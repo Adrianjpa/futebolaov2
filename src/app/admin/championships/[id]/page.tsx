@@ -383,38 +383,69 @@ function MatchList({ championshipId }: { championshipId: string }) {
 
             <div className="grid gap-3">
                 {paginatedMatches.map((match) => (
-                    <div key={match.id} className="flex items-center justify-between p-3 border rounded-lg bg-card hover:bg-accent/50 transition-colors">
-                        <div className="flex items-center gap-4 flex-1">
-                            <div className="flex items-center gap-2 flex-1 justify-end">
-                                <span className="font-medium text-sm sm:text-base">{match.home_team}</span>
-                                <div className="h-8 w-8 bg-muted/20 rounded-full flex items-center justify-center p-1">
+                    <div key={match.id} className="relative flex flex-col sm:flex-row items-center p-3 border rounded-xl bg-card/50 hover:bg-card hover:border-primary/20 transition-all gap-3 overflow-hidden group">
+
+                        {/* Status Strip Indicator */}
+                        <div className={`absolute left-0 top-0 bottom-0 w-1 ${match.status === 'live' ? 'bg-red-500 animate-pulse' : match.status === 'finished' ? 'bg-slate-500/30' : 'bg-blue-500/50'}`} />
+
+                        {/* Header Mobile (Data + Status) */}
+                        <div className="flex w-full sm:w-auto sm:flex-col items-center justify-between sm:items-start gap-2 border-b sm:border-0 pb-2 sm:pb-0 sm:pl-2">
+                            <div className="flex items-center gap-1 text-[10px] font-mono text-muted-foreground whitespace-nowrap bg-muted/30 px-2 py-1 rounded">
+                                <Calendar className="h-3 w-3" />
+                                {format(parseISO(match.date), "dd/MM HH:mm")}
+                            </div>
+                            <Badge variant={match.status === 'live' ? 'destructive' : 'secondary'} className="text-[9px] h-5 sm:hidden capitalize">
+                                {match.status === 'scheduled' ? 'Agendado' : match.status === 'live' ? 'Ao Vivo' : 'Fim'}
+                            </Badge>
+                        </div>
+
+                        {/* Match Grid (Teams & Score) */}
+                        <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 w-full flex-1 sm:px-4">
+                            {/* Home Team */}
+                            <div className="flex flex-col sm:flex-row items-center justify-end gap-2 text-center sm:text-right">
+                                <span className="text-xs sm:text-sm font-bold leading-tight line-clamp-2 sm:order-1 text-foreground/90">
+                                    {match.home_team}
+                                </span>
+                                <div className="relative h-10 w-10 sm:h-9 sm:w-9 shrink-0 sm:order-2 bg-white/5 rounded-full p-1 ring-1 ring-white/10">
                                     <img
                                         src={match.home_team_crest || getFlagUrl(match.home_team)}
-                                        alt=""
-                                        className="max-h-full max-w-full"
+                                        alt={match.home_team}
+                                        className="h-full w-full object-contain"
                                         onError={(e) => (e.currentTarget.style.display = 'none')}
                                     />
                                 </div>
                             </div>
-                            <div className="font-bold px-3 py-1 bg-muted rounded text-sm min-w-[60px] text-center">
-                                {match.status !== 'scheduled' ? `${match.score_home ?? 0} x ${match.score_away ?? 0}` : "x"}
+
+                            {/* Score Board */}
+                            <div className="flex flex-col items-center justify-center min-w-[60px]">
+                                <div className={`font-mono font-black text-lg sm:text-xl px-3 py-1 rounded-lg tracking-widest border transition-colors ${match.status === 'live' ? 'bg-red-500/10 text-red-500 border-red-500/20' : 'bg-muted/50 text-foreground border-border/50'}`}>
+                                    {match.status !== 'scheduled' ?
+                                        `${match.score_home ?? 0} : ${match.score_away ?? 0}`
+                                        : <span className="text-sm font-sans text-muted-foreground/50">VS</span>
+                                    }
+                                </div>
                             </div>
-                            <div className="flex items-center gap-2 flex-1 justify-start">
-                                <div className="h-8 w-8 bg-muted/20 rounded-full flex items-center justify-center p-1">
+
+                            {/* Away Team */}
+                            <div className="flex flex-col sm:flex-row items-center justify-start gap-2 text-center sm:text-left">
+                                <div className="relative h-10 w-10 sm:h-9 sm:w-9 shrink-0 bg-white/5 rounded-full p-1 ring-1 ring-white/10">
                                     <img
                                         src={match.away_team_crest || getFlagUrl(match.away_team)}
-                                        alt=""
-                                        className="max-h-full max-w-full"
+                                        alt={match.away_team}
+                                        className="h-full w-full object-contain"
                                         onError={(e) => (e.currentTarget.style.display = 'none')}
                                     />
                                 </div>
-                                <span className="font-medium text-sm sm:text-base">{match.away_team}</span>
+                                <span className="text-xs sm:text-sm font-bold leading-tight line-clamp-2 text-foreground/90">
+                                    {match.away_team}
+                                </span>
                             </div>
                         </div>
-                        <div className="ml-4 flex flex-col items-end gap-1 min-w-[80px]">
-                            <span className="text-[10px] text-muted-foreground">{format(parseISO(match.date), "dd/MM HH:mm")}</span>
-                            <Badge variant={match.status === 'live' ? 'destructive' : 'outline'} className="text-[9px] h-4">
-                                {match.status}
+
+                        {/* Status (Desktop) */}
+                        <div className="hidden sm:flex flex-col items-end min-w-[90px] text-right pl-2 border-l border-white/5">
+                            <Badge variant={match.status === 'live' ? 'destructive' : match.status === 'finished' ? 'secondary' : 'outline'} className="text-[10px] capitalize shadow-sm">
+                                {match.status === 'scheduled' ? 'Agendado' : match.status === 'live' ? 'Ao Vivo' : 'Encerrado'}
                             </Badge>
                         </div>
                     </div>
