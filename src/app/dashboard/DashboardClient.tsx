@@ -253,58 +253,67 @@ export default function DashboardClient() {
                             </CardTitle>
                         </CardHeader>
                         <CardContent className="pt-4 space-y-4">
-                            {Object.values(championshipsMap).filter((c: any) => c.status === 'ativo').map((champ: any) => {
-                                // Simple mock ranking selection for now, view should be used
-                                const leader = topUsers[0];
+                            {Object.values(championshipsMap)
+                                .filter((c: any) => c.status === 'ativo')
+                                .map((champ: any) => {
+                                    // Seleciona o líder para este campeonato específico (ou o geral se não houver filtro)
+                                    // Por enquanto, como o topUsers vem do ranking geral:
+                                    const leader = topUsers[0];
 
-                                return (
-                                    <div key={champ.id} className="relative p-4 rounded-xl bg-accent/20 border hover:border-primary/50 transition-all group overflow-hidden">
-                                        <div className="absolute top-0 right-0 w-24 h-24 bg-primary/5 rounded-full -mr-8 -mt-8 blur-2xl group-hover:bg-primary/10 transition-colors" />
+                                    // Se não houver líder, não mostra este campeonato no ranking lateral
+                                    if (!leader) return null;
 
-                                        <div className="flex flex-col gap-4 relative">
-                                            <div className="flex items-center justify-between">
-                                                <span className="text-[10px] font-black uppercase text-primary tracking-widest bg-primary/10 px-2 py-0.5 rounded">
-                                                    {champ.name}
-                                                </span>
-                                            </div>
+                                    return (
+                                        <div key={champ.id} className="relative p-4 rounded-xl bg-accent/20 border hover:border-primary/50 transition-all group overflow-hidden">
+                                            <div className="absolute top-0 right-0 w-24 h-24 bg-primary/5 rounded-full -mr-8 -mt-8 blur-2xl group-hover:bg-primary/10 transition-colors" />
 
-                                            <div className="flex items-center gap-4">
-                                                <div className="relative">
-                                                    <Avatar className="h-16 w-16 border-2 border-yellow-500 shadow-lg ring-4 ring-yellow-500/20">
-                                                        <AvatarImage src={leader?.foto_perfil} />
-                                                        <AvatarFallback className="bg-yellow-500 text-white font-bold">
-                                                            {(leader?.nickname || leader?.nome || "?").substring(0, 2).toUpperCase()}
-                                                        </AvatarFallback>
-                                                    </Avatar>
-                                                    <div className="absolute -bottom-1 -right-1 bg-yellow-500 text-white text-[10px] font-black w-6 h-6 flex items-center justify-center rounded-full shadow-lg border-2 border-background">
-                                                        1º
+                                            <div className="flex flex-col gap-4 relative">
+                                                <div className="flex items-center justify-between">
+                                                    <span className="text-[10px] font-black uppercase text-primary tracking-widest bg-primary/10 px-2 py-0.5 rounded">
+                                                        {champ.name}
+                                                    </span>
+                                                </div>
+
+                                                <div className="flex items-center gap-4">
+                                                    <div className="relative">
+                                                        <Avatar className="h-16 w-16 border-2 border-yellow-500 shadow-lg ring-4 ring-yellow-500/20">
+                                                            <AvatarImage src={leader?.foto_perfil} />
+                                                            <AvatarFallback className="bg-yellow-500 text-white font-bold">
+                                                                {(leader?.nickname || leader?.nome || "?").substring(0, 2).toUpperCase()}
+                                                            </AvatarFallback>
+                                                        </Avatar>
+                                                        <div className="absolute -bottom-1 -right-1 bg-yellow-500 text-white text-[10px] font-black w-6 h-6 flex items-center justify-center rounded-full shadow-lg border-2 border-background">
+                                                            1º
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="flex flex-col flex-1 min-w-0">
+                                                        <Link href={`/dashboard/profile/${leader?.user_id}`} className="hover:underline decoration-primary underline-offset-4">
+                                                            <p className="font-bold text-base truncate">{leader?.nickname || leader?.nome || "Sem competidor"}</p>
+                                                        </Link>
+                                                        <div className="flex items-center gap-2 mt-1">
+                                                            <span className="text-xl font-black text-primary font-mono">{leader?.total_points || 0}</span>
+                                                            <span className="text-[10px] uppercase font-bold text-muted-foreground">pontos</span>
+                                                        </div>
                                                     </div>
                                                 </div>
 
-                                                <div className="flex flex-col flex-1 min-w-0">
-                                                    <Link href={`/dashboard/profile/${leader?.user_id}`} className="hover:underline decoration-primary underline-offset-4">
-                                                        <p className="font-bold text-base truncate">{leader?.nickname || leader?.nome || "Sem competidor"}</p>
-                                                    </Link>
-                                                    <div className="flex items-center gap-2 mt-1">
-                                                        <span className="text-xl font-black text-primary font-mono">{leader?.total_points || 0}</span>
-                                                        <span className="text-[10px] uppercase font-bold text-muted-foreground">pontos</span>
-                                                    </div>
-                                                </div>
+                                                <Link href={`/dashboard/ranking?championship=${champ.id}`}>
+                                                    <Button size="sm" className="w-full h-8 text-xs font-bold rounded-lg group/btn">
+                                                        Ver Ranking Completo
+                                                        <ArrowRight className="ml-1 h-3 w-3 group-hover/btn:translate-x-1 transition-transform" />
+                                                    </Button>
+                                                </Link>
                                             </div>
-
-                                            <Link href={`/dashboard/ranking?championship=${champ.id}`}>
-                                                <Button size="sm" className="w-full h-8 text-xs font-bold rounded-lg group/btn">
-                                                    Ver Ranking Completo
-                                                    <ArrowRight className="ml-1 h-3 w-3 group-hover/btn:translate-x-1 transition-transform" />
-                                                </Button>
-                                            </Link>
                                         </div>
-                                    </div>
-                                );
-                            })}
-                            {Object.values(championshipsMap).filter((c: any) => c.status === 'ativo').length === 0 && (
-                                <div className="text-center py-6">
-                                    <p className="text-sm text-muted-foreground">Nenhum campeonato ativo.</p>
+                                    );
+                                })}
+
+                            {/* Mensagem caso não haja nenhum líder em nenhum campeonato ativo */}
+                            {(topUsers.length === 0 || Object.values(championshipsMap).filter((c: any) => c.status === 'ativo').length === 0) && (
+                                <div className="text-center py-8 bg-accent/5 rounded-xl border border-dashed">
+                                    <Trophy className="h-8 w-8 mx-auto mb-2 opacity-10" />
+                                    <p className="text-xs text-muted-foreground px-4">O ranking será exibido assim que os primeiros palpites forem computados.</p>
                                 </div>
                             )}
                         </CardContent>
