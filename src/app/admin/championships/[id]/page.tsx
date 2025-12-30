@@ -393,27 +393,32 @@ function MatchList({ championshipId }: { championshipId: string }) {
                             </div>
 
                             {/* Conteúdo Central (Escudos e Placar) */}
-                            <div className="flex items-center justify-center gap-6 w-full mt-2">
+                            <div className="flex items-center justify-center gap-4 w-full mt-2">
                                 {/* Home Team */}
-                                <Tooltip>
-                                    <TooltipTrigger asChild>
-                                        <div className="relative h-14 w-14 transition-transform hover:scale-110 cursor-help">
-                                            <div className="absolute inset-0 bg-primary/10 rounded-full blur-xl opacity-0 group-hover:opacity-100 transition-opacity" />
-                                            <img
-                                                src={match.home_team_crest || getFlagUrl(match.home_team)}
-                                                alt={match.home_team}
-                                                className="h-full w-full object-contain drop-shadow-lg"
-                                                onError={(e) => (e.currentTarget.style.display = 'none')}
-                                            />
-                                        </div>
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                        <p className="font-bold">{match.home_team}</p>
-                                    </TooltipContent>
-                                </Tooltip>
+                                <div className="flex flex-col items-center gap-2 w-24">
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <div className="relative h-12 w-12 transition-transform hover:scale-110 cursor-help">
+                                                <div className="absolute inset-0 bg-primary/10 rounded-full blur-xl opacity-0 group-hover:opacity-100 transition-opacity" />
+                                                <img
+                                                    src={match.home_team_crest || getFlagUrl(match.home_team)}
+                                                    alt={match.home_team}
+                                                    className="h-full w-full object-contain drop-shadow-lg"
+                                                    onError={(e) => (e.currentTarget.style.display = 'none')}
+                                                />
+                                            </div>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                            <p className="font-bold">{match.home_team}</p>
+                                        </TooltipContent>
+                                    </Tooltip>
+                                    <span className="text-[10px] font-medium text-center leading-tight text-muted-foreground truncate w-full px-1">
+                                        {match.home_team}
+                                    </span>
+                                </div>
 
                                 {/* Placar */}
-                                <div className="flex flex-col items-center">
+                                <div className="flex flex-col items-center justify-center -mt-4">
                                     <div className={`text-2xl font-black font-mono tracking-tighter ${match.status === 'live' ? 'text-red-500 animate-pulse' : 'text-foreground'}`}>
                                         {match.status !== 'scheduled' ? (
                                             <span className="flex gap-2">
@@ -428,22 +433,27 @@ function MatchList({ championshipId }: { championshipId: string }) {
                                 </div>
 
                                 {/* Away Team */}
-                                <Tooltip>
-                                    <TooltipTrigger asChild>
-                                        <div className="relative h-14 w-14 transition-transform hover:scale-110 cursor-help">
-                                            <div className="absolute inset-0 bg-primary/10 rounded-full blur-xl opacity-0 group-hover:opacity-100 transition-opacity" />
-                                            <img
-                                                src={match.away_team_crest || getFlagUrl(match.away_team)}
-                                                alt={match.away_team}
-                                                className="h-full w-full object-contain drop-shadow-lg"
-                                                onError={(e) => (e.currentTarget.style.display = 'none')}
-                                            />
-                                        </div>
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                        <p className="font-bold">{match.away_team}</p>
-                                    </TooltipContent>
-                                </Tooltip>
+                                <div className="flex flex-col items-center gap-2 w-24">
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <div className="relative h-12 w-12 transition-transform hover:scale-110 cursor-help">
+                                                <div className="absolute inset-0 bg-primary/10 rounded-full blur-xl opacity-0 group-hover:opacity-100 transition-opacity" />
+                                                <img
+                                                    src={match.away_team_crest || getFlagUrl(match.away_team)}
+                                                    alt={match.away_team}
+                                                    className="h-full w-full object-contain drop-shadow-lg"
+                                                    onError={(e) => (e.currentTarget.style.display = 'none')}
+                                                />
+                                            </div>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                            <p className="font-bold">{match.away_team}</p>
+                                        </TooltipContent>
+                                    </Tooltip>
+                                    <span className="text-[10px] font-medium text-center leading-tight text-muted-foreground truncate w-full px-1">
+                                        {match.away_team}
+                                    </span>
+                                </div>
                             </div>
 
                             {/* Informações Inferiores (Data e Status) */}
