@@ -358,48 +358,116 @@ function MatchList({ championshipId }: { championshipId: string }) {
         };
     }, [championshipId, supabase]);
 
+    // Pagination Logic
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 10;
+    const totalPages = Math.ceil(matches.length / itemsPerPage);
+
+    const paginatedMatches = matches.slice(
+        (currentPage - 1) * itemsPerPage,
+        currentPage * itemsPerPage
+    );
+
+    const nextPage = () => setCurrentPage(p => Math.min(totalPages, p + 1));
+    const prevPage = () => setCurrentPage(p => Math.max(1, p - 1));
+
     if (loading) return <div className="text-center p-4">Carregando jogos...</div>;
     if (matches.length === 0) return <div className="text-center text-muted-foreground p-4">Nenhum jogo importado ainda.</div>;
 
     return (
-        <div className="grid gap-3">
-            {matches.map((match) => (
-                <div key={match.id} className="flex items-center justify-between p-3 border rounded-lg bg-card hover:bg-accent/50 transition-colors">
-                    <div className="flex items-center gap-4 flex-1">
-                        <div className="flex items-center gap-2 flex-1 justify-end">
-                            <span className="font-medium text-sm sm:text-base">{match.home_team}</span>
-                            <div className="h-8 w-8 bg-muted/20 rounded-full flex items-center justify-center p-1">
-                                <img
-                                    src={match.home_team_crest || getFlagUrl(match.home_team)}
-                                    alt=""
-                                    className="max-h-full max-w-full"
-                                    onError={(e) => (e.currentTarget.style.display = 'none')}
-                                />
+        <div className="space-y-4">
+            <div className="flex items-center justify-between text-xs text-muted-foreground px-1">
+                <span>Total: {matches.length} jogos</span>
+                <span>Página {currentPage} de {totalPages}</span>
+            </div>
+
+            <div className="grid gap-3">
+                {paginatedMatches.map((match) => (
+                    <div key={match.id} className="flex items-center justify-between p-3 border rounded-lg bg-card hover:bg-accent/50 transition-colors">
+                        <div className="flex items-center gap-4 flex-1">
+                            <div className="flex items-center gap-2 flex-1 justify-end">
+                                <span className="font-medium text-sm sm:text-base">{match.home_team}</span>
+                                <div className="h-8 w-8 bg-muted/20 rounded-full flex items-center justify-center p-1">
+                                    <img
+                                        src={match.home_team_crest || getFlagUrl(match.home_team)}
+                                        alt=""
+                                        className="max-h-full max-w-full"
+                                        onError={(e) => (e.currentTarget.style.display = 'none')}
+                                    />
+                                </div>
+                            </div>
+                            <div className="font-bold px-3 py-1 bg-muted rounded text-sm min-w-[60px] text-center">
+                                {match.status !== 'scheduled' ? `${match.score_home ?? 0} x ${match.score_away ?? 0}` : "x"}
+                            </div>
+                            <div className="flex items-center gap-2 flex-1 justify-start">
+                                <div className="h-8 w-8 bg-muted/20 rounded-full flex items-center justify-center p-1">
+                                    <img
+                                        src={match.away_team_crest || getFlagUrl(match.away_team)}
+                                        alt=""
+                                        className="max-h-full max-w-full"
+                                        onError={(e) => (e.currentTarget.style.display = 'none')}
+                                    />
+                                </div>
+                                <span className="font-medium text-sm sm:text-base">{match.away_team}</span>
                             </div>
                         </div>
-                        <div className="font-bold px-3 py-1 bg-muted rounded text-sm min-w-[60px] text-center">
-                            {match.status !== 'scheduled' ? `${match.score_home ?? 0} x ${match.score_away ?? 0}` : "x"}
-                        </div>
-                        <div className="flex items-center gap-2 flex-1 justify-start">
-                            <div className="h-8 w-8 bg-muted/20 rounded-full flex items-center justify-center p-1">
-                                <img
-                                    src={match.away_team_crest || getFlagUrl(match.away_team)}
-                                    alt=""
-                                    className="max-h-full max-w-full"
-                                    onError={(e) => (e.currentTarget.style.display = 'none')}
-                                />
-                            </div>
-                            <span className="font-medium text-sm sm:text-base">{match.away_team}</span>
+                        <div className="ml-4 flex flex-col items-end gap-1 min-w-[80px]">
+                            <span className="text-[10px] text-muted-foreground">{format(parseISO(match.date), "dd/MM HH:mm")}</span>
+                            <Badge variant={match.status === 'live' ? 'destructive' : 'outline'} className="text-[9px] h-4">
+                                {match.status}
+                            </Badge>
                         </div>
                     </div>
-                    <div className="ml-4 flex flex-col items-end gap-1 min-w-[80px]">
-                        <span className="text-[10px] text-muted-foreground">{format(parseISO(match.date), "dd/MM HH:mm")}</span>
-                        <Badge variant={match.status === 'live' ? 'destructive' : 'outline'} className="text-[9px] h-4">
-                            {match.status}
-                        </Badge>
+                ))}
+            </div>
+
+            {totalPages > 1 && (
+                <div className="flex items-center justify-center gap-2 pt-2 flex-wrap">
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={prevPage}
+                        disabled={currentPage === 1}
+                        className="h-8 w-20 text-xs"
+                    >
+                        Anterior
+                    </Button>
+
+                    <div className="flex items-center gap-1">
+                        {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                            // Logic to show pages around current page
+                            let p = i + 1;
+                            if (totalPages > 5) {
+                                if (currentPage <= 3) p = i + 1;
+                                else if (currentPage >= totalPages - 2) p = totalPages - 4 + i;
+                                else p = currentPage - 2 + i;
+                            }
+
+                            return (
+                                <Button
+                                    key={p}
+                                    variant={currentPage === p ? "default" : "outline"}
+                                    size="sm"
+                                    onClick={() => setCurrentPage(p)}
+                                    className="h-8 w-8 text-xs p-0"
+                                >
+                                    {p}
+                                </Button>
+                            );
+                        })}
                     </div>
+
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={nextPage}
+                        disabled={currentPage === totalPages}
+                        className="h-8 w-20 text-xs"
+                    >
+                        Próxima
+                    </Button>
                 </div>
-            ))}
+            )}
         </div>
     );
 }
