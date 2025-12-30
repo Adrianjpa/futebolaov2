@@ -30,21 +30,21 @@ export default function Euro2012MigrationPage() {
         setLoading(true);
         try {
             // 1. Find the Euro 2012 Championship
-            const { data: champs } = await supabase
+            const { data: champs } = await (supabase
                 .from("championships")
                 .select("*")
-                .ilike("name", "%euro%2012%");
+                .ilike("name", "%euro%2012%") as any);
 
-            const targetChamp = champs?.[0];
+            const targetChamp = champs?.[0] as any;
 
             if (targetChamp) {
                 setChampionshipId(targetChamp.id);
             }
 
             // 2. Fetch all profiles to match against
-            const { data: allUsers } = await supabase
+            const { data: allUsers } = await (supabase
                 .from("profiles")
-                .select("*");
+                .select("*") as any);
 
             // 3. Match Logic
             const calculatedMatches: MatchedUser[] = euro2012Stats.map(stat => {

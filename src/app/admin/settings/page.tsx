@@ -34,11 +34,11 @@ export default function AdminSettingsPage() {
     useEffect(() => {
         const fetchSettings = async () => {
             try {
-                const { data, error } = await supabase
+                const { data, error } = await (supabase
                     .from("system_settings")
                     .select("data")
                     .eq("id", "config")
-                    .single();
+                    .single() as any);
 
                 if (error && error.code !== 'PGRST116') throw error; // PGRST116 is 'no rows found'
 
@@ -59,8 +59,8 @@ export default function AdminSettingsPage() {
         setSaving(true);
         try {
             const { error } = await (supabase
-                .from("system_settings")
-                .upsert({ id: 'config', data: settings }) as any);
+                .from("system_settings") as any)
+                .upsert({ id: 'config', data: settings });
 
             if (error) throw error;
             alert("Configurações salvas com sucesso!");

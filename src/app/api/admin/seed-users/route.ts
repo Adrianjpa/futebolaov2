@@ -41,11 +41,11 @@ export async function POST(request: Request) {
 
         for (const user of testUsers) {
             // 1. Check if user already exists in profiles
-            const { data: existing } = await supabaseAdmin
+            const { data: existing } = await (supabaseAdmin
                 .from('profiles')
                 .select('id')
                 .eq('email', user.email)
-                .single();
+                .single() as any);
 
             if (!existing) {
                 // 2. Create in Auth (which triggers Profile creation)

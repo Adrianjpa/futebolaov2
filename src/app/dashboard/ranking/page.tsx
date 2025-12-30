@@ -41,7 +41,7 @@ export default function RankingPage() {
 
     useEffect(() => {
         const fetchInitial = async () => {
-            const { data: champs } = await supabase.from("championships").select("*").neq("status", "arquivado");
+            const { data: champs } = await (supabase.from("championships") as any).select("*").neq("status", "arquivado");
             setChampionships(champs || []);
             if (initialChampionshipId === "all" && champs && (champs as any[]).length > 0) {
                 setSelectedChampionship((champs as any[])[0].id);
@@ -55,8 +55,8 @@ export default function RankingPage() {
         setLoading(true);
         try {
             // Consulta direta à View SQL (Muito mais performático)
-            const { data, error } = await supabase
-                .from("ranking_by_championship")
+            const { data, error } = await (supabase
+                .from("ranking_by_championship") as any)
                 .select("*")
                 .eq("championship_id", selectedChampionship);
 

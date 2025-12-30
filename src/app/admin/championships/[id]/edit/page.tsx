@@ -28,7 +28,7 @@ export default function EditChampionshipPage() {
                 if (error) throw error;
 
                 if (data) {
-                    const { settings, ...rest } = data;
+                    const { settings, ...rest } = data as any;
                     setChampionship({ ...rest, ...(settings as any) });
                 } else {
                     alert("Campeonato não encontrado");
@@ -53,8 +53,8 @@ export default function EditChampionshipPage() {
         else if (status === "arquivado") dbStatus = "arquivado";
 
         try {
-            const { error } = await supabase
-                .from("championships")
+            const { error } = await (supabase
+                .from("championships") as any)
                 .update({
                     name,
                     category,

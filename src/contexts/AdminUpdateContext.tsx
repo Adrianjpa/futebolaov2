@@ -41,8 +41,8 @@ export function AdminUpdateProvider({ children }: { children: ReactNode }) {
         if (!isAdmin) return;
 
         const fetchConfig = async () => {
-            const { data } = await supabase
-                .from("system_settings")
+            const { data } = await (supabase
+                .from("system_settings") as any)
                 .select("*")
                 .eq("id", "config")
                 .single();

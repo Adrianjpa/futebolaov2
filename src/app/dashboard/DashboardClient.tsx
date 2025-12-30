@@ -34,7 +34,7 @@ export default function DashboardClient() {
         const fetchStaticData = async () => {
             try {
                 // Fetch Championships
-                const { data: champs } = await supabase.from("championships").select("*");
+                const { data: champs } = await (supabase.from("championships") as any).select("*");
                 const champMap: Record<string, Tables<"championships">> = {};
                 (champs as Tables<"championships">[] | null)?.forEach(champ => {
                     champMap[champ.id] = champ;
@@ -42,8 +42,8 @@ export default function DashboardClient() {
                 setChampionshipsMap(champMap);
 
                 // Fetch User Predictions
-                const { data: preds } = await supabase
-                    .from("predictions")
+                const { data: preds } = await (supabase
+                    .from("predictions") as any)
                     .select("match_id")
                     .eq("user_id", user.id);
                 const predSet = new Set((preds as any[] | null)?.map(p => p.match_id as string));
@@ -54,8 +54,8 @@ export default function DashboardClient() {
                 setAllUsers(usersData || []);
 
                 // Fetch Top Users (Ranking View)
-                const { data: rankingData } = await supabase
-                    .from("ranking_live")
+                const { data: rankingData } = await (supabase
+                    .from("ranking_live") as any)
                     .select("*")
                     .order("total_points", { ascending: false })
                     .limit(5);
@@ -84,8 +84,8 @@ export default function DashboardClient() {
         todayStart.setHours(0, 0, 0, 0);
 
         try {
-            const { data: active } = await supabase
-                .from("matches")
+            const { data: active } = await (supabase
+                .from("matches") as any)
                 .select("*")
                 .gte("date", todayStart.toISOString())
                 .order("date", { ascending: true });
@@ -99,8 +99,8 @@ export default function DashboardClient() {
             })) || [];
             setActiveMatches(formattedActive);
 
-            const { data: recent } = await supabase
-                .from("matches")
+            const { data: recent } = await (supabase
+                .from("matches") as any)
                 .select("*")
                 .eq("status", "finished")
                 .order("date", { ascending: false })
@@ -138,8 +138,8 @@ export default function DashboardClient() {
         const rankingChannel = supabase
             .channel('public:ranking_live')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'predictions' }, async () => {
-                const { data: rankingData } = await supabase
-                    .from("ranking_live")
+                const { data: rankingData } = await (supabase
+                    .from("ranking_live") as any)
                     .select("*")
                     .order("total_points", { ascending: false })
                     .limit(5);

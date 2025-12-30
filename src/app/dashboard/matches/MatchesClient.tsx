@@ -71,7 +71,7 @@ export default function MatchesClient() {
     const [round, setRound] = useState(1);
 
     const fetchUsers = async () => {
-        const { data } = await supabase.from("public_profiles").select("*");
+        const { data } = await (supabase.from("public_profiles") as any).select("*");
         setUsers(data || []);
     };
 
@@ -86,8 +86,8 @@ export default function MatchesClient() {
     };
 
     const fetchChampionships = async () => {
-        const { data } = await supabase
-            .from("championships")
+        const { data } = await (supabase
+            .from("championships") as any)
             .select("*")
             .eq("status", "ativo");
         setChampionships(data || []);

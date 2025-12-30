@@ -15,7 +15,7 @@ export default function NewChampionshipPage() {
         setIsSubmitting(true);
         const { name, category, status, ...others } = values;
         try {
-            const { data, error } = await supabase.from("championships").insert({
+            const { data, error } = await (supabase.from("championships") as any).insert({
                 name,
                 category,
                 status: "ativo", // Force active on creation

@@ -25,8 +25,8 @@ export function UserSearch({ onSelect, disabled }: UserSearchProps) {
         const fetchInitial = async () => {
             setLoading(true);
             try {
-                const { data } = await supabase
-                    .from("profiles")
+                const { data } = await (supabase
+                    .from("profiles") as any)
                     .select("*")
                     .limit(20);
 
@@ -55,7 +55,7 @@ export function UserSearch({ onSelect, disabled }: UserSearchProps) {
     const performSearch = async (term: string) => {
         setLoading(true);
         try {
-            let query = supabase.from("profiles").select("*");
+            let query = (supabase.from("profiles") as any).select("*");
 
             if (term.length > 0) {
                 query = query.or(`nome.ilike.%${term}%,nickname.ilike.%${term}%,email.ilike.%${term}%`);

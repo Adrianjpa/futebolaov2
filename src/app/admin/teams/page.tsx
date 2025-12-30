@@ -9,7 +9,6 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Shield, Search } from "lucide-react";
 import { createClient } from "@/lib/supabase";
-import { Tables } from "@/lib/supabase";
 
 interface Team {
     id: string;
@@ -63,12 +62,12 @@ export default function AdminTeamsPage() {
 
     const handleAddTeam = async () => {
         try {
-            const { error } = await (supabase.from("teams").insert({
+            const { error } = await (supabase.from("teams") as any).insert({
                 name: newName,
                 short_name: newShortName,
                 shield_url: newShieldUrl,
                 type: newType,
-            }) as any);
+            });
 
             if (error) throw error;
 

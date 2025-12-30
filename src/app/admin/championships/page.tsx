@@ -16,8 +16,8 @@ export default function AdminChampionshipsPage() {
     useEffect(() => {
         const fetchChampionships = async () => {
             try {
-                const { data, error } = await supabase
-                    .from("championships")
+                const { data, error } = await (supabase
+                    .from("championships") as any)
                     .select("*")
                     .order("created_at", { ascending: false });
 

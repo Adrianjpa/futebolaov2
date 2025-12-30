@@ -17,26 +17,26 @@ export async function POST(request: Request) {
         }
 
         // 1. Get Legacy Stats
-        const { data: legacyStats, error: statsError } = await supabaseAdmin
+        const { data: legacyStats, error: statsError } = await (supabaseAdmin
             .from("legacy_stats")
             .select("*")
             .eq("id", legacyDocId)
-            .single();
+            .single() as any);
 
         if (statsError || !legacyStats) throw new Error("Legacy record not found");
 
         // 2. Link User ID in legacy_stats
-        await supabaseAdmin
-            .from("legacy_stats")
+        await (supabaseAdmin
+            .from("legacy_stats") as any)
             .update({ user_id: realUserId })
             .eq("id", legacyDocId);
 
         // 3. Update Championship Settings (Participants & Winners)
-        const { data: champ, error: champError } = await supabaseAdmin
+        const { data: champ, error: champError } = await (supabaseAdmin
             .from("championships")
             .select("settings")
             .eq("id", championshipId)
-            .single();
+            .single() as any);
 
         if (champ && champ.settings) {
             const settings = champ.settings as any;
@@ -66,8 +66,8 @@ export async function POST(request: Request) {
             }
 
             if (updated) {
-                await supabaseAdmin
-                    .from("championships")
+                await (supabaseAdmin
+                    .from("championships") as any)
                     .update({ settings })
                     .eq("id", championshipId);
             }

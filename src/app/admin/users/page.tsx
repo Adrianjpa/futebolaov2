@@ -102,8 +102,8 @@ export default function AdminUsersPage() {
         if (user && SUPER_ADMIN_EMAILS.includes(user.email)) return;
 
         try {
-            const { error } = await supabase
-                .from("profiles")
+            const { error } = await (supabase
+                .from("profiles") as any)
                 .update({ funcao: newRole as any })
                 .eq("id", userId);
 
@@ -119,8 +119,8 @@ export default function AdminUsersPage() {
         if (user && SUPER_ADMIN_EMAILS.includes(user.email)) return;
 
         try {
-            const { error } = await supabase
-                .from("profiles")
+            const { error } = await (supabase
+                .from("profiles") as any)
                 .update({ status: newStatus as any })
                 .eq("id", userId);
 
@@ -162,8 +162,8 @@ export default function AdminUsersPage() {
         try {
             // Note: In Supabase, deleting from profiles needs proper RLS or Admin client
             // Since this is a Client Component, it depends on RLS or the user being an Admin
-            const { error } = await supabase
-                .from("profiles")
+            const { error } = await (supabase
+                .from("profiles") as any)
                 .delete()
                 .in("id", selectedUsers);
 

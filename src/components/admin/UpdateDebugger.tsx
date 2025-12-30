@@ -73,12 +73,12 @@ export function UpdateDebugger() {
     // 1. Fetch Static Data & Listeners
     useEffect(() => {
         const fetchChamps = async () => {
-            const { data } = await supabase
+            const { data } = await (supabase
                 .from("championships")
-                .select("*");
+                .select("*") as any);
 
             const map: Record<string, any> = {};
-            data?.forEach(c => {
+            data?.forEach((c: any) => {
                 map[c.id] = c;
             });
             setChampionshipsMap(map);
@@ -88,11 +88,11 @@ export function UpdateDebugger() {
 
         // Check last system update (proven by DB)
         const fetchLastUpdate = async () => {
-            const { data } = await supabase
+            const { data } = await (supabase
                 .from("matches")
                 .select("updated_at")
                 .order("updated_at", { ascending: false })
-                .limit(1);
+                .limit(1) as any);
 
             if (data?.[0]?.updated_at) {
                 setLastSystemUpdate(new Date(data[0].updated_at));
@@ -113,14 +113,14 @@ export function UpdateDebugger() {
         todayStart.setHours(0, 0, 0, 0);
 
         const fetchLive = async () => {
-            const { data } = await supabase
+            const { data } = await (supabase
                 .from("matches")
                 .select("*")
                 .gte("date", todayStart.toISOString())
-                .order("date", { ascending: true });
+                .order("date", { ascending: true }) as any);
 
             const live: any[] = [];
-            data?.forEach(m => {
+            data?.forEach((m: any) => {
                 if (['live', 'IN_PLAY', 'PAUSED'].includes(m.status)) {
                     live.push({
                         ...m,
@@ -284,8 +284,8 @@ export function UpdateDebugger() {
                                             // Euro 2012 ID hardcoded for this tool
                                             const champId = "uefa_euro_2012";
 
-                                            const { error } = await supabase
-                                                .from("championships")
+                                            const { error } = await (supabase
+                                                .from("championships") as any)
                                                 .upsert({
                                                     id: champId,
                                                     name: "Eurocopa 2012",

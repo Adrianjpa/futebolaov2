@@ -30,7 +30,7 @@ export async function POST(request: Request) {
             const champId = "uefa_euro_2012";
 
             // 1. Ensure Championship Exists
-            await supabaseAdmin.from("championships").upsert({
+            await (supabaseAdmin.from("championships") as any).upsert({
                 id: champId,
                 name: "Eurocopa 2012",
                 status: "finished",
@@ -60,7 +60,7 @@ export async function POST(request: Request) {
                 score_away: match.awayScore
             }));
 
-            await supabaseAdmin.from("matches").upsert(matchesToInsert);
+            await (supabaseAdmin.from("matches") as any).upsert(matchesToInsert);
 
             // 3. Import Predictions & Stats
             if (euro2012Bets) {
@@ -120,7 +120,7 @@ export async function POST(request: Request) {
                 // OR I use a dedicated table for legacy predictions.
 
                 // For now, I'll only insert Stats into the new legacy_stats table which allows NULL user_id.
-                await supabaseAdmin.from("legacy_stats").upsert(statsToInsert);
+                await (supabaseAdmin.from("legacy_stats") as any).upsert(statsToInsert);
             }
 
             return NextResponse.json({ success: true, message: `Imported Euro 2012 data.` });

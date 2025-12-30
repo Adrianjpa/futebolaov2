@@ -89,13 +89,13 @@ export default function ChampionshipDetailsPage() {
             // If not, we do it manually.
 
             // 1. Delete Predictions
-            await supabase.from("predictions").delete().eq("championship_id", championship.id);
+            await (supabase.from("predictions") as any).delete().eq("championship_id", championship.id);
 
             // 2. Delete Matches
-            await supabase.from("matches").delete().eq("championship_id", championship.id);
+            await (supabase.from("matches") as any).delete().eq("championship_id", championship.id);
 
             // 3. Delete Championship
-            const { error } = await supabase.from("championships").delete().eq("id", championship.id);
+            const { error } = await (supabase.from("championships") as any).delete().eq("id", championship.id);
             if (error) throw error;
 
             alert("Campeonato excluído com sucesso!");
@@ -119,8 +119,8 @@ export default function ChampionshipDetailsPage() {
         if (!confirm(confirmMessage)) return;
 
         try {
-            const { error } = await supabase
-                .from("championships")
+            const { error } = await (supabase
+                .from("championships") as any)
                 .update({ status: newStatus as any })
                 .eq("id", championship.id);
 
@@ -178,10 +178,10 @@ export default function ChampionshipDetailsPage() {
                 };
             });
 
-            const { error } = await supabase.from("matches").upsert(matchesToUpsert, { onConflict: 'championship_id,external_id' });
+            const { error } = await (supabase.from("matches") as any).upsert(matchesToUpsert, { onConflict: 'championship_id,external_id' });
             if (error) {
                 // Fallback if unique constraint is just external_id or if we need to do it by ID
-                await supabase.from("matches").upsert(matchesToUpsert);
+                await (supabase.from("matches") as any).upsert(matchesToUpsert);
             }
 
             alert(`Processamento de matches concluído!`);

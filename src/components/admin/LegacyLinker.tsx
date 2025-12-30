@@ -23,7 +23,7 @@ export function LegacyLinker() {
     const fetchRecords = async () => {
         setLoading(true);
         try {
-            let query = supabase.from("legacy_stats").select("*");
+            let query = (supabase.from("legacy_stats") as any).select("*");
 
             if (viewMode === 'unlinked') {
                 query = query.is("user_id", null);

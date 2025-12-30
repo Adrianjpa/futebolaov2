@@ -37,8 +37,8 @@ export function UserNav() {
         setCurrentStatus(status);
         if (user) {
             try {
-                const { error } = await supabase
-                    .from("profiles")
+                const { error } = await (supabase
+                    .from("profiles") as any)
                     .update({ presence: status })
                     .eq("id", user.id);
                 if (error) throw error;
@@ -68,7 +68,7 @@ export function UserNav() {
                         </span>
                     </div>
                     <Avatar className="h-9 w-9 border border-border">
-                        <AvatarImage src={profile?.foto_perfil} alt={profile?.nome} />
+                        <AvatarImage src={profile?.foto_perfil || undefined} alt={profile?.nome || "Usuário"} />
                         <AvatarFallback>{(profile?.nickname || profile?.nome || "U").substring(0, 2).toUpperCase()}</AvatarFallback>
                     </Avatar>
                     <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`} />

@@ -47,8 +47,8 @@ export default function PublicProfilePage() {
 
                 if (profileError || !profile) {
                     // Try public_profiles (email will be missing)
-                    const { data: pubData } = await supabase
-                        .from("public_profiles")
+                    const { data: pubData } = await (supabase
+                        .from("public_profiles") as any)
                         .select("*")
                         .eq("id", id as string)
                         .single();
@@ -63,8 +63,8 @@ export default function PublicProfilePage() {
                 setProfileData(profile);
 
                 // 2. Fetch User Predictions
-                const { data: predictions } = await supabase
-                    .from("predictions")
+                const { data: predictions } = await (supabase
+                    .from("predictions") as any)
                     .select("*")
                     .eq("user_id", id);
 
@@ -75,8 +75,8 @@ export default function PublicProfilePage() {
 
                 // 3. Fetch Championships Details
                 if (uniqueChampionshipIds.length > 0) {
-                    const { data: champs } = await supabase
-                        .from("championships")
+                    const { data: champs } = await (supabase
+                        .from("championships") as any)
                         .select("*")
                         .in("id", uniqueChampionshipIds);
                     setChampionships(champs || []);

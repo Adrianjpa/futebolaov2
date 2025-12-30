@@ -84,14 +84,14 @@ export default function ProfilePage() {
                 }
 
                 // 2. Fetch User Predictions
-                const { data: predictions } = await supabase
-                    .from("predictions")
+                const { data: predictions } = await (supabase
+                    .from("predictions") as any)
                     .select("*")
                     .eq("user_id", user.id);
                 setUserPredictions(predictions || []);
 
                 // 3. Fetch All Championships
-                const { data: allChamps } = await supabase.from("championships").select("*");
+                const { data: allChamps } = await (supabase.from("championships") as any).select("*");
                 setChampionships(allChamps || []);
 
                 // Statistics calculation (approximate for now as legacy data might be handled differently)
