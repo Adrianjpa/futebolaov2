@@ -44,18 +44,25 @@ interface Match {
 
 const ITEMS_PER_PAGE = 10;
 
+import { useMatches } from "@/contexts/MatchesContext";
+
 export default function MatchesClient() {
     const { profile, user: authUser } = useAuth();
+    const {
+        matches: allActiveMatches,
+        championships: allChamps,
+        userPredictions,
+        loading: matchesLoading,
+        refreshMatches: fetchMatches
+    } = useMatches();
+
     const isAdmin = profile?.funcao === 'admin' || profile?.funcao === 'moderator';
     const supabase = createClient();
 
-    const [championships, setChampionships] = useState<Championship[]>([]);
     const [selectedChampionship, setSelectedChampionship] = useState<string>("all");
     const [categoryFilter, setCategoryFilter] = useState("all");
     const [matches, setMatches] = useState<Match[]>([]);
-    const [teams, setTeams] = useState<Team[]>([]);
     const [users, setUsers] = useState<any[]>([]);
-    const [userPredictions, setUserPredictions] = useState<Set<string>>(new Set());
     const [loading, setLoading] = useState(false);
     const [isDialogOpen, setIsDialogOpen] = useState(false);
 
@@ -75,107 +82,33 @@ export default function MatchesClient() {
         setUsers(data || []);
     };
 
-    const fetchUserPredictions = async () => {
-        if (!authUser) return;
-        const { data } = await (supabase.from("predictions") as any)
-            .select("match_id")
-            .eq("user_id", authUser.id);
-        const predSet = new Set<string>();
-        data?.forEach((p: any) => predSet.add(p.match_id));
-        setUserPredictions(predSet);
-    };
-
-    const fetchChampionships = async () => {
-        const { data } = await (supabase
-            .from("championships") as any)
-            .select("*")
-            .eq("status", "ativo");
-        setChampionships(data || []);
-
-        if (data?.length === 1) {
-            setSelectedChampionship((data as any)[0].id);
-        }
-    };
-
-    const fetchTeams = async () => {
-        // In Supabase, if we don't have a teams table yet, we might need to fetch from matches or create it
-        // Thinking of our schema, we only have championships, matches, predictions, profiles.
-        // For now, I'll assume teams are strings in matches as per schema.
-        setTeams([]); // Placeholder if teams table is needed later
-    };
-
-    const fetchMatches = async (page: number = 1) => {
-        setLoading(true);
-        try {
-            const from = (page - 1) * ITEMS_PER_PAGE;
-            const to = from + ITEMS_PER_PAGE - 1;
-
-            let query = (supabase.from("matches") as any)
-                .select("*", { count: "exact" })
-                .eq("status", "scheduled")
-                .gte("date", new Date().toISOString())
-                .order("date", { ascending: true })
-                .range(from, to);
-
-            if (selectedChampionship !== "all") {
-                query = query.eq("championship_id", selectedChampionship);
-            }
-
-            const { data, count, error } = await query;
-
-            if (error) throw error;
-
-            const champMap = new Map(championships.map(c => [c.id, c]));
-            const formattedMatches = (data as any[])?.map(m => {
-                const champ = champMap.get(m.championship_id);
-                return {
-                    ...m,
-                    championshipName: champ?.name,
-                    championshipLogoUrl: (champ as any)?.settings?.iconUrl
-                };
-            }) || [];
-
-            setMatches(formattedMatches);
-            setIsLastPage(count ? from + formattedMatches.length >= count : true);
-
-        } catch (error) {
-            console.error("Error fetching matches:", error);
-        } finally {
-            setLoading(false);
-        }
-    };
-
     useEffect(() => {
-        fetchChampionships();
         fetchUsers();
     }, []);
 
     useEffect(() => {
-        if (authUser) {
-            fetchUserPredictions();
-        }
-    }, [authUser]);
+        // Filter matches from context based on selection
+        let filtered = allActiveMatches.filter(m => m.status === 'scheduled');
 
-    useEffect(() => {
-        setCurrentPage(1);
-        setIsLastPage(false);
-        fetchMatches(1);
-    }, [selectedChampionship, categoryFilter, championships]);
+        if (selectedChampionship !== "all") {
+            filtered = filtered.filter(m => m.championship_id === selectedChampionship);
+        }
+
+        // Apply pagination
+        const from = (currentPage - 1) * ITEMS_PER_PAGE;
+        const to = from + ITEMS_PER_PAGE;
+        const paginated = filtered.slice(from, to);
+
+        setMatches(paginated);
+        setIsLastPage(to >= filtered.length);
+    }, [allActiveMatches, selectedChampionship, currentPage]);
 
     const handleNextPage = () => {
-        if (!isLastPage) {
-            const nextPage = currentPage + 1;
-            setCurrentPage(nextPage);
-            fetchMatches(nextPage);
-        }
+        if (!isLastPage) setCurrentPage(prev => prev + 1);
     };
 
     const handlePrevPage = () => {
-        if (currentPage > 1) {
-            const prevPage = currentPage - 1;
-            setCurrentPage(prevPage);
-            fetchMatches(prevPage);
-        }
+        if (currentPage > 1) setCurrentPage(prev => prev - 1);
     };
 
     const handleAddMatch = async () => {
@@ -203,7 +136,7 @@ export default function MatchesClient() {
             setAwayTeam("");
             setMatchDate("");
             setMatchTime("");
-            fetchMatches(1);
+            fetchMatches();
             alert("Partida criada com sucesso!");
         } catch (error: any) {
             console.error("Error adding match:", error);
@@ -223,7 +156,7 @@ export default function MatchesClient() {
                         </SelectTrigger>
                         <SelectContent>
                             <SelectItem value="all">Todos os Campeonatos</SelectItem>
-                            {championships.map(c => (
+                            {allChamps.map((c: any) => (
                                 <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                             ))}
                         </SelectContent>
@@ -231,7 +164,7 @@ export default function MatchesClient() {
 
                     {isAdmin && (
                         (() => {
-                            const currentChamp = championships.find(c => c.id === selectedChampionship);
+                            const currentChamp = allChamps.find((c: any) => c.id === selectedChampionship);
                             const isManual = currentChamp?.settings?.type === 'MANUAL';
                             const isAll = selectedChampionship === "all";
 
@@ -296,14 +229,14 @@ export default function MatchesClient() {
             </div>
 
             <div className="space-y-4">
-                {matches.length === 0 && !loading && (
+                {matches.length === 0 && !matchesLoading && (
                     <div className="text-center py-12 text-muted-foreground">
                         <CalendarIcon className="h-10 w-10 mx-auto mb-3 opacity-20" />
                         <p>Nenhuma partida agendada encontrada.</p>
                     </div>
                 )}
 
-                {loading && (
+                {matchesLoading && matches.length === 0 && (
                     <div className="flex justify-center p-8">
                         <Loader2 className="h-8 w-8 animate-spin" />
                     </div>
@@ -318,7 +251,7 @@ export default function MatchesClient() {
                         showBetButton={!isAdmin}
                         hasPrediction={userPredictions.has(match.id)}
                         isAdmin={isAdmin}
-                        onUpdate={() => fetchMatches(currentPage)}
+                        onUpdate={() => fetchMatches()}
                         showChampionshipName={selectedChampionship === 'all'}
                     />
                 ))}

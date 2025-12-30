@@ -11,44 +11,34 @@ import { isPast, parseISO } from "date-fns";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { UnifiedMatchCard } from "@/components/UnifiedMatchCard";
 
+import { useMatches } from "@/contexts/MatchesContext";
+
 export default function DashboardClient() {
     const { user, profile } = useAuth();
-    const [loading, setLoading] = useState(true);
+    const {
+        matches: allActiveMatches,
+        championshipsMap,
+        userPredictions,
+        loading: matchesLoading,
+        refreshMatches: fetchMatches
+    } = useMatches();
+
     const [liveMatches, setLiveMatches] = useState<any[]>([]);
     const [nextMatches, setNextMatches] = useState<any[]>([]);
     const [recentMatches, setRecentMatches] = useState<any[]>([]);
     const [topUsers, setTopUsers] = useState<any[]>([]);
     const [allUsers, setAllUsers] = useState<any[]>([]);
-    const [userPredictions, setUserPredictions] = useState<Set<string>>(new Set());
-    const [championshipsMap, setChampionshipsMap] = useState<Record<string, any>>({});
-    const [activeMatches, setActiveMatches] = useState<any[]>([]);
     const [currentTime, setCurrentTime] = useState(new Date());
 
     const supabase = createClient();
     const isAdmin = profile?.funcao === "admin";
 
-    // 1. Fetch Static Data (Championships, User Predictions, All Users, Initial Ranking)
+    // 1. Fetch Users & Ranking (Specific to Dashboard)
     useEffect(() => {
         if (!user) return;
 
-        const fetchStaticData = async () => {
+        const fetchData = async () => {
             try {
-                // Fetch Championships
-                const { data: champs } = await (supabase.from("championships") as any).select("*");
-                const champMap: Record<string, Tables<"championships">> = {};
-                (champs as Tables<"championships">[] | null)?.forEach(champ => {
-                    champMap[champ.id] = champ;
-                });
-                setChampionshipsMap(champMap);
-
-                // Fetch User Predictions
-                const { data: preds } = await (supabase
-                    .from("predictions") as any)
-                    .select("match_id")
-                    .eq("user_id", user.id);
-                const predSet = new Set((preds as any[] | null)?.map(p => p.match_id as string));
-                setUserPredictions(predSet);
-
                 // Fetch All Users (public_profiles)
                 const { data: usersData } = await (supabase.from("public_profiles").select("*") as any);
                 setAllUsers(usersData || []);
@@ -60,83 +50,34 @@ export default function DashboardClient() {
                     .order("total_points", { ascending: false })
                     .limit(5);
                 setTopUsers(rankingData || []);
-                setLoading(false); // Set loading false after static data is fetched if no matches logic is triggered yet
+
+                // Fetch Recent Results
+                const { data: recent } = await (supabase
+                    .from("matches") as any)
+                    .select("*")
+                    .eq("status", "finished")
+                    .order("date", { ascending: false })
+                    .limit(5);
+
+                const formattedRecent = (recent as any[])?.map(m => ({
+                    ...m,
+                    homeScore: m.score_home,
+                    awayScore: m.score_away,
+                    championshipName: championshipsMap[m.championship_id]?.name,
+                    championshipLogoUrl: championshipsMap[m.championship_id]?.settings?.iconUrl
+                })) || [];
+                setRecentMatches(formattedRecent);
 
             } catch (error) {
-                console.error("Error fetching static data:", error);
+                console.error("Error fetching dashboard specific data:", error);
             }
         };
 
-        fetchStaticData();
-    }, [user, supabase]);
+        fetchData();
 
-    // 2. Timer for live state updates
-    useEffect(() => {
-        const timer = setInterval(() => setCurrentTime(new Date()), 10000);
-        return () => clearInterval(timer);
-    }, []);
-
-    // 3. fetchMatches Function
-    const fetchMatches = useCallback(async () => {
-        if (!user) return; // Removed championship check to allow loading state to finish even if empty
-
-        const todayStart = new Date();
-        todayStart.setHours(0, 0, 0, 0);
-
-        try {
-            const { data: active } = await (supabase
-                .from("matches") as any)
-                .select("*")
-                .gte("date", todayStart.toISOString())
-                .order("date", { ascending: true });
-
-            const formattedActive = (active as Tables<"matches">[] | null)?.map(m => ({
-                ...m,
-                homeScore: m.score_home,
-                awayScore: m.score_away,
-                championshipName: championshipsMap[m.championship_id]?.name,
-                championshipLogoUrl: championshipsMap[m.championship_id]?.settings?.iconUrl
-            })) || [];
-            setActiveMatches(formattedActive);
-
-            const { data: recent } = await (supabase
-                .from("matches") as any)
-                .select("*")
-                .eq("status", "finished")
-                .order("date", { ascending: false })
-                .limit(5);
-
-            setRecentMatches((recent as Tables<"matches">[] | null)?.map(m => ({
-                ...m,
-                homeScore: m.score_home,
-                awayScore: m.score_away,
-                championshipName: championshipsMap[m.championship_id]?.name,
-                championshipLogoUrl: championshipsMap[m.championship_id]?.settings?.iconUrl
-            })) || []);
-
-        } catch (error) {
-            console.error("Error in fetchMatches:", error);
-        } finally {
-            setLoading(false);
-        }
-    }, [user, championshipsMap, supabase]);
-
-    // 4. Listen for Match Changes and Fetch Initial
-    useEffect(() => {
-        if (!user) return; // Removed championship check to initiate listeners earlier
-
-        setLoading(true);
-        fetchMatches();
-
-        const matchesChannel = supabase
-            .channel('public:matches')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'matches' }, () => {
-                fetchMatches();
-            })
-            .subscribe();
-
+        // Ranking Realtime
         const rankingChannel = supabase
-            .channel('public:ranking_live')
+            .channel('dashboard-ranking')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'predictions' }, async () => {
                 const { data: rankingData } = await (supabase
                     .from("ranking_live") as any)
@@ -148,17 +89,22 @@ export default function DashboardClient() {
             .subscribe();
 
         return () => {
-            supabase.removeChannel(matchesChannel);
             supabase.removeChannel(rankingChannel);
         };
-    }, [user, championshipsMap, supabase, fetchMatches]);
+    }, [user, supabase, championshipsMap]);
 
-    // 5. Derive Live and Next matches from activeMatches
+    // 2. Timer for live state updates
+    useEffect(() => {
+        const timer = setInterval(() => setCurrentTime(new Date()), 10000);
+        return () => clearInterval(timer);
+    }, []);
+
+    // 3. Derive Live and Next matches
     useEffect(() => {
         const live: any[] = [];
         const next: any[] = [];
 
-        activeMatches.forEach(match => {
+        allActiveMatches.forEach(match => {
             const matchDate = parseISO(match.date);
             if (match.status === 'live' || (match.status === 'scheduled' && isPast(matchDate))) {
                 live.push(match);
@@ -169,9 +115,9 @@ export default function DashboardClient() {
 
         setLiveMatches(live);
         setNextMatches(next.slice(0, 5));
-    }, [activeMatches, currentTime]);
+    }, [allActiveMatches, currentTime]);
 
-    if (loading) {
+    if (matchesLoading && allActiveMatches.length === 0) {
         return (
             <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />

@@ -25,6 +25,8 @@ import { useState } from "react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { UserNav } from "@/components/dashboard/UserNav";
 
+import { MatchesProvider } from "@/contexts/MatchesContext";
+
 export default function DashboardLayout({
     children,
 }: {
@@ -67,93 +69,95 @@ export default function DashboardLayout({
 
     return (
         <AuthGuard>
-            <div className="h-screen w-full flex bg-background overflow-hidden">
-                {/* Mobile Sidebar Overlay */}
-                {isSidebarOpen && (
-                    <div
-                        className="fixed inset-0 bg-black/50 z-40 md:hidden"
-                        onClick={() => setIsSidebarOpen(false)}
-                    />
-                )}
+            <MatchesProvider>
+                <div className="h-screen w-full flex bg-background overflow-hidden">
+                    {/* Mobile Sidebar Overlay */}
+                    {isSidebarOpen && (
+                        <div
+                            className="fixed inset-0 bg-black/50 z-40 md:hidden"
+                            onClick={() => setIsSidebarOpen(false)}
+                        />
+                    )}
 
-                {/* Sidebar */}
-                <aside className={`
+                    {/* Sidebar */}
+                    <aside className={`
           fixed inset-y-0 left-0 z-50 w-64 bg-white/40 backdrop-blur-xl border-r border-white/20 transform transition-transform duration-200 ease-in-out
           ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"}
           md:relative md:translate-x-0 shadow-2xl flex flex-col h-full
         `}>
-                    <div className="h-16 flex items-center px-6 border-b border-white/10 shrink-0">
-                        {/* Light Mode Logo (Colored/Dark) */}
-                        <div className="dark:hidden h-14 w-auto">
-                            <img src="/images/logo-full-dark.png?v=2" alt="FuteBolão" className="h-full w-auto object-contain" />
+                        <div className="h-16 flex items-center px-6 border-b border-white/10 shrink-0">
+                            {/* Light Mode Logo (Colored/Dark) */}
+                            <div className="dark:hidden h-14 w-auto">
+                                <img src="/images/logo-full-dark.png?v=2" alt="FuteBolão" className="h-full w-auto object-contain" />
+                            </div>
+                            {/* Dark Mode Logo (White/Light) */}
+                            <div className="hidden dark:block h-14 w-auto">
+                                <img src="/images/logo-full-light.png?v=2" alt="FuteBolão" className="h-full w-auto object-contain" />
+                            </div>
                         </div>
-                        {/* Dark Mode Logo (White/Light) */}
-                        <div className="hidden dark:block h-14 w-auto">
-                            <img src="/images/logo-full-light.png?v=2" alt="FuteBolão" className="h-full w-auto object-contain" />
+
+                        <div className="flex-1 overflow-y-auto p-4 space-y-2">
+                            {/* Main Menu */}
+                            {filteredMainNav.map((item) => {
+                                const Icon = item.icon;
+                                const isActive = pathname === item.href;
+                                return (
+                                    <Link key={item.href} href={item.href} onClick={() => setIsSidebarOpen(false)}>
+                                        <Button
+                                            variant={isActive ? "secondary" : "ghost"}
+                                            className={`w-full justify-start transition-all duration-300 rounded-xl mb-1 ${isActive ? "bg-white/60 text-primary shadow-sm font-medium" : "hover:bg-white/30 hover:text-primary"}`}
+                                        >
+                                            <Icon className="mr-2 h-4 w-4" />
+                                            {item.label}
+                                        </Button>
+                                    </Link>
+                                );
+                            })}
+
+                            {/* Admin Divider */}
+                            {isAdmin && (
+                                <>
+                                    <div className="my-4 border-t border-black/10 mx-2" />
+                                    <div className="px-3 mb-2 text-xs font-bold text-muted-foreground uppercase tracking-widest flex items-center">
+                                        <Shield className="h-3 w-3 mr-1" /> Administração
+                                    </div>
+                                    {adminNavItems.map((item) => {
+                                        const Icon = item.icon;
+                                        const isActive = pathname === item.href;
+                                        return (
+                                            <Link key={item.href} href={item.href} onClick={() => setIsSidebarOpen(false)}>
+                                                <Button
+                                                    variant={isActive ? "secondary" : "ghost"}
+                                                    className={`w-full justify-start transition-all duration-300 rounded-xl mb-1 ${isActive ? "bg-red-500/10 text-red-700 font-medium" : "hover:bg-red-500/5 hover:text-red-600 text-muted-foreground"}`}
+                                                >
+                                                    <Icon className="mr-2 h-4 w-4" />
+                                                    {item.label}
+                                                </Button>
+                                            </Link>
+                                        );
+                                    })}
+                                </>
+                            )}
                         </div>
+                    </aside>
+
+                    {/* Main Content */}
+                    <div className="flex-1 flex flex-col h-full min-w-0 overflow-hidden">
+                        <header className="h-16 border-b border-white/20 flex items-center justify-between px-4 md:px-6 bg-white/30 backdrop-blur-xl shrink-0 z-30 shadow-sm">
+                            <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setIsSidebarOpen(true)}>
+                                <Menu className="h-6 w-6" />
+                            </Button>
+                            <div className="ml-auto flex items-center gap-4">
+                                <ThemeToggle />
+                                <UserNav />
+                            </div>
+                        </header>
+                        <main className="flex-1 overflow-y-auto p-4 md:p-6">
+                            {children}
+                        </main>
                     </div>
-
-                    <div className="flex-1 overflow-y-auto p-4 space-y-2">
-                        {/* Main Menu */}
-                        {filteredMainNav.map((item) => {
-                            const Icon = item.icon;
-                            const isActive = pathname === item.href;
-                            return (
-                                <Link key={item.href} href={item.href} onClick={() => setIsSidebarOpen(false)}>
-                                    <Button
-                                        variant={isActive ? "secondary" : "ghost"}
-                                        className={`w-full justify-start transition-all duration-300 rounded-xl mb-1 ${isActive ? "bg-white/60 text-primary shadow-sm font-medium" : "hover:bg-white/30 hover:text-primary"}`}
-                                    >
-                                        <Icon className="mr-2 h-4 w-4" />
-                                        {item.label}
-                                    </Button>
-                                </Link>
-                            );
-                        })}
-
-                        {/* Admin Divider */}
-                        {isAdmin && (
-                            <>
-                                <div className="my-4 border-t border-black/10 mx-2" />
-                                <div className="px-3 mb-2 text-xs font-bold text-muted-foreground uppercase tracking-widest flex items-center">
-                                    <Shield className="h-3 w-3 mr-1" /> Administração
-                                </div>
-                                {adminNavItems.map((item) => {
-                                    const Icon = item.icon;
-                                    const isActive = pathname === item.href;
-                                    return (
-                                        <Link key={item.href} href={item.href} onClick={() => setIsSidebarOpen(false)}>
-                                            <Button
-                                                variant={isActive ? "secondary" : "ghost"}
-                                                className={`w-full justify-start transition-all duration-300 rounded-xl mb-1 ${isActive ? "bg-red-500/10 text-red-700 font-medium" : "hover:bg-red-500/5 hover:text-red-600 text-muted-foreground"}`}
-                                            >
-                                                <Icon className="mr-2 h-4 w-4" />
-                                                {item.label}
-                                            </Button>
-                                        </Link>
-                                    );
-                                })}
-                            </>
-                        )}
-                    </div>
-                </aside>
-
-                {/* Main Content */}
-                <div className="flex-1 flex flex-col h-full min-w-0 overflow-hidden">
-                    <header className="h-16 border-b border-white/20 flex items-center justify-between px-4 md:px-6 bg-white/30 backdrop-blur-xl shrink-0 z-30 shadow-sm">
-                        <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setIsSidebarOpen(true)}>
-                            <Menu className="h-6 w-6" />
-                        </Button>
-                        <div className="ml-auto flex items-center gap-4">
-                            <ThemeToggle />
-                            <UserNav />
-                        </div>
-                    </header>
-                    <main className="flex-1 overflow-y-auto p-4 md:p-6">
-                        {children}
-                    </main>
                 </div>
-            </div>
-        </AuthGuard>
+            </MatchesProvider>
+        </AuthGuard >
     );
 }
