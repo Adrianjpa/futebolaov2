@@ -9,7 +9,6 @@ import { format } from "date-fns";
 import { BannerConfigForm } from "@/components/banner/BannerConfigForm";
 import { ChampionBanner } from "@/components/banner/ChampionBanner";
 import { BannerConfig, BannerWinner } from "@/types/banner";
-import { useAdminUpdate } from "@/contexts/AdminUpdateContext";
 import { getCachedData } from "@/utils/cache";
 
 export function UpdateDebugger() {
@@ -151,17 +150,27 @@ export function UpdateDebugger() {
 
 
     // 2. Update Logic (From Context)
-    const { isUpdating, logs, runUpdate } = useAdminUpdate();
-
-    // Sync context logs to local logs for display
-    useEffect(() => {
-        setDebugLogs(logs);
-    }, [logs]);
-
+    // 2. Update Logic (Local)
     const handleUpdateScores = async () => {
-        setUpdating(true); // Local visual loading state if needed, though context has isUpdating
-        await runUpdate();
-        setUpdating(false);
+        setUpdating(true);
+        setDebugLogs(prev => [...prev, "Iniciando atualização manual..."]);
+        try {
+            const res = await fetch("/api/admin/force-update", { method: "POST" });
+            const result = await res.json();
+
+            if (result.success) {
+                setDebugLogs(prev => [...prev, `Sucesso: ${result.message}`]);
+                if (result.updates > 0) {
+                    setDebugLogs(prev => [...prev, `${result.updates} jogos atualizados.`]);
+                }
+            } else {
+                setDebugLogs(prev => [...prev, `ERRO: ${result.error}`]);
+            }
+        } catch (e: any) {
+            setDebugLogs(prev => [...prev, `ERRO EXCEÇÃO: ${e.message}`]);
+        } finally {
+            setUpdating(false);
+        }
     };
 
     return (

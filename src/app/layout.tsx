@@ -3,7 +3,6 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/components/theme-provider";
-import { AdminUpdateProvider } from "@/contexts/AdminUpdateContext";
 // import { Toaster } from "@/components/ui/toaster";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -27,8 +26,6 @@ export const metadata: Metadata = {
   // },
 };
 
-import { ClientGlobalUpdater } from "@/components/admin/ClientGlobalUpdater";
-
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -47,11 +44,8 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <AuthProvider>
-            <AdminUpdateProvider>
-              <ClientGlobalUpdater />
-              {children}
-              {/* <Toaster /> */}
-            </AdminUpdateProvider>
+            {children}
+            {/* <Toaster /> */}
           </AuthProvider>
         </ThemeProvider>
       </body>
