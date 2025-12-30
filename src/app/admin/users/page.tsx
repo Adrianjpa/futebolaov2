@@ -1,0 +1,398 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import { createClient } from "@/lib/supabase";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Loader2, Trash2, Search, Filter, Shield, ShieldAlert, UserCheck, Key, Mail } from "lucide-react";
+import { format } from "date-fns";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+
+interface UserProfile {
+    id: string;
+    nome: string;
+    nickname: string;
+    email: string;
+    funcao: "admin" | "moderator" | "usuario";
+    status: "ativo" | "bloqueado" | "pendente";
+    foto_perfil: string | null;
+    created_at: string;
+}
+
+const SUPER_ADMIN_EMAILS = ["adrianjpa@gmail.com"];
+
+export default function AdminUsersPage() {
+    const [users, setUsers] = useState<UserProfile[]>([]);
+    const [filteredUsers, setFilteredUsers] = useState<UserProfile[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [searchTerm, setSearchTerm] = useState("");
+    const supabase = createClient();
+
+    const [statusFilter, setStatusFilter] = useState<string>("all");
+    const [roleFilter, setRoleFilter] = useState<string>("all");
+    const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
+
+    // Delete State
+    const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
+
+    useEffect(() => {
+        fetchUsers();
+    }, []);
+
+    useEffect(() => {
+        let result = users;
+
+        // Filter by Status
+        if (statusFilter !== "all") {
+            result = result.filter(u => u.status === statusFilter);
+        }
+
+        // Filter by Role
+        if (roleFilter !== "all") {
+            result = result.filter(u => u.funcao === roleFilter);
+        }
+
+        // Filter by Search
+        if (searchTerm) {
+            const lowerTerm = searchTerm.toLowerCase();
+            result = result.filter(u =>
+                (u.nome || "").toLowerCase().includes(lowerTerm) ||
+                (u.nickname || "").toLowerCase().includes(lowerTerm) ||
+                (u.email || "").toLowerCase().includes(lowerTerm)
+            );
+        }
+
+        // Sort by Name
+        result.sort((a, b) => {
+            const nameA = a.nome || "";
+            const nameB = b.nome || "";
+            return nameA.localeCompare(nameB);
+        });
+
+        setFilteredUsers(result);
+    }, [users, searchTerm, statusFilter, roleFilter]);
+
+    const fetchUsers = async () => {
+        setLoading(true);
+        try {
+            const { data, error } = await supabase
+                .from("profiles")
+                .select("*");
+
+            if (error) throw error;
+            setUsers(data as UserProfile[]);
+        } catch (error) {
+            console.error("Error fetching users:", error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleRoleChange = async (userId: string, newRole: string) => {
+        const user = users.find(u => u.id === userId);
+        if (user && SUPER_ADMIN_EMAILS.includes(user.email)) return;
+
+        try {
+            const { error } = await supabase
+                .from("profiles")
+                .update({ funcao: newRole as any })
+                .eq("id", userId);
+
+            if (error) throw error;
+            setUsers(prev => prev.map(u => u.id === userId ? { ...u, funcao: newRole as any } : u));
+        } catch (error) {
+            console.error("Error updating role:", error);
+        }
+    };
+
+    const handleStatusChange = async (userId: string, newStatus: string) => {
+        const user = users.find(u => u.id === userId);
+        if (user && SUPER_ADMIN_EMAILS.includes(user.email)) return;
+
+        try {
+            const { error } = await supabase
+                .from("profiles")
+                .update({ status: newStatus as any })
+                .eq("id", userId);
+
+            if (error) throw error;
+            setUsers(prev => prev.map(u => u.id === userId ? { ...u, status: newStatus as any } : u));
+        } catch (error) {
+            console.error("Error updating status:", error);
+        }
+    };
+
+    const toggleUser = (userId: string) => {
+        const user = users.find(u => u.id === userId);
+        if (SUPER_ADMIN_EMAILS.includes(user?.email || "")) return;
+
+        setSelectedUsers(prev =>
+            prev.includes(userId) ? prev.filter(id => id !== userId) : [...prev, userId]
+        );
+    };
+
+    const toggleAll = () => {
+        const selectableUsers = filteredUsers.filter(u => !SUPER_ADMIN_EMAILS.includes(u.email));
+        const selectableIds = selectableUsers.map(u => u.id);
+
+        const allSelectableSelected = selectableIds.every(id => selectedUsers.includes(id));
+
+        if (allSelectableSelected) {
+            setSelectedUsers(prev => prev.filter(id => !selectableIds.includes(id)));
+        } else {
+            setSelectedUsers(prev => {
+                const newSelection = new Set([...prev, ...selectableIds]);
+                return Array.from(newSelection);
+            });
+        }
+    };
+
+    const handleBulkDelete = async () => {
+        if (selectedUsers.length === 0) return;
+        setIsDeleting(true);
+        try {
+            // Note: In Supabase, deleting from profiles needs proper RLS or Admin client
+            // Since this is a Client Component, it depends on RLS or the user being an Admin
+            const { error } = await supabase
+                .from("profiles")
+                .delete()
+                .in("id", selectedUsers);
+
+            if (error) throw error;
+
+            setUsers(prev => prev.filter(u => !selectedUsers.includes(u.id)));
+            setSelectedUsers([]);
+            setIsDeleteOpen(false);
+        } catch (error) {
+            console.error("Error deleting users:", error);
+            alert("Erro ao excluir usuários. Verifique suas permissões.");
+        } finally {
+            setIsDeleting(false);
+        }
+    };
+
+    if (loading) return <div className="flex h-96 items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
+
+    return (
+        <div className="space-y-6">
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                <div>
+                    <h1 className="text-3xl font-bold tracking-tight">Gerenciar Usuários</h1>
+                    <p className="text-muted-foreground">Visualize e gerencie todos os membros da plataforma.</p>
+                </div>
+                <div className="flex items-center gap-2">
+                    {selectedUsers.length > 0 && (
+                        <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => setIsDeleteOpen(true)}
+                            className="mr-2 animate-in fade-in"
+                        >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Excluir Selecionados ({selectedUsers.length})
+                        </Button>
+                    )}
+                    <Badge variant="secondary" className="px-4 py-1.5 text-sm">
+                        Total: {users.length}
+                    </Badge>
+                </div>
+            </div>
+
+            <Card>
+                <CardHeader className="pb-3">
+                    <CardTitle>Membros</CardTitle>
+                    <CardDescription>
+                        Lista completa de usuários registrados.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <div className="mb-4 flex flex-col gap-4 md:flex-row md:items-center">
+                        <div className="relative flex-1">
+                            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                            <Input
+                                placeholder="Buscar por nome, apelido ou email..."
+                                className="pl-9"
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                            />
+                        </div>
+                        <Select value={statusFilter} onValueChange={setStatusFilter}>
+                            <SelectTrigger className="w-full md:w-[180px]">
+                                <Filter className="mr-2 h-4 w-4" />
+                                <SelectValue placeholder="Filtrar Status" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">Todos os Status</SelectItem>
+                                <SelectItem value="ativo">Ativo</SelectItem>
+                                <SelectItem value="pendente">Pendente</SelectItem>
+                                <SelectItem value="bloqueado">Bloqueado</SelectItem>
+                            </SelectContent>
+                        </Select>
+                        <Select value={roleFilter} onValueChange={setRoleFilter}>
+                            <SelectTrigger className="w-full md:w-[180px]">
+                                <Shield className="mr-2 h-4 w-4" />
+                                <SelectValue placeholder="Filtrar Função" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">Todas as Funções</SelectItem>
+                                <SelectItem value="usuario">Usuário</SelectItem>
+                                <SelectItem value="moderator">Moderador</SelectItem>
+                                <SelectItem value="admin">Admin</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+
+                    <div className="rounded-md border">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead className="w-[50px]">
+                                        <Checkbox
+                                            checked={selectedUsers.length === filteredUsers.length && filteredUsers.length > 0}
+                                            onCheckedChange={toggleAll}
+                                        />
+                                    </TableHead>
+                                    <TableHead className="w-[300px]">Usuário</TableHead>
+                                    <TableHead>Cadastro</TableHead>
+                                    <TableHead>Função</TableHead>
+                                    <TableHead>Status</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {filteredUsers.length === 0 ? (
+                                    <TableRow>
+                                        <TableCell colSpan={5} className="h-24 text-center">
+                                            Nenhum usuário encontrado.
+                                        </TableCell>
+                                    </TableRow>
+                                ) : (
+                                    filteredUsers.map((user) => (
+                                        <TableRow key={user.id} data-state={selectedUsers.includes(user.id) ? "selected" : undefined}>
+                                            <TableCell>
+                                                <Checkbox
+                                                    checked={selectedUsers.includes(user.id)}
+                                                    onCheckedChange={() => toggleUser(user.id)}
+                                                    disabled={SUPER_ADMIN_EMAILS.includes(user.email)}
+                                                    className={SUPER_ADMIN_EMAILS.includes(user.email) ? "opacity-50 cursor-not-allowed" : ""}
+                                                />
+                                            </TableCell>
+                                            <TableCell>
+                                                <div className="flex items-center gap-3">
+                                                    <Link href={`/dashboard/profile/${user.id}`}>
+                                                        <Avatar className="cursor-pointer hover:ring-2 hover:ring-primary transition-all">
+                                                            <AvatarImage src={user.foto_perfil || undefined} />
+                                                            <AvatarFallback>{(user.nickname || user.nome || "U").substring(0, 2).toUpperCase()}</AvatarFallback>
+                                                        </Avatar>
+                                                    </Link>
+                                                    <div className="flex flex-col gap-0.5">
+                                                        <div className="flex items-center gap-1.5">
+                                                            <Link href={`/dashboard/profile/${user.id}`} className="font-bold hover:underline hover:text-primary transition-colors">
+                                                                {user.nome}
+                                                            </Link>
+                                                            <span className="text-xs text-muted-foreground">({user.nickname})</span>
+                                                        </div>
+                                                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                                                            <span className="hidden sm:inline">{user.email}</span>
+                                                            <Popover>
+                                                                <PopoverTrigger asChild>
+                                                                    <div
+                                                                        onClick={(e) => e.stopPropagation()}
+                                                                        className="sm:hidden cursor-pointer p-1 -ml-1 hover:bg-muted rounded-full transition-colors"
+                                                                    >
+                                                                        <Mail className="h-3 w-3" />
+                                                                    </div>
+                                                                </PopoverTrigger>
+                                                                <PopoverContent className="w-auto p-2 text-xs" side="top">
+                                                                    {user.email}
+                                                                </PopoverContent>
+                                                            </Popover>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell>
+                                                {user.created_at ? format(new Date(user.created_at), "dd/MM/yyyy") : "-"}
+                                            </TableCell>
+                                            <TableCell>
+                                                <Select
+                                                    defaultValue={user.funcao}
+                                                    onValueChange={(v) => handleRoleChange(user.id, v)}
+                                                    disabled={SUPER_ADMIN_EMAILS.includes(user.email)}
+                                                >
+                                                    <SelectTrigger className="h-8 w-[130px] text-xs">
+                                                        <div className="flex items-center gap-2">
+                                                            {user.funcao === "admin" && <ShieldAlert className="h-3 w-3 text-red-500" />}
+                                                            {user.funcao === "moderator" && <Shield className="h-3 w-3 text-blue-500" />}
+                                                            {user.funcao === "usuario" && <UserCheck className="h-3 w-3 text-green-500" />}
+                                                            <SelectValue />
+                                                        </div>
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="usuario">Usuário</SelectItem>
+                                                        <SelectItem value="moderator">Moderador</SelectItem>
+                                                        <SelectItem value="admin">Admin</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                            </TableCell>
+                                            <TableCell>
+                                                <Select
+                                                    defaultValue={user.status}
+                                                    onValueChange={(v) => handleStatusChange(user.id, v)}
+                                                    disabled={SUPER_ADMIN_EMAILS.includes(user.email)}
+                                                >
+                                                    <SelectTrigger className={`h-8 w-[110px] text-xs border-none font-medium transition-colors ${user.status === 'ativo' ? 'bg-green-500/10 text-green-600 dark:text-green-400 hover:bg-green-500/20' :
+                                                        user.status === 'bloqueado' ? 'bg-red-500/10 text-red-600 dark:text-red-400 hover:bg-red-500/20' :
+                                                            'bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 hover:bg-yellow-500/20'
+                                                        }`}>
+                                                        <div className="flex items-center gap-1.5">
+                                                            <span className={`h-1.5 w-1.5 rounded-full ${user.status === 'ativo' ? 'bg-green-500' :
+                                                                user.status === 'bloqueado' ? 'bg-red-500' :
+                                                                    'bg-yellow-500'
+                                                                }`} />
+                                                            <SelectValue />
+                                                        </div>
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="ativo">Ativo</SelectItem>
+                                                        <SelectItem value="pendente">Pendente</SelectItem>
+                                                        <SelectItem value="bloqueado">Bloqueado</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))
+                                )}
+                            </TableBody>
+                        </Table>
+                    </div>
+                </CardContent>
+            </Card>
+
+            <Dialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Excluir Usuários</DialogTitle>
+                        <DialogDescription>
+                            Tem certeza que deseja excluir <strong>{selectedUsers.length}</strong> usuário(s)? Essa ação não pode ser desfeita.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setIsDeleteOpen(false)}>Cancelar</Button>
+                        <Button variant="destructive" onClick={handleBulkDelete} disabled={isDeleting}>
+                            {isDeleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Excluir"}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+        </div>
+    );
+}
