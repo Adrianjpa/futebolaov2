@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Download, Loader2, Calendar, Trophy, Edit, Trash2, Archive, RefreshCcw } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import Link from "next/link";
 import { format, parseISO } from "date-fns";
 import { getFlagUrl } from "@/lib/utils";
@@ -381,79 +382,87 @@ function MatchList({ championshipId }: { championshipId: string }) {
                 <span>Página {currentPage} de {totalPages}</span>
             </div>
 
-            <div className="grid gap-3">
-                {paginatedMatches.map((match) => (
-                    <div key={match.id} className="relative flex flex-col sm:flex-row items-center p-3 border rounded-xl bg-card/50 hover:bg-card hover:border-primary/20 transition-all gap-3 overflow-hidden group">
+            <TooltipProvider>
+                <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                    {paginatedMatches.map((match) => (
+                        <div key={match.id} className="relative flex flex-col items-center justify-center p-4 rounded-2xl bg-gradient-to-b from-card/80 to-card border border-border/50 hover:border-primary/30 transition-all group overflow-hidden shadow-sm hover:shadow-md h-[200px]">
 
-                        {/* Status Strip Indicator */}
-                        <div className={`absolute left-0 top-0 bottom-0 w-1 ${match.status === 'live' ? 'bg-red-500 animate-pulse' : match.status === 'finished' ? 'bg-slate-500/30' : 'bg-blue-500/50'}`} />
-
-                        {/* Header Mobile (Data + Status) */}
-                        <div className="flex w-full sm:w-auto sm:flex-col items-center justify-between sm:items-start gap-2 border-b sm:border-0 pb-2 sm:pb-0 sm:pl-2">
-                            <div className="flex items-center gap-1 text-[10px] font-mono text-muted-foreground whitespace-nowrap bg-muted/30 px-2 py-1 rounded">
-                                <Calendar className="h-3 w-3" />
-                                {format(parseISO(match.date), "dd/MM HH:mm")}
+                            {/* Rodada (Topo) */}
+                            <div className="absolute top-3 text-[10px] font-bold uppercase tracking-widest text-muted-foreground bg-muted/20 px-2 py-0.5 rounded-full">
+                                Rodada {match.round || "-"}
                             </div>
-                            <Badge variant={match.status === 'live' ? 'destructive' : 'secondary'} className="text-[9px] h-5 sm:hidden capitalize">
-                                {match.status === 'scheduled' ? 'Agendado' : match.status === 'live' ? 'Ao Vivo' : 'Fim'}
-                            </Badge>
-                        </div>
 
-                        {/* Match Grid (Teams & Score) */}
-                        <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 w-full flex-1 sm:px-4">
-                            {/* Home Team */}
-                            <div className="flex flex-col sm:flex-row items-center justify-end gap-2 text-center sm:text-right">
-                                <span className="text-xs sm:text-sm font-bold leading-tight line-clamp-2 sm:order-1 text-foreground/90">
-                                    {match.home_team}
-                                </span>
-                                <div className="relative h-10 w-10 sm:h-9 sm:w-9 shrink-0 sm:order-2 bg-white/5 rounded-full p-1 ring-1 ring-white/10">
-                                    <img
-                                        src={match.home_team_crest || getFlagUrl(match.home_team)}
-                                        alt={match.home_team}
-                                        className="h-full w-full object-contain"
-                                        onError={(e) => (e.currentTarget.style.display = 'none')}
-                                    />
+                            {/* Conteúdo Central (Escudos e Placar) */}
+                            <div className="flex items-center justify-center gap-6 w-full mt-2">
+                                {/* Home Team */}
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <div className="relative h-14 w-14 transition-transform hover:scale-110 cursor-help">
+                                            <div className="absolute inset-0 bg-primary/10 rounded-full blur-xl opacity-0 group-hover:opacity-100 transition-opacity" />
+                                            <img
+                                                src={match.home_team_crest || getFlagUrl(match.home_team)}
+                                                alt={match.home_team}
+                                                className="h-full w-full object-contain drop-shadow-lg"
+                                                onError={(e) => (e.currentTarget.style.display = 'none')}
+                                            />
+                                        </div>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                        <p className="font-bold">{match.home_team}</p>
+                                    </TooltipContent>
+                                </Tooltip>
+
+                                {/* Placar */}
+                                <div className="flex flex-col items-center">
+                                    <div className={`text-2xl font-black font-mono tracking-tighter ${match.status === 'live' ? 'text-red-500 animate-pulse' : 'text-foreground'}`}>
+                                        {match.status !== 'scheduled' ? (
+                                            <span className="flex gap-2">
+                                                <span>{match.score_home ?? 0}</span>
+                                                <span className="text-muted-foreground/30">:</span>
+                                                <span>{match.score_away ?? 0}</span>
+                                            </span>
+                                        ) : (
+                                            <span className="text-muted-foreground/20 text-xl">VS</span>
+                                        )}
+                                    </div>
                                 </div>
+
+                                {/* Away Team */}
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <div className="relative h-14 w-14 transition-transform hover:scale-110 cursor-help">
+                                            <div className="absolute inset-0 bg-primary/10 rounded-full blur-xl opacity-0 group-hover:opacity-100 transition-opacity" />
+                                            <img
+                                                src={match.away_team_crest || getFlagUrl(match.away_team)}
+                                                alt={match.away_team}
+                                                className="h-full w-full object-contain drop-shadow-lg"
+                                                onError={(e) => (e.currentTarget.style.display = 'none')}
+                                            />
+                                        </div>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                        <p className="font-bold">{match.away_team}</p>
+                                    </TooltipContent>
+                                </Tooltip>
                             </div>
 
-                            {/* Score Board */}
-                            <div className="flex flex-col items-center justify-center min-w-[60px]">
-                                <div className={`font-mono font-black text-lg sm:text-xl px-3 py-1 rounded-lg tracking-widest border transition-colors ${match.status === 'live' ? 'bg-red-500/10 text-red-500 border-red-500/20' : 'bg-muted/50 text-foreground border-border/50'}`}>
-                                    {match.status !== 'scheduled' ?
-                                        `${match.score_home ?? 0} : ${match.score_away ?? 0}`
-                                        : <span className="text-sm font-sans text-muted-foreground/50">VS</span>
-                                    }
+                            {/* Informações Inferiores (Data e Status) */}
+                            <div className="absolute bottom-3 flex flex-col items-center gap-1">
+                                <div className="flex items-center gap-1.5 text-[10px] font-medium text-muted-foreground">
+                                    <Calendar className="h-3 w-3 opacity-70" />
+                                    <span>{format(parseISO(match.date), "dd/MM • HH:mm")}</span>
                                 </div>
-                            </div>
-
-                            {/* Away Team */}
-                            <div className="flex flex-col sm:flex-row items-center justify-start gap-2 text-center sm:text-left">
-                                <div className="relative h-10 w-10 sm:h-9 sm:w-9 shrink-0 bg-white/5 rounded-full p-1 ring-1 ring-white/10">
-                                    <img
-                                        src={match.away_team_crest || getFlagUrl(match.away_team)}
-                                        alt={match.away_team}
-                                        className="h-full w-full object-contain"
-                                        onError={(e) => (e.currentTarget.style.display = 'none')}
-                                    />
-                                </div>
-                                <span className="text-xs sm:text-sm font-bold leading-tight line-clamp-2 text-foreground/90">
-                                    {match.away_team}
-                                </span>
+                                <Badge variant={match.status === 'live' ? 'destructive' : match.status === 'finished' ? 'secondary' : 'outline'} className="text-[9px] h-4 px-2 shadow-none border-0 bg-secondary/50 text-secondary-foreground uppercase tracking-wider">
+                                    {match.status === 'scheduled' ? 'Agendado' : match.status === 'live' ? '• Ao Vivo' : 'Encerrado'}
+                                </Badge>
                             </div>
                         </div>
-
-                        {/* Status (Desktop) */}
-                        <div className="hidden sm:flex flex-col items-end min-w-[90px] text-right pl-2 border-l border-white/5">
-                            <Badge variant={match.status === 'live' ? 'destructive' : match.status === 'finished' ? 'secondary' : 'outline'} className="text-[10px] capitalize shadow-sm">
-                                {match.status === 'scheduled' ? 'Agendado' : match.status === 'live' ? 'Ao Vivo' : 'Encerrado'}
-                            </Badge>
-                        </div>
-                    </div>
-                ))}
-            </div>
+                    ))}
+                </div>
+            </TooltipProvider>
 
             {totalPages > 1 && (
-                <div className="flex items-center justify-center gap-2 pt-2 flex-wrap">
+                <div className="flex items-center justify-center gap-2 pt-6 flex-wrap">
                     <Button
                         variant="outline"
                         size="sm"
