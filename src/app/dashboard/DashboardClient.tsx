@@ -26,14 +26,21 @@ export default function DashboardClient() {
     const [liveMatches, setLiveMatches] = useState<any[]>([]);
     const [nextMatches, setNextMatches] = useState<any[]>([]);
     const [recentMatches, setRecentMatches] = useState<any[]>([]);
-    const [topUsers, setTopUsers] = useState<any[]>([]);
     const [allUsers, setAllUsers] = useState<any[]>([]);
+    // const [topUsers, setTopUsers] = useState<any[]>([]); // Deprecated for global simple list
+    const [leadersMap, setLeadersMap] = useState<Record<string, any>>({});
     const [currentTime, setCurrentTime] = useState(new Date());
+
+
 
     const supabase = createClient();
     const isAdmin = profile?.funcao === "admin";
 
-    // 1. Fetch Users & Ranking (Specific to Dashboard)
+
+
+
+
+    // 1. Fetch Users & Ranking Per Championship
     useEffect(() => {
         if (!user) return;
 
@@ -41,15 +48,33 @@ export default function DashboardClient() {
             try {
                 // Fetch All Users (public_profiles)
                 const { data: usersData } = await (supabase.from("public_profiles").select("*") as any);
-                setAllUsers(usersData || []);
+                setAllUsers(usersData || []); // Top-level const? we need to verify if allUsers is defined in scope. It was in previous code.
 
-                // Fetch Top Users (Ranking View)
-                const { data: rankingData } = await (supabase
-                    .from("ranking_live") as any)
-                    .select("*")
-                    .order("total_points", { ascending: false })
-                    .limit(5);
-                setTopUsers(rankingData || []);
+                // Fetch Leaders for Active Championships
+                // We use 'ranking_by_championship' view which splits points by championship
+                const activeChampIds = Object.values(championshipsMap)
+                    .filter((c: any) => c.status === 'ativo')
+                    .map((c: any) => c.id);
+
+                if (activeChampIds.length > 0) {
+                    const { data: rankingData } = await (supabase
+                        .from("ranking_by_championship") as any)
+                        .select("*")
+                        .in("championship_id", activeChampIds)
+                        .order("total_points", { ascending: false });
+
+                    const newLeadersMap: Record<string, any> = {};
+
+                    // Logic: Since data is ordered by points desc, the first occurrence of a champ_id is the leader
+                    if (rankingData) {
+                        rankingData.forEach((row: any) => {
+                            if (!newLeadersMap[row.championship_id]) {
+                                newLeadersMap[row.championship_id] = row;
+                            }
+                        });
+                    }
+                    setLeadersMap(newLeadersMap);
+                }
 
                 // Fetch Recent Results
                 const { data: recent } = await (supabase
@@ -79,12 +104,29 @@ export default function DashboardClient() {
         const rankingChannel = supabase
             .channel('dashboard-ranking')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'predictions' }, async () => {
-                const { data: rankingData } = await (supabase
-                    .from("ranking_live") as any)
-                    .select("*")
-                    .order("total_points", { ascending: false })
-                    .limit(5);
-                setTopUsers(rankingData || []);
+                // Re-fetch logic (simplified clone of above)
+                // ideally refactor to function, but okay for now
+                const activeChampIds = Object.values(championshipsMap)
+                    .filter((c: any) => c.status === 'ativo')
+                    .map((c: any) => c.id);
+
+                if (activeChampIds.length > 0) {
+                    const { data: rankingData } = await (supabase
+                        .from("ranking_by_championship") as any)
+                        .select("*")
+                        .in("championship_id", activeChampIds)
+                        .order("total_points", { ascending: false });
+
+                    const newLeadersMap: Record<string, any> = {};
+                    if (rankingData) {
+                        rankingData.forEach((row: any) => {
+                            if (!newLeadersMap[row.championship_id]) {
+                                newLeadersMap[row.championship_id] = row;
+                            }
+                        });
+                    }
+                    setLeadersMap(newLeadersMap);
+                }
             })
             .subscribe();
 
@@ -128,8 +170,13 @@ export default function DashboardClient() {
 
     return (
         <div className="space-y-8 animate-in fade-in duration-500">
-            <div className="flex items-center justify-between">
-                <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+            {/* Top Bar / Status Section */}
+            <div className="flex flex-col space-y-4">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+
+
+                </div>
             </div>
 
             {/* Live Matches Section */}
@@ -256,11 +303,10 @@ export default function DashboardClient() {
                             {Object.values(championshipsMap)
                                 .filter((c: any) => c.status === 'ativo')
                                 .map((champ: any) => {
-                                    // Seleciona o líder para este campeonato específico (ou o geral se não houver filtro)
-                                    // Por enquanto, como o topUsers vem do ranking geral:
-                                    const leader = topUsers[0];
+                                    // Seleciona o líder ESPECÍFICO deste campeonato
+                                    const leader = leadersMap[champ.id];
 
-                                    // Se não houver líder, não mostra este campeonato no ranking lateral
+                                    // Se não houver líder (ninguém pontuou ainda neste campeonato), não mostra
                                     if (!leader) return null;
 
                                     return (
@@ -309,8 +355,8 @@ export default function DashboardClient() {
                                     );
                                 })}
 
-                            {/* Mensagem caso não haja nenhum líder em nenhum campeonato ativo */}
-                            {(topUsers.length === 0 || Object.values(championshipsMap).filter((c: any) => c.status === 'ativo').length === 0) && (
+                            {/* Mensagem caso não haja nenhum líder visível */}
+                            {(Object.keys(leadersMap).length === 0) && (
                                 <div className="text-center py-8 bg-accent/5 rounded-xl border border-dashed">
                                     <Trophy className="h-8 w-8 mx-auto mb-2 opacity-10" />
                                     <p className="text-xs text-muted-foreground px-4">O ranking será exibido assim que os primeiros palpites forem computados.</p>

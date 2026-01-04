@@ -60,7 +60,8 @@ export default function AdminSettingsPage() {
         try {
             const { error } = await (supabase
                 .from("system_settings") as any)
-                .upsert({ id: 'config', data: settings });
+                .update({ data: settings })
+                .eq('id', 'config');
 
             if (error) throw error;
             alert("Configurações salvas com sucesso!");

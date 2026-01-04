@@ -389,7 +389,7 @@ function MatchList({ championshipId }: { championshipId: string }) {
 
                             {/* Rodada (Topo) */}
                             <div className="absolute top-3 text-[10px] font-bold uppercase tracking-widest text-muted-foreground bg-muted/20 px-2 py-0.5 rounded-full">
-                                Rodada {match.round || "-"}
+                                {match.round_name || (match.round ? `Rodada ${match.round}` : "-")}
                             </div>
 
                             {/* Conteúdo Central (Escudos e Placar) */}

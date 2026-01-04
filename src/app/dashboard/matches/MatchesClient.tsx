@@ -11,6 +11,15 @@ import { Plus, Loader2, Calendar as CalendarIcon, ChevronLeft, ChevronRight } fr
 import { createClient } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { UnifiedMatchCard } from "@/components/UnifiedMatchCard";
+import { Trophy as TrophyIcon, Award, Info, CheckCircle2 } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+
+const TEAM_ISO_MAP: Record<string, string> = {
+    'Polônia': 'pl', 'Grécia': 'gr', 'Rússia': 'ru', 'República Tcheca': 'cz',
+    'Holanda': 'nl', 'Dinamarca': 'dk', 'Alemanha': 'de', 'Portugal': 'pt',
+    'Espanha': 'es', 'Itália': 'it', 'Irlanda': 'ie', 'Croácia': 'hr',
+    'França': 'fr', 'Inglaterra': 'gb-eng', 'Ucrânia': 'ua', 'Suécia': 'se'
+};
 
 interface Championship {
     id: string;
@@ -76,32 +85,69 @@ export default function MatchesClient() {
     const [matchDate, setMatchDate] = useState("");
     const [matchTime, setMatchTime] = useState("");
     const [round, setRound] = useState(1);
+    const [userSelection, setUserSelection] = useState<string[]>([]);
+    const [isSelectionLocked, setIsSelectionLocked] = useState(false);
+    const [officialRanking, setOfficialRanking] = useState<string[]>([]);
+    const [championshipTeams, setChampionshipTeams] = useState<any[]>([]);
 
     const fetchUsers = async () => {
         const { data } = await (supabase.from("public_profiles") as any).select("*");
         setUsers(data || []);
     };
 
-    useEffect(() => {
-        fetchUsers();
-    }, []);
-
-    useEffect(() => {
-        // Filter matches from context based on selection
-        let filtered = allActiveMatches.filter(m => m.status === 'scheduled');
-
-        if (selectedChampionship !== "all") {
-            filtered = filtered.filter(m => m.championship_id === selectedChampionship);
+    const fetchChampionshipData = async () => {
+        if (selectedChampionship === "all" || !authUser) {
+            setUserSelection([]);
+            setIsSelectionLocked(false);
+            setOfficialRanking([]);
+            setChampionshipTeams([]);
+            return;
         }
 
-        // Apply pagination
-        const from = (currentPage - 1) * ITEMS_PER_PAGE;
-        const to = from + ITEMS_PER_PAGE;
-        const paginated = filtered.slice(from, to);
+        try {
+            // 1. Fetch Participant data (selections)
+            const { data: part } = await supabase
+                .from("championship_participants")
+                .select("team_selections")
+                .eq("championship_id", selectedChampionship)
+                .eq("user_id", authUser.id)
+                .single();
 
-        setMatches(paginated);
-        setIsLastPage(to >= filtered.length);
-    }, [allActiveMatches, selectedChampionship, currentPage]);
+            if (part) setUserSelection(part.team_selections || []);
+
+            // 2. Fetch Champ settings (ranking & lock status)
+            const { data: champ } = await supabase
+                .from("championships")
+                .select("settings, status")
+                .eq("id", selectedChampionship)
+                .single();
+
+            if (champ) {
+                const settings = (champ.settings as any) || {};
+                setOfficialRanking(settings.officialRanking || []);
+                setChampionshipTeams(settings.teams || []);
+
+                // Check if first match started
+                const { data: firstMatch } = await supabase
+                    .from("matches")
+                    .select("date")
+                    .eq("championship_id", selectedChampionship)
+                    .order("date", { ascending: true })
+                    .limit(1)
+                    .single();
+
+                if (firstMatch) {
+                    const now = new Date();
+                    const matchDate = new Date(firstMatch.date);
+                    setIsSelectionLocked(now >= matchDate || champ.status === 'finalizado');
+                }
+            }
+        } catch (e) { console.error(e); }
+    };
+
+    useEffect(() => {
+        fetchChampionshipData();
+    }, [selectedChampionship, authUser, supabase]);
 
     const handleNextPage = () => {
         if (!isLastPage) setCurrentPage(prev => prev + 1);
@@ -227,6 +273,146 @@ export default function MatchesClient() {
                     )}
                 </div>
             </div>
+
+            {/* BANNER DE SELEÇÕES (Favoritos) */}
+            {selectedChampionship !== "all" && (
+                <Card className="mb-6 overflow-hidden border-2 border-primary/20 bg-gradient-to-br from-blue-950/20 to-slate-950/40 backdrop-blur-md relative group">
+                    <div className="absolute inset-0 bg-blue-500/5 opacity-50 group-hover:opacity-100 transition-opacity" />
+                    <CardContent className="p-4 sm:p-6 relative">
+                        <div className="flex flex-col lg:flex-row items-center justify-between gap-6">
+                            <div className="flex items-center gap-4">
+                                <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20 shadow-inner">
+                                    <Award className="h-6 w-6 text-primary" />
+                                </div>
+                                <div className="min-w-0">
+                                    <h3 className="text-lg font-bold text-slate-100 flex items-center gap-2 truncate">
+                                        Favoritos do Campeonato
+                                        {isSelectionLocked && <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />}
+                                    </h3>
+                                    <p className="text-xs text-muted-foreground truncate">
+                                        {isSelectionLocked ? "Escolhas encerradas. Veja seus acertos!" : "Escolha suas equipes favoritas antes do 1º jogo!"}
+                                    </p>
+                                </div>
+                            </div>
+
+                            {/* EXIBIÇÃO DAS BANDEIRAS */}
+                            <div className="flex items-center gap-3 sm:gap-6">
+                                {[0, 1, 2].map((idx) => {
+                                    const team = userSelection[idx];
+                                    const iso = TEAM_ISO_MAP[team] || 'xx';
+                                    const isCorrect = officialRanking.includes(team);
+                                    // SÓ MOSTRA FADE SE O RANKING OFICIAL TIVER SIDO PREENCHIDO
+                                    const isRankingReady = officialRanking.some(r => r && r !== "");
+                                    const showFade = isRankingReady && !isCorrect;
+
+                                    return (
+                                        <div key={idx} className="flex flex-col items-center gap-1.5 p-2 rounded-xl bg-slate-900/40 border border-white/5 transition-all hover:bg-slate-900/60 min-w-[70px] sm:min-w-[80px]">
+                                            <span className="text-[9px] sm:text-[10px] font-bold text-muted-foreground uppercase">{idx + 1}º Opção</span>
+                                            {team ? (
+                                                <TooltipProvider>
+                                                    <Tooltip>
+                                                        <TooltipTrigger asChild>
+                                                            <div className={`transition-all duration-700 ${showFade ? "opacity-20 grayscale blur-[1px] scale-90" : "opacity-100 scale-105 drop-shadow-[0_0_8px_rgba(255,255,255,0.2)]"}`}>
+                                                                <img
+                                                                    src={`https://flagcdn.com/w80/${iso}.png`}
+                                                                    alt={team}
+                                                                    className="h-6 sm:h-8 w-10 sm:w-12 object-cover rounded shadow-lg border border-white/10"
+                                                                />
+                                                            </div>
+                                                        </TooltipTrigger>
+                                                        <TooltipContent className={showFade ? "opacity-70 line-through" : "font-bold"}>
+                                                            {team} {showFade ? "(Eliminado)" : ""}
+                                                        </TooltipContent>
+                                                    </Tooltip>
+                                                </TooltipProvider>
+                                            ) : (
+                                                <div className="h-6 sm:h-8 w-10 sm:w-12 bg-slate-800/50 rounded border border-dashed border-white/10 flex items-center justify-center">
+                                                    <Plus className="h-3 w-3 text-white/20" />
+                                                </div>
+                                            )}
+                                            <span className={`text-[9px] sm:text-[10px] font-bold truncate max-w-[65px] sm:max-w-[70px] ${showFade ? "opacity-30 line-through" : "text-slate-200"}`}>
+                                                {team || "Pendente"}
+                                            </span>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+
+                            {/* BOTÃO DE EDIÇÃO (Se não estiver bloqueado) */}
+                            {!isSelectionLocked && (
+                                <Dialog>
+                                    <DialogTrigger asChild>
+                                        <Button size="sm" variant="outline" className="text-xs font-bold bg-primary/10 border-primary/20 hover:bg-primary/20">
+                                            {userSelection.length > 0 ? "Alterar" : "Escolher"}
+                                        </Button>
+                                    </DialogTrigger>
+                                    <DialogContent className="sm:max-w-[500px] bg-slate-950 border-white/10">
+                                        <DialogHeader>
+                                            <DialogTitle className="text-xl font-bold text-slate-100">Suas Escolhas de Favoritos</DialogTitle>
+                                            <DialogDescription className="text-slate-400">
+                                                Selecione as 3 seleções que você acredita que chegarão no topo.
+                                            </DialogDescription>
+                                        </DialogHeader>
+                                        <div className="space-y-6 py-4">
+                                            {[0, 1, 2].map((idx) => (
+                                                <div key={idx} className="space-y-2">
+                                                    <Label className="text-slate-300 font-bold">{idx + 1}º Opção</Label>
+                                                    <Select
+                                                        value={userSelection[idx]}
+                                                        onValueChange={(val) => {
+                                                            const newSel = [...userSelection];
+                                                            newSel[idx] = val;
+                                                            setUserSelection(newSel);
+                                                        }}
+                                                    >
+                                                        <SelectTrigger className="bg-slate-900/50 border-white/10">
+                                                            <SelectValue placeholder="Selecione uma seleção..." />
+                                                        </SelectTrigger>
+                                                        <SelectContent className="bg-slate-900 border-white/10">
+                                                            {championshipTeams.map((t: any) => (
+                                                                <SelectItem key={t.id} value={t.name} disabled={userSelection.includes(t.name) && userSelection[idx] !== t.name}>
+                                                                    <div className="flex items-center gap-2">
+                                                                        {TEAM_ISO_MAP[t.name] && <img src={`https://flagcdn.com/w20/${TEAM_ISO_MAP[t.name]}.png`} className="h-3 w-4 object-contain" />}
+                                                                        {t.name}
+                                                                    </div>
+                                                                </SelectItem>
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
+                                                </div>
+                                            ))}
+                                        </div>
+                                        <DialogFooter>
+                                            <Button
+                                                className="w-full bg-primary hover:bg-primary/90"
+                                                onClick={async () => {
+                                                    try {
+                                                        const { error } = await supabase
+                                                            .from("championship_participants")
+                                                            .upsert({
+                                                                championship_id: selectedChampionship,
+                                                                user_id: authUser?.id,
+                                                                team_selections: userSelection
+                                                            }, { onConflict: 'championship_id,user_id' });
+
+                                                        if (error) throw error;
+                                                        alert("Escolhas salvas com sucesso!");
+                                                        fetchChampionshipData();
+                                                    } catch (e: any) {
+                                                        alert("Erro ao salvar: " + e.message);
+                                                    }
+                                                }}
+                                            >
+                                                Salvar Favoritos
+                                            </Button>
+                                        </DialogFooter>
+                                    </DialogContent>
+                                </Dialog>
+                            )}
+                        </div>
+                    </CardContent>
+                </Card>
+            )}
 
             <div className="space-y-4">
                 {matches.length === 0 && !matchesLoading && (

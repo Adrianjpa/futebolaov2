@@ -24,6 +24,7 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { UserNav } from "@/components/dashboard/UserNav";
+import { GlobalAdminTimer } from "@/components/admin/GlobalAdminTimer";
 
 import { MatchesProvider } from "@/contexts/MatchesContext";
 
@@ -142,8 +143,8 @@ export default function DashboardLayout({
                     </aside>
 
                     {/* Main Content */}
-                    <div className="flex-1 flex flex-col h-full min-w-0 overflow-hidden">
-                        <header className="h-16 border-b border-white/20 flex items-center justify-between px-4 md:px-6 bg-white/30 backdrop-blur-xl shrink-0 z-30 shadow-sm">
+                    <div className="flex-1 flex flex-col h-full min-w-0 overflow-hidden relative">
+                        <header className="h-16 border-b border-white/20 flex items-center justify-between px-4 md:px-6 bg-white/30 backdrop-blur-xl shrink-0 z-30 shadow-sm relative">
                             <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setIsSidebarOpen(true)}>
                                 <Menu className="h-6 w-6" />
                             </Button>
@@ -152,7 +153,11 @@ export default function DashboardLayout({
                                 <UserNav />
                             </div>
                         </header>
-                        <main className="flex-1 overflow-y-auto p-4 md:p-6">
+
+                        {/* Global Admin Timer (Fixed bar below header) */}
+                        <GlobalAdminTimer />
+
+                        <main className="flex-1 overflow-y-auto p-4 md:p-6 custom-scrollbar">
                             {children}
                         </main>
                     </div>

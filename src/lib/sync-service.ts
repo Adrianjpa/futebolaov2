@@ -140,6 +140,7 @@ export async function syncMatchesFromExternalApi() {
                             score_away: apiAwayScore,
                             status: newStatus,
                             date: apiDate,
+                            updated_at: new Date().toISOString(),
                             home_team_crest: apiMatch.homeTeam?.crest || localMatch.home_team_crest,
                             away_team_crest: apiMatch.awayTeam?.crest || localMatch.away_team_crest
                         })
@@ -156,6 +157,13 @@ export async function syncMatchesFromExternalApi() {
                 // If match not in current API response, maybe it's outside the 1-day range?
             }
         }
+
+        // 5. Update System Heartbeat (Last Check Time)
+        // This ensures the dashboard timer knows the system is alive even if no matches were updated.
+        await (supabaseAdmin
+            .from("system_settings") as any)
+            .update({ updated_at: new Date().toISOString() })
+            .eq("id", "config");
 
         return {
             success: true,
