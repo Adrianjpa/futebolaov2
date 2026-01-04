@@ -52,7 +52,7 @@ export function MatchesProvider({ children }: { children: ReactNode }) {
             const { data: matchesData } = await (supabase
                 .from("matches") as any)
                 .select("*")
-                .or(`date.gte.${todayStart.toISOString()},status.eq.live`)
+                .gte("date", todayStart.toISOString())
                 .order("date", { ascending: true });
 
             const formatted = matchesData?.map((m: any) => ({
