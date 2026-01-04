@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { createClient } from "@/lib/supabase";
 import { Card, CardContent } from "@/components/ui/card";
@@ -16,6 +16,13 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import Link from "next/link";
 import { Countdown } from "@/components/ui/countdown";
 import { getFlagUrl } from "@/lib/utils";
+
+const TEAM_ISO_MAP: Record<string, string> = {
+    'Polônia': 'pl', 'Grécia': 'gr', 'Rússia': 'ru', 'República Tcheca': 'cz',
+    'Holanda': 'nl', 'Dinamarca': 'dk', 'Alemanha': 'de', 'Portugal': 'pt',
+    'Espanha': 'es', 'Itália': 'it', 'Irlanda': 'ie', 'Croácia': 'hr',
+    'França': 'fr', 'Inglaterra': 'gb-eng', 'Ucrânia': 'ua', 'Suécia': 'se'
+};
 
 interface UnifiedMatchCardProps {
     match: any;
@@ -63,11 +70,61 @@ export function UnifiedMatchCard({
     const [expanded, setExpanded] = useState(false);
     const [predictions, setPredictions] = useState<any[]>([]);
     const [loadingPreds, setLoadingPreds] = useState(false);
+    const [participantsData, setParticipantsData] = useState<any[]>([]); // New state for selections
+    const [enablePriority, setEnablePriority] = useState<boolean>(true);
+    const [officialRanking, setOfficialRanking] = useState<string[]>([]);
     const [showFinalizeDialog, setShowFinalizeDialog] = useState(false);
 
     // Pred state for betting
     const [betHome, setBetHome] = useState<string>("");
     const [betAway, setBetAway] = useState<string>("");
+
+    // --- HIGHLANDER LOGIC (Strict Priority) ---
+    // Calculates the "Highlander" winners: Find the highest ranking team that was selected,
+    // then find the highest priority (lowest index) used for that team, and select ONLY those users.
+    const highlanderStats = useMemo(() => {
+        // Validation: Must have ranking and participants
+        const ranking = officialRanking || [];
+        if (!ranking.length || (!participantsData || participantsData.length === 0)) return null;
+
+        let winningTeam: string | null = null;
+        let winningPriorityIdx: number = 999;
+        let winnersSet = new Set<string>();
+
+        // 1. Iterate official ranking sequentially (1st -> 2nd -> ...)
+        for (const adminTeam of ranking) {
+            if (!adminTeam) continue;
+
+            // Find ALL users who selected this team (regardless of which slot)
+            const usersWithTeam = participantsData.filter(p => (p.teamSelections || []).includes(adminTeam));
+
+            if (usersWithTeam.length > 0) {
+                // FOUND THE BEST TEAM WITH BETS.
+                // According to rules ("Espanha ta na posição 1... se ninguem... ve o 2 lugar"),
+                // we stop at the first team that has any bets.
+                winningTeam = adminTeam;
+
+                // 2. Find the BEST priority used (Lowest Index = Best Priority)
+                let bestPriority = 999;
+                usersWithTeam.forEach(u => {
+                    const idx = u.teamSelections.indexOf(adminTeam);
+                    if (idx !== -1 && idx < bestPriority) bestPriority = idx;
+                });
+                winningPriorityIdx = bestPriority;
+
+                // 3. Collect winners who matched this best priority
+                usersWithTeam.forEach(u => {
+                    if (u.teamSelections.indexOf(adminTeam) === bestPriority) {
+                        winnersSet.add(u.userId);
+                    }
+                });
+
+                // STOP. Winners defined.
+                break;
+            }
+        }
+        return { winningTeam, winningPriorityIdx, winnersSet };
+    }, [officialRanking, participantsData]);
 
     const handleSaveScore = async (e: React.MouseEvent) => {
         e.stopPropagation();
@@ -146,16 +203,74 @@ export function UnifiedMatchCard({
         }
     };
 
+    const canViewPredictions = isAdmin || match.status !== 'scheduled';
+
     const handleToggleExpand = async () => {
-        if (!expanded && predictions.length === 0) {
+        if (!canViewPredictions && !isAdmin) return;
+
+        if (!expanded) {
             setLoadingPreds(true);
             try {
-                const { data } = await supabase
-                    .from("predictions")
-                    .select("*")
-                    .eq("match_id", match.id);
-                setPredictions(data || []);
-            } catch (e) { console.error(e); } finally { setLoadingPreds(false); }
+                // 1. Fetch Predictions
+                if (predictions.length === 0) {
+                    const { data: preds } = await supabase
+                        .from("predictions")
+                        .select("*")
+                        .eq("match_id", match.id)
+                        .order('points', { ascending: false });
+                    setPredictions(preds || []);
+                }
+
+                // 2. Fetch Championship Data (Ranking & Participants)
+                const champId = match.championship_id || match.championshipId;
+                if (champId) {
+                    const { data: champ } = await supabase
+                        .from("championships")
+                        .select("settings")
+                        .eq("id", champId)
+                        .single();
+
+                    if (champ) {
+                        const settings = (champ as any).settings || {};
+                        const ranking = settings.officialRanking || [];
+                        setOfficialRanking(ranking);
+                        // Force boolean conversion and default to TRUE for Euro legacy
+                        setEnablePriority(settings.enableSelectionPriority !== false);
+
+                        // 3. Fetch Participants Selections with Fallback
+                        let finalParticipants: any[] = [];
+
+                        // Try new table
+                        const { data: newParts } = await supabase
+                            .from("championship_participants")
+                            .select("user_id, team_selections")
+                            .eq("championship_id", champId);
+
+                        if (newParts && newParts.length > 0) {
+                            // Map table structure to local structure
+                            finalParticipants = newParts.map((p: any) => ({
+                                userId: p.user_id,
+                                teamSelections: p.team_selections || [],
+                                nickname: p.nickname || "Usuário" // We might need to fetch profile names if not in this table, but usually we map by ID later
+                            }));
+                        } else {
+                            // Fallback to Settings (Legacy JSON)
+                            const legacyParts = settings.participants || [];
+                            finalParticipants = legacyParts.map((p: any) => ({
+                                userId: p.userId || p.id || p.user_id,
+                                nickname: p.nickname || p.displayName || p.nome,
+                                teamSelections: p.teamSelections || p.team_selections || p.selections || []
+                            }));
+                        }
+
+                        setParticipantsData(finalParticipants);
+                    }
+                }
+            } catch (e) {
+                console.error("Error in UnifiedMatchCard expand:", e);
+            } finally {
+                setLoadingPreds(false);
+            }
         }
         setExpanded(!expanded);
     };
@@ -189,8 +304,8 @@ export function UnifiedMatchCard({
                                     <Trophy className="h-5 w-5 text-blue-500" />
                                 )}
                             </div>
-                            <span className="hidden md:block text-[11px] font-bold text-muted-foreground bg-muted dark:bg-slate-800/40 px-2.5 py-1 rounded-md border border-border dark:border-slate-700/50">
-                                {match.round ? `Rodada ${match.round}` : "Rodada --"}
+                            <span className="hidden md:block text-[11px] font-bold text-muted-foreground bg-muted dark:bg-slate-800/40 px-2.5 py-1 rounded-md border border-border dark:border-slate-700/50 uppercase">
+                                {match.round_name || (match.round ? `Rodada ${match.round}` : "Rodada --")}
                             </span>
                         </div>
 
@@ -218,8 +333,8 @@ export function UnifiedMatchCard({
 
                     {/* 2. MOBILE ONLY: Round (Centered) */}
                     <div className="md:hidden flex justify-center mb-4">
-                        <span className="text-[11px] font-bold text-muted-foreground/80 dark:text-slate-400/80">
-                            {match.round ? `Rodada ${match.round}` : "Rodada --"}
+                        <span className="text-[11px] font-bold text-muted-foreground/80 dark:text-slate-400/80 uppercase">
+                            {match.round_name || (match.round ? `Rodada ${match.round}` : "Rodada --")}
                         </span>
                     </div>
 
@@ -363,43 +478,15 @@ export function UnifiedMatchCard({
 
                 {/* PREDICTIONS SECTION */}
                 {expanded && (
-                    <div className="border-t border-border dark:border-slate-800 bg-muted/30 dark:bg-slate-900/30 animate-in slide-in-from-top-4 duration-300">
+                    <div className="border-t border-border dark:border-slate-800 bg-muted/30 dark:bg-slate-950 animate-in slide-in-from-top-4 duration-300">
                         <div className="p-4 sm:p-6 space-y-4">
-                            {/* Status for betting */}
-                            {!isLocked && showBetButton && (
-                                <div className="mb-6 p-4 bg-blue-500/5 border border-blue-500/10 rounded-2xl" onClick={(e) => e.stopPropagation()}>
-                                    <div className="flex items-center justify-between gap-4">
-                                        <div className="flex-1 flex items-center justify-center gap-2">
-                                            <Input
-                                                type="number"
-                                                placeholder="0"
-                                                className="w-16 h-12 text-center text-xl font-bold rounded-xl bg-background border-input"
-                                                value={betHome}
-                                                onChange={(e) => setBetHome(e.target.value)}
-                                            />
-                                            <span className="font-bold text-muted-foreground">x</span>
-                                            <Input
-                                                type="number"
-                                                placeholder="0"
-                                                className="w-16 h-12 text-center text-xl font-bold rounded-xl bg-background border-input"
-                                                value={betAway}
-                                                onChange={(e) => setBetAway(e.target.value)}
-                                            />
-                                        </div>
-                                        <Button
-                                            onClick={handleSavePrediction}
-                                            disabled={saving || !betHome || !betAway}
-                                            className="h-12 px-8 rounded-xl font-bold"
-                                        >
-                                            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Palpitar"}
-                                        </Button>
-                                    </div>
-                                </div>
-                            )}
 
-                            <div className="flex items-center gap-2 mb-2">
-                                <Users className="h-4 w-4 text-blue-500" />
-                                <h4 className="text-sm font-bold text-foreground">Palpites da Galera</h4>
+                            {/* Header Section */}
+                            <div className="flex items-center justify-between mb-4">
+                                <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Palpites da Galera</h4>
+                                <span className="px-2 py-0.5 rounded-full bg-muted dark:bg-slate-800 text-[10px] font-bold text-muted-foreground border border-border">
+                                    {predictions.length} palpites
+                                </span>
                             </div>
 
                             {loadingPreds ? (
@@ -407,26 +494,230 @@ export function UnifiedMatchCard({
                                     <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                                 </div>
                             ) : predictions.length > 0 ? (
-                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                                <div className="space-y-2">
                                     {predictions.map((pred) => {
                                         const userProfile = users.find(u => u.id === pred.user_id);
+                                        const points = pred.points || 0;
+                                        const isZero = points === 0;
+                                        const isExact = !isLive && (pred.home_score === match.score_home && pred.away_score === match.score_away);
+
+                                        // TODO: Implementar lógica de fichas/combo/bonus
+                                        const isGoalsOnly = false; // Roxo (Placeholder)
+                                        const isCombo = false; // Dourado (Placeholder)
+                                        const isBonus = false; // Prata (Placeholder)
+
+                                        let bgClass = "";
+                                        let badgeClass = "";
+
+                                        if (isCombo) {
+                                            bgClass = "bg-yellow-950/40 border-yellow-700/50 hover:bg-yellow-900/40";
+                                            badgeClass = "bg-yellow-500 text-black";
+                                        } else if (isBonus) {
+                                            bgClass = "bg-slate-700/40 border-slate-500/50 hover:bg-slate-700/30";
+                                            badgeClass = "bg-slate-400 text-black";
+                                        } else if (isZero) {
+                                            bgClass = "bg-red-950/20 border-red-900/30 hover:bg-red-900/20";
+                                            badgeClass = "bg-red-600 text-white";
+                                        } else if (isExact) {
+                                            bgClass = "bg-emerald-950/30 border-emerald-900/40 hover:bg-emerald-900/20";
+                                            badgeClass = "bg-emerald-500 text-white shadow-lg shadow-emerald-900/20 ring-1 ring-emerald-400/50 scale-110";
+                                        } else if (isGoalsOnly) {
+                                            bgClass = "bg-purple-950/30 border-purple-900/30 hover:bg-purple-900/20";
+                                            badgeClass = "bg-purple-600 text-white";
+                                        } else {
+                                            bgClass = "bg-blue-950/30 border-blue-900/30 hover:bg-blue-900/20";
+                                            badgeClass = "bg-blue-600 text-white";
+                                        }
+
                                         return (
-                                            <div key={pred.id} className="flex items-center justify-between p-3 rounded-xl bg-muted/40 dark:bg-slate-800/40 border border-border dark:border-slate-700/50">
-                                                <div className="flex items-center gap-2">
-                                                    <Avatar className="h-7 w-7 border border-border">
+                                            <div key={pred.id} className={`grid grid-cols-[1fr_auto_1fr] sm:grid-cols-3 items-center gap-2 p-3 rounded-xl border transition-all duration-300 ${bgClass}`}>
+                                                {/* Left: Avatar + Name */}
+                                                <div className="flex items-center gap-3 min-w-0 overflow-hidden text-left">
+                                                    <Avatar
+                                                        className="h-8 w-8 border border-white/10 shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            window.location.href = `/dashboard/profile/${pred.user_id}`;
+                                                        }}
+                                                    >
                                                         <AvatarImage src={userProfile?.foto_perfil} />
-                                                        <AvatarFallback className="bg-muted text-[10px] text-muted-foreground">
+                                                        <AvatarFallback className="bg-slate-800 text-white text-xs font-bold">
                                                             {(userProfile?.nickname || userProfile?.nome || "?").substring(0, 2).toUpperCase()}
                                                         </AvatarFallback>
                                                     </Avatar>
-                                                    <span className="text-xs font-medium text-foreground truncate max-w-[80px]">
-                                                        {userProfile?.nickname || userProfile?.nome || "User"}
-                                                    </span>
+                                                    <div className="flex flex-col min-w-0 leading-none">
+                                                        <Link
+                                                            href={`/dashboard/profile/${pred.user_id}`}
+                                                            onClick={(e) => e.stopPropagation()}
+                                                            className="text-sm font-bold text-slate-200 truncate mb-0.5 hover:text-blue-400 transition-colors"
+                                                        >
+                                                            {userProfile?.nickname || userProfile?.nome || "User"}
+                                                        </Link>
+                                                        {(() => {
+                                                            const p = participantsData.find(pd =>
+                                                                pd.userId === pred.user_id ||
+                                                                (userProfile?.nickname && pd.nickname === userProfile.nickname) ||
+                                                                (userProfile?.nome && pd.nickname === userProfile.nome)
+                                                            );
+                                                            if (p?.teamSelections?.length > 0) {
+                                                                return (
+                                                                    <div className="flex items-center min-h-[14px]" onClick={(e) => e.stopPropagation()}>
+                                                                        {/* MOBILE: TROPHY (Using Popover for better touch support) */}
+                                                                        <div className="md:hidden">
+                                                                            <Popover>
+                                                                                <PopoverTrigger asChild>
+                                                                                    <Button
+                                                                                        variant="ghost"
+                                                                                        size="icon"
+                                                                                        className="h-5 w-5 p-0 hover:bg-transparent"
+                                                                                        onClick={(e) => e.stopPropagation()}
+                                                                                    >
+                                                                                        <Trophy className="h-3.5 w-3.5 text-yellow-500" />
+                                                                                    </Button>
+                                                                                </PopoverTrigger>
+                                                                                <PopoverContent
+                                                                                    className="bg-slate-900 border-slate-700 p-3 shadow-xl w-48"
+                                                                                    onClick={(e) => e.stopPropagation()}
+                                                                                >
+                                                                                    <div className="space-y-1.5">
+                                                                                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest border-b border-border/50 pb-1 mb-2">Seleções Favoritas</p>
+                                                                                        {(() => {
+                                                                                            const isRankingReady = officialRanking.some(r => r && r !== "");
+                                                                                            if (!isRankingReady) {
+                                                                                                return p.teamSelections.map((team: string, idx: number) => (
+                                                                                                    <div key={idx} className="flex items-center gap-2">
+                                                                                                        <span className="text-[10px] font-mono text-muted-foreground w-4">{idx + 1}º</span>
+                                                                                                        <span className="text-xs font-bold text-slate-100">{team}</span>
+                                                                                                    </div>
+                                                                                                ));
+                                                                                            }
+
+                                                                                            return p.teamSelections.map((team: string, idx: number) => {
+                                                                                                const teamRank = officialRanking.indexOf(team);
+                                                                                                const isHit = teamRank !== -1;
+
+                                                                                                // USE CENTRALIZED HIGHLANDER STATS
+                                                                                                const isAbsoluteWinner = enablePriority
+                                                                                                    ? (highlanderStats?.winnersSet.has(p.userId) && team === highlanderStats.winningTeam && idx === highlanderStats.winningPriorityIdx)
+                                                                                                    : isHit;
+
+                                                                                                let opacityClass = "opacity-40 grayscale";
+                                                                                                let textClass = "text-muted-foreground";
+                                                                                                let statusBadge = null;
+
+                                                                                                if (isAbsoluteWinner) {
+                                                                                                    opacityClass = "opacity-100 grayscale-0";
+                                                                                                    textClass = enablePriority ? "text-yellow-400 font-black drop-shadow-[0_0_8px_rgba(250,204,21,0.5)]" : "text-emerald-400 font-bold";
+                                                                                                    statusBadge = enablePriority ? (
+                                                                                                        <span className="text-[8px] px-1.5 py-0.5 bg-yellow-500/20 text-yellow-500 border border-yellow-500/30 rounded ml-auto flex items-center gap-1 animate-pulse">
+                                                                                                            <Trophy className="h-2 w-2" /> LÍDER
+                                                                                                        </span>
+                                                                                                    ) : (
+                                                                                                        <span className="text-[8px] px-1.5 py-0.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded ml-auto">ACERTOU</span>
+                                                                                                    );
+                                                                                                } else if (!enablePriority && isHit) {
+                                                                                                    opacityClass = "opacity-100 grayscale-0";
+                                                                                                    textClass = "text-emerald-400 font-bold";
+                                                                                                    statusBadge = <span className="text-[8px] px-1.5 py-0.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded ml-auto">ACERTOU</span>;
+                                                                                                }
+
+                                                                                                return (
+                                                                                                    <div key={idx} className={`flex items-center gap-2 transition-all duration-300 ${opacityClass}`}>
+                                                                                                        <span className="text-[10px] font-mono text-muted-foreground w-4">{idx + 1}º</span>
+                                                                                                        <span className={`text-xs ${textClass}`}>{team}</span>
+                                                                                                        {statusBadge}
+                                                                                                    </div>
+                                                                                                );
+                                                                                            });
+                                                                                        })()}
+                                                                                    </div>
+                                                                                </PopoverContent>
+                                                                            </Popover>
+                                                                        </div>
+
+                                                                        {/* DESKTOP: FLAGS SIDE BY SIDE */}
+                                                                        <div className="hidden md:flex items-center gap-1">
+                                                                            {(() => {
+                                                                                const isRankingReady = officialRanking.some(r => r && r !== "");
+                                                                                if (!isRankingReady) {
+                                                                                    return p.teamSelections.map((team: string, idx: number) => {
+                                                                                        const iso = TEAM_ISO_MAP[team] || 'xx';
+                                                                                        return (
+                                                                                            <Tooltip key={idx}>
+                                                                                                <TooltipTrigger asChild>
+                                                                                                    <div className="relative group/flag transition-all duration-300">
+                                                                                                        <img src={`https://flagcdn.com/w40/${iso}.png`} className="h-3 w-4.5 object-cover rounded-[2px] border border-white/5" />
+                                                                                                    </div>
+                                                                                                </TooltipTrigger>
+                                                                                                <TooltipContent className="text-[10px] uppercase font-bold">{idx + 1}º {team}</TooltipContent>
+                                                                                            </Tooltip>
+                                                                                        );
+                                                                                    });
+                                                                                }
+
+                                                                                return p.teamSelections.map((team: string, idx: number) => {
+                                                                                    const iso = TEAM_ISO_MAP[team] || 'xx';
+                                                                                    const teamRank = officialRanking.indexOf(team);
+                                                                                    const isHit = teamRank !== -1;
+
+                                                                                    // USE CENTRALIZED HIGHLANDER STATS
+                                                                                    const isAbsoluteWinner = enablePriority
+                                                                                        ? (highlanderStats?.winnersSet.has(p.userId) && team === highlanderStats.winningTeam && idx === highlanderStats.winningPriorityIdx)
+                                                                                        : isHit; // Fallback to simple hit if priority off
+
+                                                                                    // Simple hit check for visual fallback
+                                                                                    const isSimpleHit = !enablePriority && isHit;
+
+                                                                                    return (
+                                                                                        <Tooltip key={idx}>
+                                                                                            <TooltipTrigger asChild>
+                                                                                                <div className={`relative group/flag transition-all duration-500
+                                                                                                    ${isAbsoluteWinner ? "opacity-100 scale-125 z-10 drop-shadow-[0_0_12px_rgba(250,204,21,0.8)]" : "opacity-20 grayscale blur-[0.5px] scale-90"}
+                                                                                                    ${isSimpleHit ? "opacity-100 grayscale-0 blur-0 scale-100 drop-shadow-[0_0_8px_rgba(16,185,129,0.5)] border-emerald-500/50" : ""}
+                                                                                                `}>
+                                                                                                    <img
+                                                                                                        src={`https://flagcdn.com/w40/${iso}.png`}
+                                                                                                        alt={team}
+                                                                                                        className={`h-3 w-4.5 object-cover rounded-[2px] shadow-sm cursor-help border transition-all ${isAbsoluteWinner ? `border-yellow-400 border-2` : (isSimpleHit ? `border-emerald-400 border-2` : 'border-white/5')}`}
+                                                                                                    />
+                                                                                                    {isAbsoluteWinner && (
+                                                                                                        <div className="absolute -top-1.5 -right-1.5 h-3 w-3 bg-yellow-400 rounded-full border-2 border-slate-950 animate-bounce shadow-[0_0_8px_rgba(250,204,21,1)] flex items-center justify-center">
+                                                                                                            <div className="h-1 w-1 bg-slate-950 rounded-full" />
+                                                                                                        </div>
+                                                                                                    )}
+                                                                                                </div>
+                                                                                            </TooltipTrigger>
+                                                                                            <TooltipContent side="bottom" className={`text-[10px] font-bold px-2 py-1 ${!isAbsoluteWinner && !isSimpleHit ? "opacity-70" : ""}`}>
+                                                                                                {idx + 1}º {team}
+                                                                                                {isAbsoluteWinner && " (LÍDER ABSOLUTO! 🏆)"}
+                                                                                                {isSimpleHit && " (Acertou! ✅)"}
+                                                                                                {!isAbsoluteWinner && !isSimpleHit && enablePriority && isHit && " (Superado pela Hierarquia ❌)"}
+                                                                                            </TooltipContent>
+                                                                                        </Tooltip>
+                                                                                    );
+                                                                                });
+                                                                            })()}
+                                                                        </div>
+                                                                    </div>
+                                                                );
+                                                            }
+                                                            return <div className="h-[14px]" />; // Placeholder to keep height consistent
+                                                        })()}
+                                                    </div>
                                                 </div>
-                                                <div className="flex items-center gap-1.5 px-2 py-1 bg-background dark:bg-slate-900 rounded-lg text-xs font-mono font-bold text-foreground dark:text-white border border-border dark:border-slate-700/50">
-                                                    <span>{pred.home_score}</span>
-                                                    <span className="text-muted-foreground">x</span>
-                                                    <span>{pred.away_score}</span>
+
+                                                {/* Center: Score */}
+                                                <div className="flex justify-center">
+                                                    <div className="font-mono font-bold text-lg text-white tracking-widest bg-black/20 px-3 py-1 rounded-lg whitespace-nowrap">
+                                                        {pred.home_score} - {pred.away_score}
+                                                    </div>
+                                                </div>
+
+                                                {/* Right: Points Badge */}
+                                                <div className="flex justify-end">
+                                                    <div className={`h-7 w-7 rounded-full flex items-center justify-center text-xs font-bold shadow-sm shrink-0 ${badgeClass}`}>
+                                                        {isZero ? "0" : `+${points}`}
+                                                    </div>
                                                 </div>
                                             </div>
                                         );
