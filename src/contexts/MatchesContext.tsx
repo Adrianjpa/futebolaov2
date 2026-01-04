@@ -47,6 +47,7 @@ export function MatchesProvider({ children }: { children: ReactNode }) {
 
             // 3. Fetch Matches (Next 7 days + Live)
             const todayStart = new Date();
+            todayStart.setDate(todayStart.getDate() - 1); // Get Yesterday to show recent results
             todayStart.setHours(0, 0, 0, 0);
 
             const { data: matchesData } = await (supabase

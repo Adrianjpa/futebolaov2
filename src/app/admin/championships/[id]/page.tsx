@@ -460,7 +460,7 @@ function MatchList({ championshipId }: { championshipId: string }) {
                             <div className="absolute bottom-3 flex flex-col items-center gap-1">
                                 <div className="flex items-center gap-1.5 text-[10px] font-medium text-muted-foreground">
                                     <Calendar className="h-3 w-3 opacity-70" />
-                                    <span>{format(parseISO(match.date), "dd/MM • HH:mm")}</span>
+                                    <span>{new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' }).format(new Date(match.date))}</span>
                                 </div>
                                 <Badge variant={match.status === 'live' ? 'destructive' : match.status === 'finished' ? 'secondary' : 'outline'} className="text-[9px] h-4 px-2 shadow-none border-0 bg-secondary/50 text-secondary-foreground uppercase tracking-wider">
                                     {match.status === 'scheduled' ? 'Agendado' : match.status === 'live' ? '• Ao Vivo' : 'Encerrado'}

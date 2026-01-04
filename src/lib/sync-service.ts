@@ -28,8 +28,8 @@ export async function syncMatchesFromExternalApi() {
 
         // Calculate Date Window early
         const today = new Date();
-        const dateFrom = format(addDays(today, -1), 'yyyy-MM-dd'); // Yesterday
-        const dateTo = format(addDays(today, 1), 'yyyy-MM-dd');   // Tomorrow
+        const dateFrom = format(addDays(today, -5), 'yyyy-MM-dd'); // 5 days back
+        const dateTo = format(addDays(today, 5), 'yyyy-MM-dd');   // 5 days forward
 
         if (validChamps.size === 0) {
             return {

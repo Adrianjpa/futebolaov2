@@ -448,9 +448,7 @@ export function UnifiedMatchCard({
                                 <>
                                     <Calendar className="h-3.5 w-3.5 text-muted-foreground/60" />
                                     <span className="text-[11px] sm:text-[13px]">
-                                        {isToday(matchDate) ? "Hoje" : isTomorrow(matchDate) ? "Amanhã" : isYesterday(matchDate) ? "Ontem" : format(matchDate, "dd/MM", { locale: ptBR })}
-                                        {" • "}
-                                        {format(matchDate, "HH:mm")}
+                                        {new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' }).format(matchDate)}
                                     </span>
                                 </>
                             )}
@@ -510,23 +508,23 @@ export function UnifiedMatchCard({
                                         let badgeClass = "";
 
                                         if (isCombo) {
-                                            bgClass = "bg-yellow-950/40 border-yellow-700/50 hover:bg-yellow-900/40";
-                                            badgeClass = "bg-yellow-500 text-black";
+                                            bgClass = "bg-yellow-900/60 border-yellow-600/60 hover:bg-yellow-800/60";
+                                            badgeClass = "bg-yellow-500 text-black font-bold";
                                         } else if (isBonus) {
-                                            bgClass = "bg-slate-700/40 border-slate-500/50 hover:bg-slate-700/30";
-                                            badgeClass = "bg-slate-400 text-black";
+                                            bgClass = "bg-slate-700/60 border-slate-500/60 hover:bg-slate-600/60";
+                                            badgeClass = "bg-slate-200 text-black font-bold";
                                         } else if (isZero) {
-                                            bgClass = "bg-red-950/20 border-red-900/30 hover:bg-red-900/20";
-                                            badgeClass = "bg-red-600 text-white";
+                                            bgClass = "bg-red-950/60 border-red-800/60 hover:bg-red-900/50";
+                                            badgeClass = "bg-red-600 text-white font-bold";
                                         } else if (isExact) {
-                                            bgClass = "bg-emerald-950/30 border-emerald-900/40 hover:bg-emerald-900/20";
-                                            badgeClass = "bg-emerald-500 text-white shadow-lg shadow-emerald-900/20 ring-1 ring-emerald-400/50 scale-110";
+                                            bgClass = "bg-emerald-950/60 border-emerald-600/60 hover:bg-emerald-900/50 shadow-[0_0_15px_rgba(16,185,129,0.15)]";
+                                            badgeClass = "bg-emerald-500 text-white font-bold shadow-lg shadow-emerald-900/20 ring-1 ring-emerald-400/50 scale-110";
                                         } else if (isGoalsOnly) {
-                                            bgClass = "bg-purple-950/30 border-purple-900/30 hover:bg-purple-900/20";
-                                            badgeClass = "bg-purple-600 text-white";
+                                            bgClass = "bg-purple-900/50 border-purple-600/50 hover:bg-purple-800/50";
+                                            badgeClass = "bg-purple-500 text-white font-bold";
                                         } else {
-                                            bgClass = "bg-blue-950/30 border-blue-900/30 hover:bg-blue-900/20";
-                                            badgeClass = "bg-blue-600 text-white";
+                                            bgClass = "bg-blue-950/50 border-blue-800/50 hover:bg-blue-900/50";
+                                            badgeClass = "bg-blue-600 text-white font-bold";
                                         }
 
                                         return (
