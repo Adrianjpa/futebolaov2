@@ -113,7 +113,7 @@ export default function MatchesClient() {
                 .eq("user_id", authUser.id)
                 .single();
 
-            if (part) setUserSelection(part.team_selections || []);
+            if (part) setUserSelection((part as any).team_selections || []);
 
             // 2. Fetch Champ settings (ranking & lock status)
             const { data: champ } = await supabase
@@ -123,7 +123,7 @@ export default function MatchesClient() {
                 .single();
 
             if (champ) {
-                const settings = (champ.settings as any) || {};
+                const settings = ((champ as any).settings as any) || {};
                 setOfficialRanking(settings.officialRanking || []);
                 setChampionshipTeams(settings.teams || []);
 
@@ -138,8 +138,8 @@ export default function MatchesClient() {
 
                 if (firstMatch) {
                     const now = new Date();
-                    const matchDate = new Date(firstMatch.date);
-                    setIsSelectionLocked(now >= matchDate || champ.status === 'finalizado');
+                    const matchDate = new Date((firstMatch as any).date);
+                    setIsSelectionLocked(now >= matchDate || (champ as any).status === 'finalizado');
                 }
             }
         } catch (e) { console.error(e); }
@@ -387,8 +387,8 @@ export default function MatchesClient() {
                                                 className="w-full bg-primary hover:bg-primary/90"
                                                 onClick={async () => {
                                                     try {
-                                                        const { error } = await supabase
-                                                            .from("championship_participants")
+                                                        const { error } = await (supabase
+                                                            .from("championship_participants") as any)
                                                             .upsert({
                                                                 championship_id: selectedChampionship,
                                                                 user_id: authUser?.id,

@@ -1,3 +1,4 @@
+
 import { supabaseAdmin } from "./supabase-server";
 import { Database } from "@/types/database.types";
 import { format, addDays } from "date-fns";
@@ -26,10 +27,10 @@ export async function syncMatchesFromExternalApi() {
             }
         });
 
-        // Calculate Date Window early
+        // Calculate Date Window (Widened to catch timezone issues)
         const today = new Date();
-        const dateFrom = format(addDays(today, -1), 'yyyy-MM-dd'); // Yesterday
-        const dateTo = format(addDays(today, 1), 'yyyy-MM-dd');   // Tomorrow
+        const dateFrom = format(addDays(today, -3), 'yyyy-MM-dd'); // 3 days ago
+        const dateTo = format(addDays(today, 3), 'yyyy-MM-dd');   // 3 days ahead
 
         if (validChamps.size === 0) {
             return {
@@ -41,7 +42,9 @@ export async function syncMatchesFromExternalApi() {
             };
         }
 
-        // 2. Fetch Candidate Matches (Live, Scheduled or Recently Finished)
+        // 2. Fetch Candidate Matches
+        // We fetch matches that are Live/Scheduled/Finished within this widened window.
+        // This helps catch matches that might be timezone shifted locally.
         const { data: localMatches, error: matchesError } = await (supabaseAdmin
             .from("matches")
             .select("*")
@@ -69,7 +72,6 @@ export async function syncMatchesFromExternalApi() {
             console.error("FOOTBALL_DATA_API_KEY is missing!");
             return { success: false, error: "Chave da API (FOOTBALL_DATA_API_KEY) não configurada." };
         }
-
 
         const url = `https://api.football-data.org/v4/matches?dateFrom=${dateFrom}&dateTo=${dateTo}`;
 
