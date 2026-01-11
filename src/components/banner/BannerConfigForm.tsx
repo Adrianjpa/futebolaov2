@@ -12,9 +12,10 @@ interface BannerConfigFormProps {
     config: BannerConfig;
     onChange: (newConfig: BannerConfig) => void;
     hasTies: boolean;
+    showInfoField?: boolean;
 }
 
-export function BannerConfigForm({ config, onChange, hasTies }: BannerConfigFormProps) {
+export function BannerConfigForm({ config, onChange, hasTies, showInfoField }: BannerConfigFormProps) {
     const supabase = createClient();
     const [isUploading, setIsUploading] = useState<string | null>(null);
     const logoInputRef = useRef<HTMLInputElement>(null);
@@ -127,6 +128,20 @@ export function BannerConfigForm({ config, onChange, hasTies }: BannerConfigForm
                     placeholder="#FFFFFF"
                 />
             </div>
+            {showInfoField && (
+                <div className="grid gap-2 col-span-1 sm:col-span-2">
+                    <Label className="text-amber-600 font-bold">Conteúdo Informativo (Substitui Ganhadores)</Label>
+                    <Input
+                        value={config.infoText || ""}
+                        onChange={(e) => update("infoText", e.target.value)}
+                        placeholder="Ex: Em breve os resultados oficiais..."
+                        className="border-amber-200 focus-visible:ring-amber-500"
+                    />
+                    <p className="text-[10px] text-muted-foreground">
+                        Se preenchido, este texto aparecerá no centro do banner no lugar dos nomes dos campeões.
+                    </p>
+                </div>
+            )}
             <div className="grid gap-2">
                 <Label>Logo do Campeonato</Label>
                 <div className="flex gap-2">

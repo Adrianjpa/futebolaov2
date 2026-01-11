@@ -12,6 +12,7 @@ export interface BannerConfig {
     backgroundPosY?: number; // 0 to 100%
     customFontSizeOffset?: number; // Additional size in cqw (default 0)
     selectionMode?: 'auto' | 'manual'; // [NEW] Winner selection mode
+    infoText?: string; // [NEW] Informative text that replaces winner sections
 }
 
 export interface ChampionPredictionSettings {

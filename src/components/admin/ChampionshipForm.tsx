@@ -110,6 +110,7 @@ const formSchema = z.object({
         name: z.string(),
         shieldUrl: z.string().nullable().optional()
     })).default([]),
+    apiScoreType: z.enum(["fullTime", "regularTime"]).default("fullTime"),
 });
 
 export type ChampionshipFormData = z.infer<typeof formSchema>;
@@ -161,6 +162,7 @@ export function ChampionshipForm({ initialData, onSubmit, isSubmitting = false, 
             status: initialData?.status || "rascunho",
             officialRanking: initialData?.officialRanking || ["", "", "", "", ""],
             teams: initialData?.teams || [],
+            apiScoreType: initialData?.apiScoreType || "fullTime",
         } as any,
     });
 
@@ -518,6 +520,28 @@ export function ChampionshipForm({ initialData, onSubmit, isSubmitting = false, 
                                         }}
                                     />
                                     {form.formState.errors.endDate && <p className="text-sm text-destructive">{form.formState.errors.endDate.message}</p>}
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div className="grid gap-2">
+                                    <Label>Placar da API (Modo de Busca)</Label>
+                                    <Select
+                                        onValueChange={(val) => form.setValue("apiScoreType", val as "fullTime" | "regularTime")}
+                                        defaultValue={form.watch("apiScoreType") || "fullTime"}
+                                        disabled={form.watch("creationType") === "manual"}
+                                    >
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Selecione o modo" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="fullTime">Tempo Integral (Com Prorrogação)</SelectItem>
+                                            <SelectItem value="regularTime">Tempo Regular (90 min)</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                    <p className="text-[10px] text-muted-foreground">
+                                        Define qual placar buscar da API. Ligas (ex: Brasileirão) usam 90min. Copas podem variar.
+                                    </p>
                                 </div>
                             </div>
 

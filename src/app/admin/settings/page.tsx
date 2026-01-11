@@ -15,7 +15,6 @@ interface SystemSettings {
     announcement: string;
     apiKey?: string;
     apiUpdateInterval?: number; // Minutes
-    scorePriority?: 'regular' | 'full'; // 'regular' = 90min, 'full' = Final (inc. ET/Pen)
 }
 
 export default function AdminSettingsPage() {
@@ -23,8 +22,7 @@ export default function AdminSettingsPage() {
         maintenanceMode: false,
         announcement: "",
         apiKey: "",
-        apiUpdateInterval: 3,
-        scorePriority: 'regular'
+        apiUpdateInterval: 3
     });
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -144,39 +142,7 @@ export default function AdminSettingsPage() {
                             </p>
                         </div>
 
-                        <div className="space-y-3 pt-2 border-t">
-                            <Label>Prioridade de Placar</Label>
-                            <div className="flex flex-col gap-2">
-                                <div className="flex items-center space-x-2">
-                                    <input
-                                        type="radio"
-                                        id="score-regular"
-                                        name="scorePriority"
-                                        value="regular"
-                                        checked={settings.scorePriority === 'regular' || !settings.scorePriority}
-                                        onChange={() => setSettings({ ...settings, scorePriority: 'regular' })}
-                                        className="h-4 w-4 border-gray-300 text-primary focus:ring-primary"
-                                    />
-                                    <Label htmlFor="score-regular" className="font-normal">
-                                        Tempo Regulamentar (90min) - <span className="text-muted-foreground text-xs">Ignora prorrogação e pênaltis</span>
-                                    </Label>
-                                </div>
-                                <div className="flex items-center space-x-2">
-                                    <input
-                                        type="radio"
-                                        id="score-full"
-                                        name="scorePriority"
-                                        value="full"
-                                        checked={settings.scorePriority === 'full'}
-                                        onChange={() => setSettings({ ...settings, scorePriority: 'full' })}
-                                        className="h-4 w-4 border-gray-300 text-primary focus:ring-primary"
-                                    />
-                                    <Label htmlFor="score-full" className="font-normal">
-                                        Tempo Total (Final) - <span className="text-muted-foreground text-xs">Inclui prorrogação e pênaltis</span>
-                                    </Label>
-                                </div>
-                            </div>
-                        </div>
+
                     </CardContent>
                 </Card>
 

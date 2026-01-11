@@ -93,6 +93,9 @@ export async function syncMatchesFromExternalApi() {
         let updatesCount = 0;
         const updatedMatchNames: string[] = [];
 
+        // Pre-create a map of championship settings for quick access
+        const champSettingsMap = new Map(championships.map(c => [c.id, c.settings as any]));
+
         for (const localMatch of matchesWithApiId) {
             const apiMatch = apiMatchesMap.get(localMatch.external_id) as any;
 
@@ -102,8 +105,23 @@ export async function syncMatchesFromExternalApi() {
                 if (['IN_PLAY', 'PAUSED', 'LIVE'].includes(rawStatus)) newStatus = 'live';
                 if (['FINISHED', 'AWARDED'].includes(rawStatus)) newStatus = 'finished';
 
-                const apiHomeScore = apiMatch.score.fullTime.home ?? 0;
-                const apiAwayScore = apiMatch.score.fullTime.away ?? 0;
+                // Get Score Type from Championship Settings
+                const champSettings = champSettingsMap.get(localMatch.championship_id || '');
+                const scoreType = champSettings?.apiScoreType || 'fullTime'; // Default to fullTime
+
+                // Extract score based on setting
+                let apiHomeScore = 0;
+                let apiAwayScore = 0;
+
+                if (scoreType === 'regularTime' && apiMatch.score.regularTime) {
+                    apiHomeScore = apiMatch.score.regularTime.home ?? 0;
+                    apiAwayScore = apiMatch.score.regularTime.away ?? 0;
+                } else {
+                    // Default to fullTime (which usually includes extra time if it happened)
+                    apiHomeScore = apiMatch.score.fullTime?.home ?? 0;
+                    apiAwayScore = apiMatch.score.fullTime?.away ?? 0;
+                }
+
                 const apiDate = apiMatch.utcDate ? new Date(apiMatch.utcDate).toISOString() : localMatch.date;
 
                 // Ensure we compare numbers and handle nulls correctly

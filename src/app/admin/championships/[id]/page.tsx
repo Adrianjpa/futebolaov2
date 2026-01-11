@@ -157,8 +157,17 @@ export default function ChampionshipDetailsPage() {
                 if (match.status === "FINISHED") status = "finished";
                 else if (match.status === "IN_PLAY" || match.status === "PAUSED") status = "live";
 
-                let homeScore = match.score?.fullTime?.home ?? null;
-                let awayScore = match.score?.fullTime?.away ?? null;
+                const scoreType = championship.settings?.apiScoreType || 'fullTime';
+                let homeScore = null;
+                let awayScore = null;
+
+                if (scoreType === 'regularTime' && match.score?.regularTime) {
+                    homeScore = match.score.regularTime.home ?? null;
+                    awayScore = match.score.regularTime.away ?? null;
+                } else {
+                    homeScore = match.score?.fullTime?.home ?? null;
+                    awayScore = match.score?.fullTime?.away ?? null;
+                }
                 if (status === "live") {
                     if (homeScore === null) homeScore = 0;
                     if (awayScore === null) awayScore = 0;

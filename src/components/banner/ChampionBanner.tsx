@@ -96,83 +96,93 @@ export function ChampionBanner({ championshipName, config, winners, className, t
                         </div>
                     </div>
 
-                    <div className="flex-1 flex flex-col justify-start pt-[4cqw] gap-[6cqw]">
-                        {/* Champion Section */}
-                        <div className="flex flex-col items-center">
-                            <h2 className="uppercase font-black italic tracking-wide mb-[1cqw] drop-shadow-md"
-                                style={{ color: subtitleColor, fontSize: getFontSize(6) }}>
-                                CAMPEÃO GERAL
-                            </h2>
-                            {/* Winners Grid */}
-                            {/* Champions Names Flow */}
-                            <div className="flex flex-wrap justify-center items-center w-full px-[5cqw] text-center leading-none">
-                                {champions.length > 0 ? champions.map((winner, idx) => (
-                                    <div key={idx} className="inline-flex items-center hover:opacity-100 transition-opacity cursor-default">
-                                        {displayMode === 'photo_and_names' && (
-                                            <div className="mr-[1cqw]">
-                                                {renderAvatar(winner.photoUrl, 12, subtitleColor)}
-                                            </div>
-                                        )}
-                                        <span className="font-extrabold uppercase drop-shadow-md"
-                                            style={{ color: namesColor, fontSize: champions.length > 1 ? "6cqw" : "8cqw" }}>
-                                            {winner.displayName}
-                                        </span>
-                                        {/* Graphic Separator - Only if not last */}
-                                        {idx < champions.length - 1 && (
-                                            <span
-                                                className="mx-[1.5cqw] rounded-full inline-block bg-current opacity-80"
-                                                style={{
-                                                    width: "1.5cqw",
-                                                    height: "1.5cqw",
-                                                    color: subtitleColor,
-                                                    marginBottom: "0.2em" // Optical alignment
-                                                }}
-                                            />
-                                        )}
-                                    </div>
-                                )) : (
-                                    <span style={{ color: namesColor, fontSize: "5cqw" }}>A DEFINIR</span>
-                                )}
+                    {config.infoText ? (
+                        <div className="flex-1 flex items-center justify-center p-[4cqw] text-center">
+                            <p
+                                className="font-bold uppercase tracking-wide leading-tight drop-shadow-md"
+                                style={{ color: namesColor, fontSize: getFontSize(5.5) }}
+                            >
+                                {config.infoText}
+                            </p>
+                        </div>
+                    ) : (
+                        <div className="flex-1 flex flex-col justify-start pt-[4cqw] gap-[6cqw]">
+                            {/* Champion Section */}
+                            <div className="flex flex-col items-center">
+                                <h2 className="uppercase font-black italic tracking-wide mb-[1cqw] drop-shadow-md"
+                                    style={{ color: subtitleColor, fontSize: getFontSize(6) }}>
+                                    CAMPEÃO GERAL
+                                </h2>
+                                {/* Winners Grid */}
+                                {/* Champions Names Flow */}
+                                <div className="flex flex-wrap justify-center items-center w-full px-[5cqw] text-center leading-none">
+                                    {champions.length > 0 ? champions.map((winner, idx) => (
+                                        <div key={idx} className="inline-flex items-center hover:opacity-100 transition-opacity cursor-default">
+                                            {displayMode === 'photo_and_names' && (
+                                                <div className="mr-[1cqw]">
+                                                    {renderAvatar(winner.photoUrl, 12, subtitleColor)}
+                                                </div>
+                                            )}
+                                            <span className="font-extrabold uppercase drop-shadow-md"
+                                                style={{ color: namesColor, fontSize: champions.length > 1 ? "6cqw" : "8cqw" }}>
+                                                {winner.displayName}
+                                            </span>
+                                            {/* Graphic Separator - Only if not last */}
+                                            {idx < champions.length - 1 && (
+                                                <span
+                                                    className="mx-[1.5cqw] rounded-full inline-block bg-current opacity-80"
+                                                    style={{
+                                                        width: "1.5cqw",
+                                                        height: "1.5cqw",
+                                                        color: subtitleColor,
+                                                        marginBottom: "0.2em" // Optical alignment
+                                                    }}
+                                                />
+                                            )}
+                                        </div>
+                                    )) : (
+                                        <span style={{ color: namesColor, fontSize: "5cqw" }}>A DEFINIR</span>
+                                    )}
+                                </div>
+                            </div>
+
+                            <div className="flex flex-col items-center">
+                                <h3 className="uppercase font-bold italic tracking-wide mb-[1cqw] drop-shadow-md"
+                                    style={{ color: subtitleColor, fontSize: getFontSize(4.5) }}>
+                                    {goldSubtitle}
+                                </h3>
+                                <div className="flex flex-wrap justify-center items-center w-full px-[5cqw] text-center leading-none">
+                                    {goldWinners.length > 0 ? goldWinners.map((winner, idx) => (
+                                        <div key={idx} className="inline-flex items-center hover:opacity-100 transition-opacity cursor-default">
+                                            {displayMode === 'photo_and_names' && (
+                                                <div className="mr-[0.8cqw]">
+                                                    {renderAvatar(winner.photoUrl, 9, subtitleColor)}
+                                                </div>
+                                            )}
+                                            <span className="font-bold uppercase drop-shadow-md"
+                                                style={{ color: namesColor, fontSize: goldWinners.length > 1 ? "4cqw" : "5cqw" }}>
+                                                {winner.displayName}
+                                            </span>
+                                            {/* Graphic Separator - Only if not last */}
+                                            {idx < goldWinners.length - 1 && (
+                                                <span
+                                                    className="mx-[1.2cqw] rounded-full inline-block bg-current opacity-80"
+                                                    style={{
+                                                        width: "1.2cqw",
+                                                        height: "1.2cqw",
+                                                        color: subtitleColor,
+                                                        marginBottom: "0.2em"
+                                                    }}
+                                                />
+                                            )}
+                                        </div>
+                                    )) : (
+                                        <span style={{ color: namesColor, fontSize: "4cqw" }}>EM BREVE</span>
+                                    )}
+                                </div>
                             </div>
                         </div>
-
-                        <div className="flex flex-col items-center">
-                            <h3 className="uppercase font-bold italic tracking-wide mb-[1cqw] drop-shadow-md"
-                                style={{ color: subtitleColor, fontSize: getFontSize(4.5) }}>
-                                {goldSubtitle}
-                            </h3>
-                            <div className="flex flex-wrap justify-center items-center w-full px-[5cqw] text-center leading-none">
-                                {goldWinners.length > 0 ? goldWinners.map((winner, idx) => (
-                                    <div key={idx} className="inline-flex items-center hover:opacity-100 transition-opacity cursor-default">
-                                        {displayMode === 'photo_and_names' && (
-                                            <div className="mr-[0.8cqw]">
-                                                {renderAvatar(winner.photoUrl, 9, subtitleColor)}
-                                            </div>
-                                        )}
-                                        <span className="font-bold uppercase drop-shadow-md"
-                                            style={{ color: namesColor, fontSize: goldWinners.length > 1 ? "4cqw" : "5cqw" }}>
-                                            {winner.displayName}
-                                        </span>
-                                        {/* Graphic Separator - Only if not last */}
-                                        {idx < goldWinners.length - 1 && (
-                                            <span
-                                                className="mx-[1.2cqw] rounded-full inline-block bg-current opacity-80"
-                                                style={{
-                                                    width: "1.2cqw",
-                                                    height: "1.2cqw",
-                                                    color: subtitleColor,
-                                                    marginBottom: "0.2em"
-                                                }}
-                                            />
-                                        )}
-                                    </div>
-                                )) : (
-                                    <span style={{ color: namesColor, fontSize: "4cqw" }}>EM BREVE</span>
-                                )}
-                            </div>
-                        </div>
-
-                    </div>
+                    )}
 
                     {/* Footer */}
                     <div className="w-full text-center mt-auto pt-[4cqw] opacity-60">
@@ -224,75 +234,86 @@ export function ChampionBanner({ championshipName, config, winners, className, t
                     </div>
                 </div>
 
-                {/* Main Content - Two Columns */}
-                <div className="flex-1 w-full grid grid-cols-2 mt-[4cqw] gap-[2cqw]">
+                {/* Main Content */}
+                {config.infoText ? (
+                    <div className="flex-1 w-full flex items-center justify-center px-[8cqw] text-center">
+                        <p
+                            className="font-black uppercase tracking-tight leading-tight drop-shadow-lg"
+                            style={{ color: namesColor, fontSize: getFontSize(6) }}
+                        >
+                            {config.infoText}
+                        </p>
+                    </div>
+                ) : (
+                    <div className="flex-1 w-full grid grid-cols-2 mt-[4cqw] gap-[2cqw]">
 
-                    {/* Left: General Champions */}
-                    <div className="flex flex-col items-center justify-start relative w-full">
-                        {/* Wrapper for multiple winners */}
-                        <div className="flex flex-wrap justify-center gap-[2cqw] w-full">
-                            {champions.length > 0 ? champions.map((winner, idx) => (
-                                <div key={idx} className="flex flex-col items-center relative group hover:scale-105 transition-transform duration-300 cursor-default">
-                                    <div className="mb-[2cqw] relative">
-                                        {/* Icons Removed as requested */}
-                                        {renderAvatar(winner.photoUrl, champions.length > 1 ? 22 : 32, "#EAB308")}
-                                        <div className="absolute -bottom-[1.5cqw] left-1/2 -translate-x-1/2 bg-yellow-500 text-yellow-950 px-[3cqw] py-[0.5cqw] rounded-full font-bold uppercase whitespace-nowrap shadow-lg flex items-center gap-1 z-20" style={{ fontSize: champions.length > 1 ? "1.8cqw" : "2.5cqw" }}>
-                                            <Trophy className="w-[3cqw] h-[3cqw]" /> {champions.length > 1 ? `#${idx + 1}` : "Campeão Geral"}
+                        {/* Left: General Champions */}
+                        <div className="flex flex-col items-center justify-start relative w-full">
+                            {/* Wrapper for multiple winners */}
+                            <div className="flex flex-wrap justify-center gap-[2cqw] w-full">
+                                {champions.length > 0 ? champions.map((winner, idx) => (
+                                    <div key={idx} className="flex flex-col items-center relative group hover:scale-105 transition-transform duration-300 cursor-default">
+                                        <div className="mb-[2cqw] relative">
+                                            {/* Icons Removed as requested */}
+                                            {renderAvatar(winner.photoUrl, champions.length > 1 ? 22 : 32, "#EAB308")}
+                                            <div className="absolute -bottom-[1.5cqw] left-1/2 -translate-x-1/2 bg-yellow-500 text-yellow-950 px-[3cqw] py-[0.5cqw] rounded-full font-bold uppercase whitespace-nowrap shadow-lg flex items-center gap-1 z-20" style={{ fontSize: champions.length > 1 ? "1.8cqw" : "2.5cqw" }}>
+                                                <Trophy className="w-[3cqw] h-[3cqw]" /> {champions.length > 1 ? `#${idx + 1}` : "Campeão Geral"}
+                                            </div>
+                                        </div>
+                                        <div className="mt-[4.5cqw] text-center px-1">
+                                            <h2 className="font-bold drop-shadow-md whitespace-nowrap overflow-hidden text-ellipsis max-w-[35cqw] leading-tight"
+                                                style={{ color: namesColor, fontSize: champions.length > 1 ? "3cqw" : "4.5cqw" }}>
+                                                {winner.displayName}
+                                            </h2>
                                         </div>
                                     </div>
-                                    <div className="mt-[4.5cqw] text-center px-1">
-                                        <h2 className="font-bold drop-shadow-md whitespace-nowrap overflow-hidden text-ellipsis max-w-[35cqw] leading-tight"
-                                            style={{ color: namesColor, fontSize: champions.length > 1 ? "3cqw" : "4.5cqw" }}>
-                                            {winner.displayName}
-                                        </h2>
+                                )) : (
+                                    <div className="text-center mt-[5cqw]">
+                                        <h2 className="font-bold opacity-50" style={{ color: namesColor, fontSize: "4cqw" }}>A Definir</h2>
                                     </div>
-                                </div>
-                            )) : (
-                                <div className="text-center mt-[5cqw]">
-                                    <h2 className="font-bold opacity-50" style={{ color: namesColor, fontSize: "4cqw" }}>A Definir</h2>
-                                </div>
+                                )}
+                            </div>
+                            {champions.length > 0 && (
+                                <p className="text-white/80 font-medium mt-[0.5cqw] text-center w-full uppercase tracking-wide" style={{ fontSize: "2cqw" }}>
+                                    Maior Pontuação
+                                </p>
                             )}
                         </div>
-                        {champions.length > 0 && (
-                            <p className="text-white/80 font-medium mt-[0.5cqw] text-center w-full uppercase tracking-wide" style={{ fontSize: "2cqw" }}>
-                                Maior Pontuação
-                            </p>
-                        )}
-                    </div>
 
-                    {/* Right: Gold Winner (Palpiteiro) */}
-                    <div className="flex flex-col items-center justify-start relative w-full">
-                        <div className="flex flex-wrap justify-center gap-[2cqw] w-full">
-                            {goldWinners.length > 0 ? goldWinners.map((winner, idx) => (
-                                <div key={idx} className="flex flex-col items-center relative group hover:scale-105 transition-transform duration-300 cursor-default">
-                                    <div className="mb-[2cqw] relative">
-                                        {/* Icons Removed as requested */}
-                                        {renderAvatar(winner.photoUrl, goldWinners.length > 1 ? 22 : 32, "#F59E0B")}
-                                        <div className="absolute -bottom-[1.5cqw] left-1/2 -translate-x-1/2 bg-amber-500 text-amber-950 px-[3cqw] py-[0.5cqw] rounded-full font-bold uppercase whitespace-nowrap shadow-lg flex items-center gap-1 z-20" style={{ fontSize: goldWinners.length > 1 ? "1.8cqw" : "2.5cqw" }}>
-                                            <Star className="w-[3cqw] h-[3cqw]" /> Escolha Certa
+                        {/* Right: Gold Winner (Palpiteiro) */}
+                        <div className="flex flex-col items-center justify-start relative w-full">
+                            <div className="flex flex-wrap justify-center gap-[2cqw] w-full">
+                                {goldWinners.length > 0 ? goldWinners.map((winner, idx) => (
+                                    <div key={idx} className="flex flex-col items-center relative group hover:scale-105 transition-transform duration-300 cursor-default">
+                                        <div className="mb-[2cqw] relative">
+                                            {/* Icons Removed as requested */}
+                                            {renderAvatar(winner.photoUrl, goldWinners.length > 1 ? 22 : 32, "#F59E0B")}
+                                            <div className="absolute -bottom-[1.5cqw] left-1/2 -translate-x-1/2 bg-amber-500 text-amber-950 px-[3cqw] py-[0.5cqw] rounded-full font-bold uppercase whitespace-nowrap shadow-lg flex items-center gap-1 z-20" style={{ fontSize: goldWinners.length > 1 ? "1.8cqw" : "2.5cqw" }}>
+                                                <Star className="w-[3cqw] h-[3cqw]" /> Escolha Certa
+                                            </div>
+                                        </div>
+                                        <div className="mt-[4.5cqw] text-center px-1">
+                                            <h2 className="font-bold drop-shadow-md whitespace-nowrap overflow-hidden text-ellipsis max-w-[35cqw] leading-tight"
+                                                style={{ color: namesColor, fontSize: goldWinners.length > 1 ? "3cqw" : "4.5cqw" }}>
+                                                {winner.displayName}
+                                            </h2>
                                         </div>
                                     </div>
-                                    <div className="mt-[4.5cqw] text-center px-1">
-                                        <h2 className="font-bold drop-shadow-md whitespace-nowrap overflow-hidden text-ellipsis max-w-[35cqw] leading-tight"
-                                            style={{ color: namesColor, fontSize: goldWinners.length > 1 ? "3cqw" : "4.5cqw" }}>
-                                            {winner.displayName}
-                                        </h2>
+                                )) : (
+                                    <div className="text-center mt-[5cqw]">
+                                        <h2 className="font-bold opacity-50" style={{ color: namesColor, fontSize: "4cqw" }}>Em Breve</h2>
                                     </div>
-                                </div>
-                            )) : (
-                                <div className="text-center mt-[5cqw]">
-                                    <h2 className="font-bold opacity-50" style={{ color: namesColor, fontSize: "4cqw" }}>Em Breve</h2>
-                                </div>
+                                )}
+                            </div>
+                            {goldWinners.length > 0 && (
+                                <p className="text-white/80 font-medium mt-[0.5cqw] text-center w-full uppercase tracking-wide" style={{ fontSize: "2cqw" }}>
+                                    {goldSubtitle}
+                                </p>
                             )}
                         </div>
-                        {goldWinners.length > 0 && (
-                            <p className="text-white/80 font-medium mt-[0.5cqw] text-center w-full uppercase tracking-wide" style={{ fontSize: "2cqw" }}>
-                                {goldSubtitle}
-                            </p>
-                        )}
-                    </div>
 
-                </div>
+                    </div>
+                )}
 
                 {/* Footer */}
                 <div className="w-full text-center mt-auto pt-[4cqw] opacity-60">

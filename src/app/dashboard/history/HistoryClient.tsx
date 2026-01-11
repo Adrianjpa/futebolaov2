@@ -42,10 +42,22 @@ export default function HistoryClient() {
     const paramType = searchParams.get("type");
 
     const [championships, setChampionships] = useState<Championship[]>([]);
+    const [selectedCategory, setSelectedCategory] = useState<string>("all");
     const [selectedChampionship, setSelectedChampionship] = useState<string>(paramChamp || "all");
     const [matches, setMatches] = useState<Match[]>([]);
     const [users, setUsers] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+
+    const CATEGORY_MAP: Record<string, string> = {
+        "world_cup": "Copa do Mundo",
+        "euro": "Eurocopa",
+        "copa_america": "Copa América",
+        "brasileirao": "Brasileirão",
+        "libertadores": "Libertadores",
+        "champions_league": "Champions League",
+        "nacional": "Nacional",
+        "other": "Outros"
+    };
 
     // Pagination State
     const [currentPage, setCurrentPage] = useState(1);
@@ -54,10 +66,19 @@ export default function HistoryClient() {
     useEffect(() => {
         const fetchInitialData = async () => {
             const { data: champs } = await (supabase.from("championships") as any).select("*").neq("status", "arquivado");
-            setChampionships(champs || []);
+            const allChamps = champs || [];
+            setChampionships(allChamps);
 
             const { data: profiles } = await (supabase.from("public_profiles") as any).select("*");
             setUsers(profiles || []);
+
+            // If we have a paramChamp, find its category and set it
+            if (paramChamp) {
+                const champ = (allChamps as Championship[]).find((c: Championship) => c.id === paramChamp);
+                if (champ?.category) {
+                    setSelectedCategory(champ.category);
+                }
+            }
         };
         fetchInitialData();
     }, []);
@@ -68,7 +89,7 @@ export default function HistoryClient() {
             const from = (page - 1) * ITEMS_PER_PAGE;
             const to = from + ITEMS_PER_PAGE - 1;
 
-            const champMap = new Map(championships.map(c => [c.id, c]));
+            const champMap = new Map(championships.map((c: Championship) => [c.id, c]));
             let formattedMatches: Match[] = [];
             let totalCount = 0;
 
@@ -179,8 +200,24 @@ export default function HistoryClient() {
         if (currentPage > 1) fetchMatches(currentPage - 1);
     };
 
+    const handleCategoryChange = (val: string) => {
+        setSelectedCategory(val);
+        // Reset championship if it's not under the new category
+        if (val !== "all") {
+            const champ = championships.find(c => c.id === selectedChampionship);
+            if (champ && champ.category !== val) {
+                setSelectedChampionship("all");
+            }
+        }
+    };
+
     const isFiltered = !!paramUser || !!paramType;
     const showPagination = (currentPage > 1 || !isLastPage) && matches.length > 0;
+
+    const availableCategories = Array.from(new Set(championships.map((c: Championship) => c.category || "other"))).sort();
+    const filteredChampionships = selectedCategory === "all"
+        ? championships
+        : championships.filter((c: Championship) => (c.category || "other") === selectedCategory);
 
     return (
         <div className="space-y-6">
@@ -194,17 +231,34 @@ export default function HistoryClient() {
 
                 <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
                     {isFiltered && (
-                        <Button variant="ghost" onClick={() => router.push('/dashboard/history')} className="text-muted-foreground">
+                        <Button variant="ghost" onClick={() => router.push('/dashboard/history')} className="text-muted-foreground h-10 px-4">
                             Limpar Filtros
                         </Button>
                     )}
+
+                    {/* Filter by Category (Grouping) */}
+                    <Select value={selectedCategory} onValueChange={handleCategoryChange}>
+                        <SelectTrigger className="w-full sm:w-[200px] h-10">
+                            <SelectValue placeholder="Agrupamento" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">Todos os Agrupamentos</SelectItem>
+                            {availableCategories.map(cat => (
+                                <SelectItem key={cat} value={cat}>
+                                    {CATEGORY_MAP[cat] || cat}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+
+                    {/* Filter by Championship */}
                     <Select value={selectedChampionship} onValueChange={setSelectedChampionship}>
-                        <SelectTrigger className="w-full sm:w-[260px]">
+                        <SelectTrigger className="w-full sm:w-[240px] h-10">
                             <SelectValue placeholder="Campeonato" />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="all">Todos os Campeonatos</SelectItem>
-                            {championships.map(c => (
+                            <SelectItem value="all">Todos {selectedCategory !== 'all' ? `da ${CATEGORY_MAP[selectedCategory] || selectedCategory}` : 'os Campeonatos'}</SelectItem>
+                            {filteredChampionships.map(c => (
                                 <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                             ))}
                         </SelectContent>
