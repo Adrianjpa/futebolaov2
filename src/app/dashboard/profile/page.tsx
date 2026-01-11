@@ -12,6 +12,7 @@ import { Loader2, User, Trophy, Users, Gamepad2, Edit, Clock, Target, CheckCircl
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import Link from "next/link";
 import ReactCrop, { centerCrop, makeAspectCrop, Crop, PixelCrop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
 
@@ -83,35 +84,61 @@ export default function ProfilePage() {
                     setPhotoURL(profileData.foto_perfil || "");
                 }
 
-                // 2. Fetch User Predictions
+                // 2. Fetch User Predictions with Match info to get Championship ID and Scores
                 const { data: predictions } = await (supabase
                     .from("predictions") as any)
-                    .select("*")
+                    .select("*, matches(championship_id, score_home, score_away)")
                     .eq("user_id", user.id);
-                setUserPredictions(predictions || []);
+
+                const preds = (predictions || []).map((p: any) => ({
+                    ...p,
+                    championship_id: p.matches?.championship_id
+                }));
+                setUserPredictions(preds || []);
 
                 // 3. Fetch All Championships
                 const { data: allChamps } = await (supabase.from("championships") as any).select("*");
-                setChampionships(allChamps || []);
+                const champs = (allChamps || []) as any[];
+                const filteredChamps = champs
+                    .filter(c => uniqueChampionshipIds.includes(c.id))
+                    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+                setChampionships(filteredChamps);
+                if (filteredChamps.length > 0 && selectedChampionship === "all") {
+                    setSelectedChampionship(filteredChamps[0].id);
+                }
 
                 // Statistics calculation (approximate for now as legacy data might be handled differently)
-                const championshipsDisputed = allChamps?.length || 0; // Simplified
+                const championshipsDisputed = filteredChamps.length;
+
+                const uniqueChampionshipIds = Array.from(new Set(preds.map((p: any) => p.championship_id).filter(Boolean)));
 
                 // Titles and Medals would come from a winners table or JSON settings in championship
                 // Here we use a placeholder or check if settings JSON has winners
-                const titlesWon = allChamps?.filter((c: any) =>
-                    c.settings?.winners?.some((w: any) => w.user_id === user.id && w.position === 'champion')
-                ).length || 0;
+                // Calculate Titles (Champion positions)
+                const titlesWon = (allChamps || []).filter((c: any) => {
+                    const settings = c.settings || {};
+                    const winners = settings.winners || settings.manualWinners || [];
+                    return winners.some((w: any) =>
+                        (w.user_id === user.id || w.userId === user.id) &&
+                        w.position === 'champion'
+                    );
+                }).length;
 
-                const goldMedals = allChamps?.filter((c: any) =>
-                    c.settings?.winners?.some((w: any) => w.user_id === user.id && w.position === 'gold_winner')
-                ).length || 0;
+                const goldMedals = (allChamps || []).filter((c: any) => {
+                    const settings = c.settings || {};
+                    const winners = settings.winners || settings.manualWinners || [];
+                    return winners.some((w: any) =>
+                        (w.user_id === user.id || w.userId === user.id) &&
+                        w.position === 'gold_winner'
+                    );
+                }).length;
 
                 setStats({
                     totalPoints: (profileData as any)?.total_points || 0,
                     ranking: "-",
                     totalPredictions: predictions?.length || 0,
-                    championshipsDisputed: championshipsDisputed,
+                    championshipsDisputed: uniqueChampionshipIds.length,
                     titlesWon: titlesWon,
                     goldMedals: goldMedals
                 });
@@ -293,10 +320,33 @@ export default function ProfilePage() {
             filteredPreds = userPredictions.filter((p: any) => p.championship_id === selectedChampionship);
         }
 
-        const points = filteredPreds.reduce((acc, curr) => acc + (curr.points || 0), 0);
-        const buchas = filteredPreds.filter((p: any) => p.points === 3).length;
-        const situacao = filteredPreds.filter((p: any) => p.points === 1).length;
-        const erros = filteredPreds.filter((p: any) => p.points === 0).length;
+        let points = 0;
+        let buchas = 0;
+        let situacao = 0;
+        let erros = 0;
+
+        filteredPreds.forEach((p: any) => {
+            points += (p.points || 0);
+
+            const match = p.matches;
+            if (match && match.score_home !== null && match.score_away !== null) {
+                const ph = p.home_score;
+                const pa = p.away_score;
+                const mh = match.score_home;
+                const ma = match.score_away;
+
+                const winP = ph > pa ? 1 : (ph < pa ? 2 : 0);
+                const winM = mh > ma ? 1 : (mh < ma ? 2 : 0);
+
+                if (ph === mh && pa === ma) {
+                    buchas++;
+                } else if (winP === winM) {
+                    situacao++;
+                } else {
+                    erros++;
+                }
+            }
+        });
 
         return { points, buchas, situacao, combo: 0, bonus: 0, gols: 0, erros };
     };
@@ -471,7 +521,6 @@ export default function ProfilePage() {
                         <Select value={selectedChampionship} onValueChange={setSelectedChampionship}>
                             <SelectTrigger><SelectValue placeholder="Selecione um campeonato" /></SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="all">Todos os Campeonatos</SelectItem>
                                 {championships.map((champ) => <SelectItem key={champ.id} value={champ.id}>{champ.name}</SelectItem>)}
                             </SelectContent>
                         </Select>
@@ -480,31 +529,45 @@ export default function ProfilePage() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
                     <StatCard title="Pontos" value={filteredStats.points} icon={<Gamepad2 className="h-4 w-4" />} color="bg-muted" text="text-foreground" description="Total de pontos no campeonato" />
-                    <StatCard title="Buchas" value={filteredStats.buchas} icon={<Target className="h-4 w-4" />} color="bg-green-600" description="Placares cravados" />
-                    <StatCard title="Situação" value={filteredStats.situacao} icon={<CheckCircle className="h-4 w-4" />} color="bg-blue-600" description="Vencedor/Empate corretos" />
-                    <StatCard title="Combo" value={0} icon={<Gem className="h-4 w-4" />} color="bg-yellow-500" description="Bucha + Gols" pulse />
-                    <StatCard title="Bônus" value={0} icon={<Trophy className="h-4 w-4" />} color="bg-slate-300" text="text-slate-900" description="Situação + Gols" />
-                    <StatCard title="Gols" value={0} icon={<Goal className="h-4 w-4" />} color="bg-purple-600" description="Acerto apenas nos gols" />
-                    <StatCard title="Erros" value={filteredStats.erros} icon={<XCircle className="h-4 w-4" />} color="bg-red-600" description="Palpites sem pontuação" />
+                    <StatCard title="Buchas" value={filteredStats.buchas} icon={<Target className="h-4 w-4" />} color="bg-green-600" description="Placares cravados" link={`/dashboard/history?championship=${selectedChampionship}&user=${user?.id}&type=bucha`} />
+                    <StatCard title="Situação" value={filteredStats.situacao} icon={<CheckCircle className="h-4 w-4" />} color="bg-blue-600" description="Vencedor/Empate corretos" link={`/dashboard/history?championship=${selectedChampionship}&user=${user?.id}&type=situacao`} />
+                    {filteredStats.combo > 0 && <StatCard title="Combo" value={filteredStats.combo} icon={<Gem className="h-4 w-4" />} color="bg-yellow-500" description="Bucha + Gols" pulse />}
+                    {filteredStats.bonus > 0 && <StatCard title="Bônus" value={filteredStats.bonus} icon={<Trophy className="h-4 w-4" />} color="bg-slate-300" text="text-slate-900" description="Situação + Gols" />}
+                    {filteredStats.gols > 0 && <StatCard title="Gols" value={filteredStats.gols} icon={<Goal className="h-4 w-4" />} color="bg-purple-600" description="Acerto apenas nos gols" />}
+                    <StatCard title="Erros" value={filteredStats.erros} icon={<XCircle className="h-4 w-4" />} color="bg-red-600" description="Palpites sem pontuação" link={`/dashboard/history?championship=${selectedChampionship}&user=${user?.id}&type=erro`} />
                 </div>
             </div>
         </div>
     );
 }
 
-function StatCard({ title, value, icon, color, description, text = "text-white", pulse = false }: any) {
+function StatCard({ title, value, icon, color, description, text = "text-white", pulse = false, link }: any) {
+    const content = (
+        <CardContent className="p-4 flex flex-col justify-between h-full bg-opacity-90">
+            <div className="flex flex-col gap-1">
+                <div className="flex justify-between items-start">
+                    <span className="text-xs font-medium opacity-80">{title}</span>
+                    <span className="opacity-60">{icon}</span>
+                </div>
+                {description && <span className="text-[10px] leading-tight opacity-70 line-clamp-2">{description}</span>}
+            </div>
+            <span className="text-2xl font-bold mt-2">{value}</span>
+        </CardContent>
+    );
+
+    if (link) {
+        return (
+            <Link href={link}>
+                <Card className={`${color} ${text} ${pulse ? "animate-pulse ring-2 ring-yellow-300/50" : ""} border-none cursor-pointer hover:ring-2 hover:ring-white/20 transition-all active:scale-95`}>
+                    {content}
+                </Card>
+            </Link>
+        );
+    }
+
     return (
         <Card className={`${color} ${text} ${pulse ? "animate-pulse ring-2 ring-yellow-300/50" : ""} border-none`}>
-            <CardContent className="p-4 flex flex-col justify-between h-full bg-opacity-90">
-                <div className="flex flex-col gap-1">
-                    <div className="flex justify-between items-start">
-                        <span className="text-xs font-medium opacity-80">{title}</span>
-                        <span className="opacity-60">{icon}</span>
-                    </div>
-                    {description && <span className="text-[10px] leading-tight opacity-70 line-clamp-2">{description}</span>}
-                </div>
-                <span className="text-2xl font-bold mt-2">{value}</span>
-            </CardContent>
+            {content}
         </Card>
     );
 }

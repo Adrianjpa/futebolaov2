@@ -4,8 +4,10 @@ import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2, ChevronLeft, ChevronRight, Calendar as CalendarIcon } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { UnifiedMatchCard } from "@/components/UnifiedMatchCard";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface Championship {
     id: string;
@@ -30,9 +32,17 @@ const ITEMS_PER_PAGE = 10;
 
 export default function HistoryClient() {
     const supabase = createClient();
+    const { user: currentUser } = useAuth();
+    const router = useRouter();
+    const searchParams = useSearchParams();
+
+    // Read Initial Filters from URL
+    const paramChamp = searchParams.get("championship");
+    const paramUser = searchParams.get("user");
+    const paramType = searchParams.get("type");
+
     const [championships, setChampionships] = useState<Championship[]>([]);
-    const [categoryFilter, setCategoryFilter] = useState("all");
-    const [selectedChampionship, setSelectedChampionship] = useState<string>("all");
+    const [selectedChampionship, setSelectedChampionship] = useState<string>(paramChamp || "all");
     const [matches, setMatches] = useState<Match[]>([]);
     const [users, setUsers] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
@@ -58,31 +68,95 @@ export default function HistoryClient() {
             const from = (page - 1) * ITEMS_PER_PAGE;
             const to = from + ITEMS_PER_PAGE - 1;
 
-            let query = (supabase.from("matches") as any)
-                .select("*", { count: "exact" })
-                .eq("status", "finished")
-                .order("date", { ascending: false })
-                .range(from, to);
+            const champMap = new Map(championships.map(c => [c.id, c]));
+            let formattedMatches: Match[] = [];
+            let totalCount = 0;
 
-            if (selectedChampionship !== "all") {
-                query = query.eq("championship_id", selectedChampionship);
+            // If we have a user AND a type filter, we MUST fetch all to filter correctly client-side
+            if (paramUser && paramType) {
+                let query = (supabase.from("predictions") as any)
+                    .select("*, matches(*)")
+                    .eq("user_id", paramUser);
+
+                if (selectedChampionship !== "all") {
+                    query = query.filter("matches.championship_id", "eq", selectedChampionship);
+                }
+
+                query = query.order("date", { foreignTable: "matches", ascending: true });
+
+                const { data, error } = await query;
+                if (error) throw error;
+
+                const filtered = (data as any[])?.map(p => {
+                    const m = p.matches;
+                    if (!m) return null;
+
+                    const ph = p.home_score;
+                    const pa = p.away_score;
+                    const mh = m.score_home;
+                    const ma = m.score_away;
+
+                    if (mh === null || ma === null) return null;
+
+                    const winP = ph > pa ? 1 : (ph < pa ? 2 : 0);
+                    const winM = mh > ma ? 1 : (mh < ma ? 2 : 0);
+
+                    const isBucha = ph === mh && pa === ma;
+                    const isSituacao = !isBucha && winP === winM;
+                    const isErro = winP !== winM;
+
+                    if (paramType === "bucha" && !isBucha) return null;
+                    if (paramType === "situacao" && !isSituacao) return null;
+                    if (paramType === "erro" && !isErro) return null;
+
+                    const champ = champMap.get(m.championship_id);
+                    return {
+                        ...m,
+                        championshipName: champ?.name || "Campeonato Desconhecido",
+                        championshipLogoUrl: (champ as any)?.settings?.iconUrl
+                    };
+                }).filter(Boolean) || [];
+
+                totalCount = filtered.length;
+                formattedMatches = filtered.slice(from, to + 1);
+            } else {
+                let query;
+                if (paramUser) {
+                    query = (supabase.from("predictions") as any)
+                        .select("*, matches(*)", { count: "exact" })
+                        .eq("user_id", paramUser);
+                    query = query.order("date", { foreignTable: "matches", ascending: true });
+                    if (selectedChampionship !== "all") {
+                        query = query.filter("matches.championship_id", "eq", selectedChampionship);
+                    }
+                } else {
+                    query = (supabase.from("matches") as any)
+                        .select("*", { count: "exact" })
+                        .eq("status", "finished")
+                        .order("date", { ascending: true });
+                    if (selectedChampionship !== "all") {
+                        query = query.eq("championship_id", selectedChampionship);
+                    }
+                }
+
+                const { data, count, error } = await query.range(from, to);
+                if (error) throw error;
+
+                totalCount = count || 0;
+                formattedMatches = (data as any[])?.map(item => {
+                    const m = paramUser ? item.matches : item;
+                    if (!m) return null;
+                    const champ = champMap.get(m.championship_id);
+                    return {
+                        ...m,
+                        championshipName: champ?.name || "Campeonato Desconhecido",
+                        championshipLogoUrl: (champ as any)?.settings?.iconUrl
+                    };
+                }).filter(Boolean) || [];
             }
 
-            const { data, count, error } = await query;
-            if (error) throw error;
-
-            const champMap = new Map(championships.map(c => [c.id, c]));
-            const formattedMatches = (data as any[])?.map(m => {
-                const champ = champMap.get(m.championship_id);
-                return {
-                    ...m,
-                    championshipName: champ?.name || "Campeonato Desconhecido",
-                    championshipLogoUrl: (champ as any)?.settings?.iconUrl
-                };
-            }) || [];
-
             setMatches(formattedMatches);
-            setIsLastPage(count ? from + formattedMatches.length >= count : true);
+            setIsLastPage(from + formattedMatches.length >= totalCount);
             setCurrentPage(page);
         } catch (error) {
             console.error("Error fetching history matches:", error);
@@ -95,7 +169,7 @@ export default function HistoryClient() {
         if (championships.length > 0) {
             fetchMatches(1);
         }
-    }, [selectedChampionship, championships]);
+    }, [selectedChampionship, championships, paramUser, paramType]);
 
     const handleNextPage = () => {
         if (!isLastPage) fetchMatches(currentPage + 1);
@@ -105,12 +179,25 @@ export default function HistoryClient() {
         if (currentPage > 1) fetchMatches(currentPage - 1);
     };
 
+    const isFiltered = !!paramUser || !!paramType;
+    const showPagination = (currentPage > 1 || !isLastPage) && matches.length > 0;
+
     return (
         <div className="space-y-6">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <h1 className="text-3xl font-bold tracking-tight">Histórico de Partidas</h1>
+                <h1 className="text-3xl font-bold tracking-tight">
+                    {paramType === 'bucha' ? 'Minhas Buchas' :
+                        paramType === 'situacao' ? 'Minhas Situações' :
+                            paramType === 'erro' ? 'Meus Erros' :
+                                'Histórico de Partidas'}
+                </h1>
 
                 <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
+                    {isFiltered && (
+                        <Button variant="ghost" onClick={() => router.push('/dashboard/history')} className="text-muted-foreground">
+                            Limpar Filtros
+                        </Button>
+                    )}
                     <Select value={selectedChampionship} onValueChange={setSelectedChampionship}>
                         <SelectTrigger className="w-full sm:w-[260px]">
                             <SelectValue placeholder="Campeonato" />
@@ -150,7 +237,7 @@ export default function HistoryClient() {
                     />
                 ))}
 
-                {(matches.length > 0 || currentPage > 1) && !loading && (
+                {showPagination && !loading && (
                     <div className="flex items-center justify-between pt-4 border-t">
                         <Button variant="outline" onClick={handlePrevPage} disabled={currentPage === 1} className="w-[120px]">
                             <ChevronLeft className="mr-2 h-4 w-4" /> Anterior

@@ -448,7 +448,9 @@ export function UnifiedMatchCard({
                                 <>
                                     <Calendar className="h-3.5 w-3.5 text-muted-foreground/60" />
                                     <span className="text-[11px] sm:text-[13px]">
-                                        {new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' }).format(matchDate)}
+                                        {match.championship_id === '2ecad449-e20f-4084-8ae6-c017083db04a'
+                                            ? '2012'
+                                            : new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' }).format(matchDate)}
                                     </span>
                                 </>
                             )}
