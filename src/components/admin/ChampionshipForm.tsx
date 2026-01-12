@@ -16,6 +16,7 @@ import { Switch } from "@/components/ui/switch";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { ChampionBanner } from "@/components/banner/ChampionBanner";
 import { BannerConfigForm } from "@/components/banner/BannerConfigForm";
 import { BannerConfig, BannerWinner } from "@/types/banner";
@@ -59,6 +60,8 @@ const formSchema = z.object({
     iconUrl: z.string().url("URL inválida").optional().or(z.literal("")),
     startDate: z.date(),
     endDate: z.date(),
+    startDateInput: z.string().optional(),
+    endDateInput: z.string().optional(),
     type: z.enum(["liga", "copa", "avulso"]),
     category: z.string().default("other"),
     teamMode: z.enum(["clubes", "selecoes", "mista"]),
@@ -128,12 +131,14 @@ export function ChampionshipForm({ initialData, onSubmit, isSubmitting = false, 
         resolver: zodResolver(formSchema) as any,
         defaultValues: {
             name: initialData?.name || "",
-            iconUrl: initialData?.iconUrl || "",
+            iconUrl: initialData?.iconUrl || (initialData as any)?.icon_url || "",
             startDate: initialData?.startDate ? new Date(initialData.startDate) : undefined,
             endDate: initialData?.endDate ? new Date(initialData.endDate) : undefined,
-            type: initialData?.type || "liga",
+            startDateInput: initialData?.startDate ? format(new Date(initialData.startDate), "dd/MM/yyyy") : "",
+            endDateInput: initialData?.endDate ? format(new Date(initialData.endDate), "dd/MM/yyyy") : "",
+            type: initialData?.type || "copa",
             category: initialData?.category || "other",
-            teamMode: initialData?.teamMode || "clubes",
+            teamMode: initialData?.teamMode || "selecoes",
             ghostPlayer: initialData?.ghostPlayer ?? false,
             selectionSlots: initialData?.selectionSlots ?? 3,
             enableSelectionPriority: initialData?.enableSelectionPriority ?? false,
@@ -144,30 +149,48 @@ export function ChampionshipForm({ initialData, onSubmit, isSubmitting = false, 
             comboPoints: initialData?.comboPoints ?? 5,
             bannerEnabled: initialData?.bannerEnabled ?? false,
             bannerConfig: initialData?.bannerConfig || {
-                titleColor: "#FFFFFF",
-                subtitleColor: "#FBBF24",
-                namesColor: "#FFFFFF",
-                displayMode: "photo_and_names",
-                layoutStyle: "modern",
+                active: false,
+                displayMode: 'photo_and_names',
+                titleColor: '#FFFFFF',
+                subtitleColor: '#fbbf24',
+                namesColor: '#FFFFFF',
+                layoutStyle: 'modern',
                 backgroundScale: 100,
                 backgroundPosX: 50,
                 backgroundPosY: 50,
                 customFontSizeOffset: 0,
-                selectionMode: "manual",
+                selectionMode: 'manual'
             },
             manualWinners: initialData?.manualWinners || [],
-            participants: initialData?.participants || [],
+            participants: (initialData?.participants || []).map((p: any) => ({
+                userId: p.userId || p.user_id,
+                displayName: p.displayName || p.display_name,
+                photoUrl: p.photoUrl || p.photo_url || null,
+                email: p.email || null
+            })),
             creationType: initialData?.creationType || "manual",
             apiCode: initialData?.apiCode || "",
-            status: initialData?.status || "rascunho",
+            status: (initialData?.status as any) === "ativo" ? "ativo" : (initialData?.status as any) === "finalizado" ? "finished" : (initialData?.status || "rascunho") as any,
             officialRanking: initialData?.officialRanking || ["", "", "", "", ""],
-            teams: initialData?.teams || [],
+            teams: (initialData?.teams || []).map((t: any) => ({
+                id: t.id,
+                name: t.name,
+                shieldUrl: t.shieldUrl || t.shield_url || null
+            })),
             apiScoreType: initialData?.apiScoreType || "fullTime",
         } as any,
     });
 
     const [isUploading, setIsUploading] = useState(false);
     const [isAutoFilling, setIsAutoFilling] = useState(false);
+    const [quickTeam, setQuickTeam] = useState({ name: "", shortName: "", shieldUrl: "", type: "national" as "club" | "national" });
+    const [duplicateTeam, setDuplicateTeam] = useState<any>(null);
+    const [showDuplicateDialog, setShowDuplicateDialog] = useState(false);
+    const [isCreatingTeam, setIsCreatingTeam] = useState(false);
+
+    const participants = form.watch("participants") || [];
+    const manualWinners = form.watch("manualWinners") || [];
+
     const logoInputRef = useRef<HTMLInputElement>(null);
     const bgInputRef = useRef<HTMLInputElement>(null);
 
@@ -343,12 +366,87 @@ export function ChampionshipForm({ initialData, onSubmit, isSubmitting = false, 
     };
 
     const removeParticipant = (userId: string) => {
-        const current = form.getValues("participants") || [];
-        form.setValue("participants", current.filter(p => p.userId !== userId));
+        form.setValue("participants", participants.filter((p: any) => p.userId !== userId));
     };
 
-    const manualWinners = form.watch("manualWinners") || [];
-    const participants = form.watch("participants") || [];
+    const mapDbTeamToUi = (t: any) => ({
+        id: t.id,
+        name: t.name,
+        shieldUrl: t.shield_url || t.shieldUrl
+    });
+
+    const handleQuickTeamAdd = async (overwrite: boolean = false, forceUseExisting: boolean = false) => {
+        if (!quickTeam.name) return;
+        setIsCreatingTeam(true);
+
+        try {
+            let targetTeam = duplicateTeam;
+
+            // 1. Check for duplicates (still client-side for fast UX, but the API will also check)
+            if (!targetTeam && !forceUseExisting && !overwrite) {
+                const { data: existing, error: searchError } = await supabase
+                    .from("teams")
+                    .select("*")
+                    .ilike("name", quickTeam.name);
+
+                if (searchError) throw searchError;
+
+                if (existing && existing.length > 0) {
+                    setDuplicateTeam(existing[0]);
+                    setShowDuplicateDialog(true);
+                    setIsCreatingTeam(false);
+                    return;
+                }
+            }
+
+            // 2. Call Admin API to bypass RLS
+            const response = await fetch("/api/admin/teams", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    id: overwrite ? targetTeam?.id : undefined,
+                    name: quickTeam.name,
+                    short_name: quickTeam.shortName || null,
+                    shield_url: quickTeam.shieldUrl || null,
+                    type: quickTeam.type,
+                    overwrite: overwrite || forceUseExisting
+                })
+            });
+
+            const result = await response.json();
+
+            if (!response.ok) {
+                if (response.status === 409) { // Conflict
+                    setDuplicateTeam(result.team);
+                    setShowDuplicateDialog(true);
+                    setIsCreatingTeam(false);
+                    return;
+                }
+                throw new Error(result.error || "Erro ao salvar equipe");
+            }
+
+            const finalTeam = mapDbTeamToUi(result);
+
+            if (finalTeam) {
+                const currentTeams = (form.getValues("teams") as any[]) || [];
+                if (!currentTeams.some(t => t.id === finalTeam.id)) {
+                    form.setValue("teams", [...currentTeams, finalTeam] as any);
+                }
+            }
+
+            setQuickTeam({ name: "", shortName: "", shieldUrl: "", type: "national" });
+            setDuplicateTeam(null);
+            setShowDuplicateDialog(false);
+
+        } catch (error: any) {
+            console.error("Error detailed:", error);
+            const msg = error.message || "Erro desconhecido ao processar equipe.";
+            alert(`Erro: ${msg}`);
+        } finally {
+            setIsCreatingTeam(false);
+        }
+    };
+
     const bannerLayout = form.watch("bannerConfig.layoutStyle");
 
     // Check for ties to enforce classic layout
@@ -489,36 +587,91 @@ export function ChampionshipForm({ initialData, onSubmit, isSubmitting = false, 
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div className="grid gap-2">
                                     <Label>Data de Início</Label>
-                                    <Input
-                                        type="date"
-                                        value={form.watch("startDate") ? format(form.watch("startDate"), "yyyy-MM-dd") : ""}
-                                        onChange={(e) => {
-                                            const date = e.target.value ? new Date(e.target.value) : undefined;
-                                            if (date) {
-                                                // Ajustar fuso horário para evitar problemas de "dia anterior"
-                                                const userTimezoneOffset = date.getTimezoneOffset() * 60000;
-                                                const adjustedDate = new Date(date.getTime() + userTimezoneOffset);
-                                                form.setValue("startDate", adjustedDate);
-                                            }
-                                        }}
-                                    />
+                                    <div className="flex gap-2">
+                                        <Input
+                                            placeholder="DD/MM/AAAA"
+                                            {...form.register("startDateInput")}
+                                            className="flex-1"
+                                            onChange={(e) => {
+                                                let v = e.target.value.replace(/\D/g, '').slice(0, 8);
+                                                if (v.length >= 5) v = `${v.slice(0, 2)}/${v.slice(2, 4)}/${v.slice(4)}`;
+                                                else if (v.length >= 3) v = `${v.slice(0, 2)}/${v.slice(2)}`;
+                                                e.target.value = v;
+                                                form.setValue("startDateInput", v);
+
+                                                if (v.length === 10) {
+                                                    const [d, m, y] = v.split('/').map(Number);
+                                                    const date = new Date(y, m - 1, d);
+                                                    if (!isNaN(date.getTime())) form.setValue("startDate", date);
+                                                }
+                                            }}
+                                        />
+                                        <Popover>
+                                            <PopoverTrigger asChild>
+                                                <Button variant="outline" size="icon" className="shrink-0">
+                                                    <CalendarIcon className="h-4 w-4" />
+                                                </Button>
+                                            </PopoverTrigger>
+                                            <PopoverContent className="w-auto p-0" align="end">
+                                                <Calendar
+                                                    mode="single"
+                                                    selected={form.watch("startDate")}
+                                                    onSelect={(date) => {
+                                                        if (date) {
+                                                            form.setValue("startDate", date);
+                                                            form.setValue("startDateInput", format(date, "dd/MM/yyyy"));
+                                                        }
+                                                    }}
+                                                    initialFocus
+                                                />
+                                            </PopoverContent>
+                                        </Popover>
+                                    </div>
                                     {form.formState.errors.startDate && <p className="text-sm text-destructive">{form.formState.errors.startDate.message}</p>}
                                 </div>
 
                                 <div className="grid gap-2">
                                     <Label>Data de Fim</Label>
-                                    <Input
-                                        type="date"
-                                        value={form.watch("endDate") ? format(form.watch("endDate"), "yyyy-MM-dd") : ""}
-                                        onChange={(e) => {
-                                            const date = e.target.value ? new Date(e.target.value) : undefined;
-                                            if (date) {
-                                                const userTimezoneOffset = date.getTimezoneOffset() * 60000;
-                                                const adjustedDate = new Date(date.getTime() + userTimezoneOffset);
-                                                form.setValue("endDate", adjustedDate);
-                                            }
-                                        }}
-                                    />
+                                    <div className="flex gap-2">
+                                        <Input
+                                            placeholder="DD/MM/AAAA"
+                                            {...form.register("endDateInput")}
+                                            className="flex-1"
+                                            onChange={(e) => {
+                                                let v = e.target.value.replace(/\D/g, '').slice(0, 8);
+                                                if (v.length >= 5) v = `${v.slice(0, 2)}/${v.slice(2, 4)}/${v.slice(4)}`;
+                                                else if (v.length >= 3) v = `${v.slice(0, 2)}/${v.slice(2)}`;
+                                                e.target.value = v;
+                                                form.setValue("endDateInput", v);
+
+                                                if (v.length === 10) {
+                                                    const [d, m, y] = v.split('/').map(Number);
+                                                    const date = new Date(y, m - 1, d);
+                                                    if (!isNaN(date.getTime())) form.setValue("endDate", date);
+                                                }
+                                            }}
+                                        />
+                                        <Popover>
+                                            <PopoverTrigger asChild>
+                                                <Button variant="outline" size="icon" className="shrink-0">
+                                                    <CalendarIcon className="h-4 w-4" />
+                                                </Button>
+                                            </PopoverTrigger>
+                                            <PopoverContent className="w-auto p-0" align="end">
+                                                <Calendar
+                                                    mode="single"
+                                                    selected={form.watch("endDate")}
+                                                    onSelect={(date) => {
+                                                        if (date) {
+                                                            form.setValue("endDate", date);
+                                                            form.setValue("endDateInput", format(date, "dd/MM/yyyy"));
+                                                        }
+                                                    }}
+                                                    initialFocus
+                                                />
+                                            </PopoverContent>
+                                        </Popover>
+                                    </div>
                                     {form.formState.errors.endDate && <p className="text-sm text-destructive">{form.formState.errors.endDate.message}</p>}
                                 </div>
                             </div>
@@ -680,8 +833,9 @@ export function ChampionshipForm({ initialData, onSubmit, isSubmitting = false, 
                             <CardDescription>Gerencie quais equipes fazem parte deste campeonato.</CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4">
-                            <div className="flex gap-4">
+                            <div className="flex flex-col sm:flex-row gap-4">
                                 <div className="flex-1">
+                                    <Label className="text-[10px] uppercase font-bold text-muted-foreground mb-1 block">Buscar no Banco</Label>
                                     <Select onValueChange={(teamId) => {
                                         const fetchTeam = async () => {
                                             const { data } = await supabase.from("teams").select("*").eq("id", teamId).single();
@@ -696,20 +850,9 @@ export function ChampionshipForm({ initialData, onSubmit, isSubmitting = false, 
                                         fetchTeam();
                                     }}>
                                         <SelectTrigger>
-                                            <SelectValue placeholder="Adicionar Equipe..." />
+                                            <SelectValue placeholder="Escolher equipe existente..." />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <div className="p-2">
-                                                <Input
-                                                    placeholder="Filtrar equipes..."
-                                                    className="mb-2 h-8 text-xs"
-                                                    onChange={async (e) => {
-                                                        const term = e.target.value;
-                                                        // O ideal seria um seletor com busca, mas para agora vamos mostrar todos ord. por nome
-                                                    }}
-                                                />
-                                            </div>
-                                            {/* Busca simples de equipes nacionais por causa do modo euro */}
                                             <TeamSelectorItems
                                                 supabase={supabase}
                                                 selectedTeamIds={((form.watch("teams") as any[]) || []).map((t: any) => t.id)}
@@ -717,29 +860,155 @@ export function ChampionshipForm({ initialData, onSubmit, isSubmitting = false, 
                                         </SelectContent>
                                     </Select>
                                 </div>
-                            </div>
 
-                            <div className="grid gap-2 grid-cols-2 sm:grid-cols-3 md:grid-cols-4">
-                                {(form.watch("teams") as any[] || []).map((team: any, index: number) => (
-                                    <div key={`${team.id}-${index}`} className="flex items-center justify-between p-2 rounded-md border border-border bg-muted/20 group hover:border-primary/50 transition-all">
-                                        <div className="flex items-center gap-2 overflow-hidden">
-                                            {team.shieldUrl && <img src={team.shieldUrl} alt={team.name} className="h-5 w-5 object-contain" />}
-                                            <span className="text-xs font-medium truncate">{team.name}</span>
+                                <div className="flex-[2] space-y-3 p-4 border rounded-lg bg-yellow-500/5 border-yellow-500/10">
+                                    <div className="flex items-center gap-2 mb-1">
+                                        <Plus className="h-4 w-4 text-yellow-600" />
+                                        <h4 className="text-xs font-bold uppercase text-yellow-700">Adicionar Nova Seleção/Equipe</h4>
+                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-12 gap-2">
+                                        <div className="md:col-span-5">
+                                            <Input
+                                                placeholder="Nome (Ex: Holanda)"
+                                                value={quickTeam.name}
+                                                onChange={(e) => setQuickTeam({ ...quickTeam, name: e.target.value })}
+                                                className="h-8 text-xs bg-background"
+                                            />
+                                        </div>
+                                        <div className="md:col-span-2">
+                                            <Input
+                                                placeholder="Sigla"
+                                                value={quickTeam.shortName}
+                                                onChange={(e) => setQuickTeam({ ...quickTeam, shortName: e.target.value })}
+                                                className="h-8 text-xs bg-background uppercase"
+                                            />
+                                        </div>
+                                        <div className="md:col-span-5">
+                                            <Input
+                                                placeholder="URL do Escudo"
+                                                value={quickTeam.shieldUrl}
+                                                onChange={(e) => setQuickTeam({ ...quickTeam, shieldUrl: e.target.value })}
+                                                className="h-8 text-xs bg-background"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="flex justify-between items-center">
+                                        <div className="flex gap-4">
+                                            <label className="flex items-center gap-1.5 cursor-pointer">
+                                                <input
+                                                    type="radio"
+                                                    name="q-type"
+                                                    checked={quickTeam.type === 'national'}
+                                                    onChange={() => setQuickTeam({ ...quickTeam, type: 'national' })}
+                                                    className="accent-yellow-600 h-3 w-3"
+                                                />
+                                                <span className="text-[10px] uppercase font-medium">Seleção</span>
+                                            </label>
+                                            <label className="flex items-center gap-1.5 cursor-pointer">
+                                                <input
+                                                    type="radio"
+                                                    name="q-type"
+                                                    checked={quickTeam.type === 'club'}
+                                                    onChange={() => setQuickTeam({ ...quickTeam, type: 'club' })}
+                                                    className="accent-yellow-600 h-3 w-3"
+                                                />
+                                                <span className="text-[10px] uppercase font-medium">Clube</span>
+                                            </label>
                                         </div>
                                         <Button
                                             type="button"
-                                            variant="ghost"
-                                            size="icon"
-                                            className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                                            onClick={() => {
-                                                const current = form.getValues("teams") || [];
-                                                form.setValue("teams", current.filter(t => t.id !== team.id));
-                                            }}
+                                            onClick={() => handleQuickTeamAdd(false)}
+                                            disabled={!quickTeam.name || isCreatingTeam}
+                                            size="sm"
+                                            className="h-7 text-[10px] bg-yellow-600 hover:bg-yellow-700 text-white font-bold px-4"
                                         >
-                                            <X className="h-4 w-4" />
+                                            {isCreatingTeam ? <Loader2 className="h-3 w-3 animate-spin" /> : "ADICIONAR"}
                                         </Button>
                                     </div>
-                                ))}
+                                </div>
+                            </div>
+
+                            {/* Duplicate Dialog */}
+                            <Dialog open={showDuplicateDialog} onOpenChange={setShowDuplicateDialog}>
+                                <DialogContent className="sm:max-w-[425px]">
+                                    <DialogHeader>
+                                        <DialogTitle className="flex items-center gap-2 text-yellow-600">
+                                            <AlertCircle className="h-5 w-5" />
+                                            Equipe já cadastrada
+                                        </DialogTitle>
+                                        <DialogDescription>
+                                            A equipe <strong>{duplicateTeam?.name}</strong> já existe no banco de dados.
+                                        </DialogDescription>
+                                    </DialogHeader>
+                                    <div className="flex items-center gap-4 p-4 bg-muted/30 rounded-lg">
+                                        <div className="h-12 w-12 bg-white rounded-full flex items-center justify-center p-1 border shadow-sm shrink-0">
+                                            {duplicateTeam?.shield_url ? (
+                                                <img src={duplicateTeam.shield_url} alt="Logo" className="h-full w-full object-contain" />
+                                            ) : <Shield className="h-6 w-6 text-muted-foreground" />}
+                                        </div>
+                                        <div>
+                                            <p className="font-bold text-sm">{duplicateTeam?.name} ({duplicateTeam?.short_name})</p>
+                                            <p className="text-[10px] text-muted-foreground">ID: {duplicateTeam?.id}</p>
+                                        </div>
+                                    </div>
+                                    <DialogFooter className="flex flex-col sm:flex-row gap-2">
+                                        <Button
+                                            variant="outline"
+                                            onClick={() => setShowDuplicateDialog(false)}
+                                            className="w-full sm:w-auto text-xs"
+                                        >
+                                            Cancelar
+                                        </Button>
+                                        <Button
+                                            variant="secondary"
+                                            onClick={() => handleQuickTeamAdd(false, true)}
+                                            className="w-full sm:w-auto text-xs"
+                                        >
+                                            Usar Existente
+                                        </Button>
+                                        <Button
+                                            onClick={() => handleQuickTeamAdd(true)}
+                                            className="w-full sm:w-auto text-xs bg-yellow-600 hover:bg-yellow-700"
+                                        >
+                                            Sobrescrever Dados
+                                        </Button>
+                                    </DialogFooter>
+                                </DialogContent>
+                            </Dialog>
+
+                            <div className="border-t pt-4">
+                                <Label className="text-[10px] uppercase font-bold text-muted-foreground mb-3 block">Equipes no Campeonato ({((form.watch("teams") as any[]) || []).length})</Label>
+                                <div className="grid gap-2 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+                                    {(form.watch("teams") as any[] || []).map((team: any, index: number) => (
+                                        <div key={`${team.id}-${index}`} className="flex items-center justify-between p-2 rounded-md border border-border bg-muted/20 group hover:border-primary/50 transition-all opacity-100 hover:bg-background">
+                                            <div className="flex items-center gap-2 overflow-hidden">
+                                                <div className="h-6 w-6 shrink-0 bg-white rounded-full border flex items-center justify-center p-0.5 mt-0.5">
+                                                    {team.shieldUrl ? (
+                                                        <img src={team.shieldUrl} alt={team.name} className="h-full w-full object-contain" />
+                                                    ) : <Shield className="h-2 w-2 text-muted-foreground" />}
+                                                </div>
+                                                <span className="text-[11px] font-bold truncate">{team.name}</span>
+                                            </div>
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
+                                                onClick={() => {
+                                                    const current = form.getValues("teams") || [];
+                                                    form.setValue("teams", current.filter((t: any) => t.id !== team.id));
+                                                }}
+                                            >
+                                                <X className="h-3 w-3" />
+                                            </Button>
+                                        </div>
+                                    ))}
+                                </div>
+                                {((form.watch("teams") as any[]) || []).length === 0 && (
+                                    <div className="text-center py-6 border-2 border-dashed rounded-lg bg-muted/10">
+                                        <p className="text-xs text-muted-foreground">Nenhuma equipe adicionada a este campeonato.</p>
+                                    </div>
+                                )}
                             </div>
                         </CardContent>
                     </Card>
@@ -922,6 +1191,11 @@ export function ChampionshipForm({ initialData, onSubmit, isSubmitting = false, 
                                                 namesColor: "#FFFFFF",
                                                 displayMode: "photo_and_names",
                                                 layoutStyle: "modern",
+                                                backgroundScale: 100,
+                                                backgroundPosX: 50,
+                                                backgroundPosY: 50,
+                                                customFontSizeOffset: 0,
+                                                selectionMode: "manual",
                                                 ...form.watch("bannerConfig")
                                             }}
                                             onChange={(newConfig) => form.setValue("bannerConfig", newConfig as any, { shouldDirty: true })}

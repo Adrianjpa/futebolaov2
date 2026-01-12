@@ -37,7 +37,10 @@ export default function HallOfFamePage() {
     const isAdmin = profile?.funcao === 'admin' || profile?.funcao === 'moderator';
     const [championships, setChampionships] = useState<ArchivedChampionship[]>([]);
     const [loading, setLoading] = useState(true);
-    const [emblaRef] = useEmblaCarousel({ loop: true, align: "center", containScroll: "trimSnaps" }, [Autoplay({ delay: 6000, stopOnInteraction: false })]);
+    const [emblaRef] = useEmblaCarousel(
+        { loop: true, align: "center", skipSnaps: false },
+        [Autoplay({ delay: 4000, stopOnInteraction: false, stopOnMouseEnter: true })]
+    );
     const supabase = createClient();
 
     // Admin State for Add/Edit
@@ -62,15 +65,15 @@ export default function HallOfFamePage() {
     const fetchFame = async () => {
         try {
             // Fetch all championships to check for banner settings
-            const { data, error } = await (supabase
+            const { data, error } = await supabase
                 .from("championships")
                 .select("*")
-                .order("created_at", { ascending: false }) as any);
+                .order("created_at", { ascending: false });
 
             if (error) throw error;
 
             // Map and filter for banner enabled in settings
-            const list = ((data as any[]) || [])
+            const list: ArchivedChampionship[] = ((data as any[]) || [])
                 .map(d => {
                     const settings = d.settings as any;
                     // Prioritize tournament end date from settings, fallback to record creation
@@ -82,16 +85,16 @@ export default function HallOfFamePage() {
                         status: d.status,
                         category: d.category || "geral",
                         created_at: sortDate,
-                        bannerEnabled: settings?.bannerEnabled || settings?.bannerConfig?.active || settings?.bannerConfig?.enabled,
+                        bannerEnabled: !!(settings?.bannerEnabled || settings?.bannerConfig?.active || settings?.bannerConfig?.enabled),
                         bannerConfig: settings?.bannerConfig,
                         manualWinners: settings?.manualWinners || [],
                         teamMode: settings?.teamMode || 'clubes'
                     };
                 })
-                .filter(c => (c as any).bannerEnabled === true)
-                .sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+                .filter(c => c.bannerEnabled === true)
+                .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
-            setChampionships(list as ArchivedChampionship[]);
+            setChampionships(list);
         } catch (error) {
             console.error("Error loading Hall of Fame:", error);
         } finally {
@@ -189,7 +192,7 @@ export default function HallOfFamePage() {
     }
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 px-4 sm:px-0 pb-12">
             <div className="flex items-center justify-between gap-4">
                 <div className="flex flex-col gap-1">
                     <h1 className="text-3xl font-bold tracking-tight">🏆 Hall da Fama</h1>
@@ -373,8 +376,8 @@ export default function HallOfFamePage() {
                 </div>
             ) : (
                 /* Embla Carousel Viewport */
-                <div className="overflow-hidden p-1 -m-1" ref={emblaRef}>
-                    <div className="flex gap-6 touch-pan-y">
+                <div className="overflow-hidden" ref={emblaRef}>
+                    <div className="flex touch-pan-y -ml-4">
                         {championships.map((champ: ArchivedChampionship) => {
                             // Prepare winners list (Manual Override OR Automatic Logic placeholder)
                             const winners = champ.manualWinners || [];
@@ -389,7 +392,7 @@ export default function HallOfFamePage() {
                             };
 
                             return (
-                                <div key={champ.id} className="flex-[0_0_92%] min-w-0 sm:flex-[0_0_50%] lg:flex-[0_0_33.33%] xl:flex-[0_0_25%] pb-4">
+                                <div key={champ.id} className="flex-[0_0_88%] min-w-0 pl-4 sm:flex-[0_0_50%] lg:flex-[0_0_33.33%] xl:flex-[0_0_25%] pb-4">
                                     <div className="relative group">
                                         <Dialog>
                                             <DialogTrigger className="w-full transition-transform hover:scale-[1.02] active:scale-[0.98] outline-none">

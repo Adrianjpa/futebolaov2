@@ -101,11 +101,34 @@ export default function PublicProfilePage() {
                     );
                 }).length;
 
+                // 4. Fetch Actual Participation (to count disputed correctly)
+                const { data: participationData } = await (supabase
+                    .from("championship_participants") as any)
+                    .select("championship_id")
+                    .eq("user_id", id);
+
+                const participantIds = (participationData || []).map((p: any) => p.championship_id);
+
+                // Disputed = Linked championships that are FINISHED
+                const championshipsDisputed = champs.filter((c: any) => {
+                    const isFinished = c.status === 'finalizado' || c.status === 'finished';
+                    if (!isFinished) return false;
+
+                    // Check Join Table
+                    const isInJoinTable = participantIds.includes(c.id);
+                    if (isInJoinTable) return true;
+
+                    // Check Settings JSON
+                    const settingsParticipants = c.settings?.participants || [];
+                    const isInJson = settingsParticipants.some((p: any) => (p.userId === id || p.user_id === id));
+                    return isInJson;
+                }).length;
+
                 setStats({
                     totalPoints: profile?.total_points || 0,
                     ranking: "-",
                     totalPredictions: preds.length,
-                    championshipsDisputed: uniqueChampionshipIds.length,
+                    championshipsDisputed: championshipsDisputed,
                     titlesWon: titlesWon
                 });
 

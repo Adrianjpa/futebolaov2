@@ -1,10 +1,8 @@
 "use client";
 
-import { useMemo } from "react";
-import Link from "next/link";
 import { BannerConfig, BannerWinner } from "@/types/banner";
 import { cn } from "@/lib/utils";
-import { Trophy, Medal, Star } from "lucide-react";
+import { Trophy, Star } from "lucide-react";
 
 interface ChampionBannerProps {
     championshipName: string;
@@ -14,8 +12,9 @@ interface ChampionBannerProps {
     teamMode?: 'clubes' | 'selecoes' | 'mista';
 }
 
-export function ChampionBanner({ championshipName, config, winners, className, teamMode = 'clubes' }: ChampionBannerProps) {
-    // defaults
+export function ChampionBanner({ championshipName, config: rawConfig, winners, className, teamMode = 'clubes' }: ChampionBannerProps) {
+    // defaults with safety check
+    const config = rawConfig || {};
     const titleColor = config.titleColor || "#FFFFFF";
     const subtitleColor = config.subtitleColor || "#FBBF24"; // Amber-400
     const namesColor = config.namesColor || "#FFFFFF";

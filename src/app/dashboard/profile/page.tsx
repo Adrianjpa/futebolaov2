@@ -96,6 +96,8 @@ export default function ProfilePage() {
                 }));
                 setUserPredictions(preds || []);
 
+                const uniqueChampionshipIds = Array.from(new Set(preds.map((p: any) => p.championship_id).filter(Boolean)));
+
                 // 3. Fetch All Championships
                 const { data: allChamps } = await (supabase.from("championships") as any).select("*");
                 const champs = (allChamps || []) as any[];
@@ -107,11 +109,6 @@ export default function ProfilePage() {
                 if (filteredChamps.length > 0 && selectedChampionship === "all") {
                     setSelectedChampionship(filteredChamps[0].id);
                 }
-
-                // Statistics calculation (approximate for now as legacy data might be handled differently)
-                const championshipsDisputed = filteredChamps.length;
-
-                const uniqueChampionshipIds = Array.from(new Set(preds.map((p: any) => p.championship_id).filter(Boolean)));
 
                 // Titles and Medals would come from a winners table or JSON settings in championship
                 // Here we use a placeholder or check if settings JSON has winners
@@ -134,11 +131,34 @@ export default function ProfilePage() {
                     );
                 }).length;
 
+                // 4. Fetch Actual Participation (to count disputed correctly)
+                const { data: participationData } = await (supabase
+                    .from("championship_participants") as any)
+                    .select("championship_id")
+                    .eq("user_id", user.id);
+
+                const participantIds = (participationData || []).map((p: any) => p.championship_id);
+
+                // Disputed = Linked championships that are FINISHED
+                const championshipsDisputed = (allChamps || []).filter((c: any) => {
+                    const isFinished = c.status === 'finalizado' || c.status === 'finished';
+                    if (!isFinished) return false;
+
+                    // Check Join Table
+                    const isInJoinTable = participantIds.includes(c.id);
+                    if (isInJoinTable) return true;
+
+                    // Check Settings JSON
+                    const settingsParticipants = c.settings?.participants || [];
+                    const isInJson = settingsParticipants.some((p: any) => (p.userId === user.id || p.user_id === user.id));
+                    return isInJson;
+                }).length;
+
                 setStats({
                     totalPoints: (profileData as any)?.total_points || 0,
                     ranking: "-",
                     totalPredictions: predictions?.length || 0,
-                    championshipsDisputed: uniqueChampionshipIds.length,
+                    championshipsDisputed: championshipsDisputed,
                     titlesWon: titlesWon,
                     goldMedals: goldMedals
                 });
