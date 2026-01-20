@@ -22,10 +22,11 @@ export function ChampionBanner({ championshipName, config: rawConfig, winners, c
     const champions = winners.filter(w => w.position === 'champion');
     const goldWinners = winners.filter(w => w.position === 'gold_winner');
 
-    // Rule: Force classic layout if there are ties (more than 1 winner in any category)
+    // Regra de Negócio: Se houver empates em qualquer categoria,
+    // o layout é obrigatoriamente Clássico e Exibição Apenas Nomes para caber todo mundo.
     const hasTies = champions.length > 1 || goldWinners.length > 1;
-    const layout = hasTies ? 'classic' : (config.layoutStyle || "modern");
-    const displayMode = hasTies ? 'names_only' : (config.displayMode || 'photo_and_names');
+    const layout = hasTies ? "classic" : (config.layoutStyle || "modern");
+    const displayMode = hasTies ? "names_only" : (config.displayMode || 'photo_and_names');
 
     // Determine subtitle based on teamMode
     const goldSubtitle = teamMode === 'selecoes' ? "PALPITES DA SELEÇÃO" : "PALPITES DA EQUIPE";

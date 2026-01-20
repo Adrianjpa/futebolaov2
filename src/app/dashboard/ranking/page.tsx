@@ -17,7 +17,13 @@ const TEAM_ISO_MAP: Record<string, string> = {
     'Polônia': 'pl', 'Grécia': 'gr', 'Rússia': 'ru', 'República Tcheca': 'cz',
     'Holanda': 'nl', 'Dinamarca': 'dk', 'Alemanha': 'de', 'Portugal': 'pt',
     'Espanha': 'es', 'Itália': 'it', 'Irlanda': 'ie', 'Croácia': 'hr',
-    'França': 'fr', 'Inglaterra': 'gb-eng', 'Ucrânia': 'ua', 'Suécia': 'se'
+    'França': 'fr', 'Inglaterra': 'gb-eng', 'Ucrânia': 'ua', 'Suécia': 'se',
+    'Brasil': 'br', 'Argentina': 'ar', 'Uruguai': 'uy', 'Bélgica': 'be',
+    'Suíça': 'ch', 'México': 'mx', 'Colômbia': 'co', 'Japão': 'jp',
+    'Senegal': 'sn', 'Marrocos': 'ma', 'Irã': 'ir', 'Egito': 'eg',
+    'Arábia Saudita': 'sa', 'Austrália': 'au', 'Islândia': 'is', 'Peru': 'pe',
+    'Nigéria': 'ng', 'Costa Rica': 'cr', 'Sérvia': 'rs', 'Coréia do Sul': 'kr',
+    'Panamá': 'pa', 'Tunísia': 'tn', 'Turquia': 'tr', 'Áustria': 'at'
 };
 
 interface UserProfile {
@@ -250,9 +256,6 @@ export default function RankingPage() {
                                 alt={team}
                                 className={`h-3 w-4.5 object-cover rounded-[2px] shadow-sm cursor-help border transition-all ${isAbsoluteWinner && enablePriority ? `border-yellow-400 border-2` : (!enablePriority && isHit ? `border-emerald-400 border-2` : 'border-white/5')}`}
                             />
-                            {isAbsoluteWinner && enablePriority && (
-                                <div className="absolute -top-1.5 -right-1.5 h-2.5 w-2.5 bg-yellow-400 rounded-full border border-slate-950 animate-bounce shadow-[0_0_8px_rgba(250,204,21,1)]" />
-                            )}
                         </div>
                     </TooltipTrigger>
                     <TooltipContent side="top" className={`text-[10px] font-bold px-2 py-1 ${!isAbsoluteWinner && enablePriority ? "opacity-70" : ""}`}>
@@ -284,9 +287,27 @@ export default function RankingPage() {
                         <div className="flex items-center text-xs font-bold text-muted-foreground px-4 py-3 gap-2 uppercase tracking-wider">
                             <div className="w-8 text-center">Pos.</div>
                             <div className="flex-1">Jogador</div>
-                            <HeaderItem label="Pontos" active={sortBy === 'total_points'} onClick={() => setSortBy('total_points')} />
-                            <HeaderItem label="Buchas" active={sortBy === 'exact_scores'} onClick={() => setSortBy('exact_scores')} />
-                            <HeaderItem label="Situação" active={sortBy === 'outcomes'} onClick={() => setSortBy('outcomes')} />
+
+                            {/* Desktop Headers */}
+                            <div className="hidden sm:flex items-center gap-0">
+                                <HeaderItem label="Pontos" active={sortBy === 'total_points'} onClick={() => setSortBy('total_points')} />
+                                <HeaderItem label="Buchas" active={sortBy === 'exact_scores'} onClick={() => setSortBy('exact_scores')} />
+                                <HeaderItem label="Situação" active={sortBy === 'outcomes'} onClick={() => setSortBy('outcomes')} />
+                            </div>
+
+                            {/* Mobile Header with Switcher */}
+                            <div className="flex sm:hidden items-center justify-end">
+                                <Select value={sortBy} onValueChange={(val: any) => setSortBy(val)}>
+                                    <SelectTrigger className="h-7 border-0 bg-transparent focus:ring-0 p-0 text-[10px] font-bold uppercase w-20 justify-end gap-1">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent align="end">
+                                        <SelectItem value="total_points">Pontos</SelectItem>
+                                        <SelectItem value="exact_scores">Buchas</SelectItem>
+                                        <SelectItem value="outcomes">Situação</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
                         </div>
                     </CardHeader>
                     <CardContent className="p-0">
@@ -339,9 +360,21 @@ export default function RankingPage() {
                                                 </div>
                                             </div>
                                         </div>
-                                        <StatValue value={user.total_points} active={sortBy === 'total_points'} />
-                                        <StatValue value={user.exact_scores} active={sortBy === 'exact_scores'} />
-                                        <StatValue value={user.outcomes} active={sortBy === 'outcomes'} />
+                                        {/* Desktop Stats */}
+                                        <div className="hidden sm:flex items-center">
+                                            <StatValue value={user.total_points} active={sortBy === 'total_points'} />
+                                            <StatValue value={user.exact_scores} active={sortBy === 'exact_scores'} />
+                                            <StatValue value={user.outcomes} active={sortBy === 'outcomes'} />
+                                        </div>
+
+                                        {/* Mobile Stat (Only active) */}
+                                        <div className="sm:hidden flex items-center justify-end w-20">
+                                            <StatValue
+                                                value={sortBy === 'total_points' ? user.total_points : sortBy === 'exact_scores' ? user.exact_scores : user.outcomes}
+                                                active={true}
+                                                mobile={true}
+                                            />
+                                        </div>
                                     </div>
                                 ))}
                             </div>
@@ -355,15 +388,15 @@ export default function RankingPage() {
 
 function HeaderItem({ label, active, onClick }: any) {
     return (
-        <div onClick={onClick} className={`w-12 sm:w-16 text-center cursor-pointer hover:text-primary transition-colors text-[10px] sm:text-xs uppercase font-bold ${active ? "text-primary border-b-2 border-primary" : ""}`}>
+        <div onClick={onClick} className={`w-16 text-center cursor-pointer hover:text-primary transition-colors text-xs uppercase font-bold ${active ? "text-primary border-b-2 border-primary" : ""}`}>
             {label}
         </div>
     );
 }
 
-function StatValue({ value, active }: any) {
+function StatValue({ value, active, mobile }: any) {
     return (
-        <div className={`w-12 sm:w-16 text-center font-mono text-sm ${active ? "text-primary font-bold bg-primary/5" : "text-muted-foreground"}`}>
+        <div className={`${mobile ? "w-full" : "w-16"} text-center font-mono text-sm ${active ? "text-primary font-bold bg-primary/5" : "text-muted-foreground"}`}>
             {value}
         </div>
     );

@@ -152,7 +152,19 @@ export default function ChampionshipDetailsPage() {
                 return;
             }
 
-            const matchesToUpsert = apiMatches.map((match: any) => {
+            // Filtrar jogos que ainda não têm times definidos (comum em mata-mata/Champions League)
+            const validMatches = apiMatches.filter((m: any) =>
+                m.homeTeam && m.homeTeam.name &&
+                m.awayTeam && m.awayTeam.name
+            );
+
+            if (validMatches.length === 0) {
+                alert("A API retornou jogos, mas nenhum deles tem os times definidos ainda (comum em fases futuras de mata-mata).");
+                setImporting(false);
+                return;
+            }
+
+            const matchesToUpsert = validMatches.map((match: any) => {
                 let status = "scheduled";
                 if (match.status === "FINISHED") status = "finished";
                 else if (match.status === "IN_PLAY" || match.status === "PAUSED") status = "live";
@@ -181,7 +193,8 @@ export default function ChampionshipDetailsPage() {
                     home_team_crest: match.homeTeam.crest,
                     away_team_crest: match.awayTeam.crest,
                     date: new Date(match.utcDate).toISOString(),
-                    round: match.matchday,
+                    round: match.matchday || 0,
+                    round_name: match.stage ? match.stage.replace(/_/g, " ") : null,
                     status: status,
                     score_home: homeScore,
                     score_away: awayScore,
@@ -189,12 +202,15 @@ export default function ChampionshipDetailsPage() {
             });
 
             const { error } = await (supabase.from("matches") as any).upsert(matchesToUpsert, { onConflict: 'championship_id,external_id' });
+
             if (error) {
-                // Fallback if unique constraint is just external_id or if we need to do it by ID
-                await (supabase.from("matches") as any).upsert(matchesToUpsert);
+                console.error("Upsert error:", error);
+                // Fallback attempt
+                const { error: error2 } = await (supabase.from("matches") as any).upsert(matchesToUpsert);
+                if (error2) throw new Error(`Erro no banco de dados: ${error2.message}`);
             }
 
-            alert(`Processamento de matches concluído!`);
+            alert(`Processamento de ${matchesToUpsert.length} matches concluído!`);
 
         } catch (error: any) {
             console.error("Error importing matches:", error);
@@ -469,7 +485,13 @@ function MatchList({ championshipId }: { championshipId: string }) {
                             <div className="absolute bottom-3 flex flex-col items-center gap-1">
                                 <div className="flex items-center gap-1.5 text-[10px] font-medium text-muted-foreground">
                                     <Calendar className="h-3 w-3 opacity-70" />
-                                    <span>{new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' }).format(new Date(match.date))}</span>
+                                    <span>
+                                        {match.championship_id === '2ecad449-e20f-4084-8ae6-c017083db04a'
+                                            ? '2012'
+                                            : match.championship_id === 'f5a811ac-82d4-49da-891d-d1118ce88ff8'
+                                                ? '2018'
+                                                : new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' }).format(new Date(match.date))}
+                                    </span>
                                 </div>
                                 <Badge variant={match.status === 'live' ? 'destructive' : match.status === 'finished' ? 'secondary' : 'outline'} className="text-[9px] h-4 px-2 shadow-none border-0 bg-secondary/50 text-secondary-foreground uppercase tracking-wider">
                                     {match.status === 'scheduled' ? 'Agendado' : match.status === 'live' ? '• Ao Vivo' : 'Encerrado'}

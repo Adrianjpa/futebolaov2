@@ -257,14 +257,18 @@ export function ChampionshipForm({ initialData, onSubmit, isSubmitting = false, 
                 return;
             }
 
-            // 1. Fetch Ranking de Pontos
-            const { data: rankingData } = await supabase
+            console.log("🏆 Calculando vencedores automáticos...");
+
+            // 1. Fetch Ranking de Pontos direto do banco
+            const { data: rankingData, error: rankingError } = await supabase
                 .from("ranking_by_championship")
                 .select("*")
                 .eq("championship_id", champId);
 
+            if (rankingError) throw rankingError;
+
             if (!rankingData || rankingData.length === 0) {
-                alert("Nenhum palpite computado ainda para este campeonato.");
+                alert("Nenhum palpite computado ainda para este campeonato no ranking oficial.");
                 return;
             }
 
@@ -272,25 +276,41 @@ export function ChampionshipForm({ initialData, onSubmit, isSubmitting = false, 
             const maxPoints = Math.max(...rankingData.map((u: any) => u.total_points || 0));
             const pointChampions = rankingData.filter((u: any) => u.total_points === maxPoints);
 
-            // 3. Determinar Palpiteiro de Ouro (Lógica de Prioridade)
+            console.log(`🥇 Campeão(ões) com ${maxPoints} pts:`, pointChampions.map((c: any) => c.nickname));
+
+            // 3. Determinar Palpiteiro de Ouro (Highlander)
             const officialRanking = (form.getValues("officialRanking") as string[]) || [];
             const isRankingReady = officialRanking.some(r => r && r !== "");
 
             let goldWinners: any[] = [];
             if (isRankingReady) {
-                // Precisamos buscar as seleções de TODOS os participantes
-                const { data: allPartsSelections } = await supabase
+                console.log("🌟 Calculando Palpiteiro de Ouro com ranking oficial:", officialRanking);
+
+                // Tenta buscar da tabela vinculada
+                let { data: allPartsSelections } = await supabase
                     .from("championship_participants")
                     .select("user_id, team_selections")
                     .eq("championship_id", champId);
+
+                // Fallback: Se a tabela estiver vazia, tenta usar o que está no state local (settings)
+                if (!allPartsSelections || allPartsSelections.length === 0) {
+                    console.log("⚠️ Tabela championship_participants vazia, usando dados dos settings...");
+                    allPartsSelections = (form.getValues("participants") || []).map((p: any) => ({
+                        user_id: p.userId,
+                        team_selections: p.teamSelections || []
+                    })) as any;
+                }
 
                 if (allPartsSelections && allPartsSelections.length > 0) {
                     const bestHits = allPartsSelections.map((p: any) => {
                         const selections = (p.team_selections as string[]) || [];
                         const hitRanks = selections.map((t: string) => {
-                            const r = officialRanking.indexOf(t);
+                            // Trim para evitar erros de espaço
+                            const cleanT = t.trim();
+                            const r = officialRanking.findIndex(rankName => rankName.trim() === cleanT);
                             return r === -1 ? 999 : r;
                         });
+
                         const minRank = Math.min(...hitRanks);
                         const optIdx = hitRanks.indexOf(minRank);
 
@@ -306,11 +326,15 @@ export function ChampionshipForm({ initialData, onSubmit, isSubmitting = false, 
                         };
                     });
 
-                    const globalMinRank = Math.min(...bestHits.map(h => h.minRank));
-                    if (globalMinRank !== 999) {
-                        const candidates = bestHits.filter(h => h.minRank === globalMinRank);
+                    // Filtrar quem não acertou nada (999) ou seleções vazias (Infinity)
+                    const validHits = bestHits.filter(h => h.minRank !== 999 && h.minRank !== Infinity);
+
+                    if (validHits.length > 0) {
+                        const globalMinRank = Math.min(...validHits.map(h => h.minRank));
+                        const candidates = validHits.filter(h => h.minRank === globalMinRank);
                         const bestOpt = Math.min(...candidates.map(c => c.optIdx));
                         goldWinners = candidates.filter(c => c.optIdx === bestOpt);
+                        console.log(`✨ Palpiteiro(s) de Ouro encontratos:`, goldWinners.map(g => g.displayName));
                     }
                 }
             }
@@ -337,11 +361,11 @@ export function ChampionshipForm({ initialData, onSubmit, isSubmitting = false, 
             });
 
             form.setValue("manualWinners", newWinners);
-            alert("Vencedores sugeridos com sucesso com base nas regras!");
+            alert(`Sucesso! Sugeridos ${pointChampions.length} campeão(ões) e ${goldWinners.length} palpiteiro(s) de ouro.`);
 
         } catch (e: any) {
-            console.error(e);
-            alert("Erro ao calcular: " + e.message);
+            console.error("❌ Erro no cálculo automático:", e);
+            alert("Erro ao calcular: " + (e.message || "Verifique o console"));
         } finally {
             setIsAutoFilling(false);
         }
@@ -1029,16 +1053,17 @@ export function ChampionshipForm({ initialData, onSubmit, isSubmitting = false, 
                                 <div className="w-[300px]">
                                     <UserSearch
                                         onSelect={addParticipant}
-                                        disabled={form.watch("status") === "ativo" || form.watch("status") === "finished"}
+                                        // Removido bloqueio por status para permitir ajustes em campeonatos legados
+                                        disabled={false}
                                     />
                                 </div>
                             </div>
 
                             {(form.watch("status") === "ativo" || form.watch("status") === "finished") && (
-                                <div className="flex items-center gap-2 bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 p-3 rounded-md border border-yellow-500/50 text-sm">
+                                <div className="flex items-center gap-2 bg-blue-500/10 text-blue-600 dark:text-blue-400 p-3 rounded-md border border-blue-500/50 text-sm">
                                     <AlertCircle className="h-4 w-4" />
                                     <span>
-                                        A lista de participantes está consolidada (Campeonato iniciado ou finalizado).
+                                        O campeonato já está em andamento ou finalizado. Alterações aqui afetarão o ranking retroativamente.
                                     </span>
                                 </div>
                             )}
@@ -1059,7 +1084,8 @@ export function ChampionshipForm({ initialData, onSubmit, isSubmitting = false, 
                                             type="button"
                                             variant="ghost"
                                             size="icon"
-                                            disabled={form.watch("status") === "ativo" || form.watch("status") === "finished"}
+                                            // Removido bloqueio por status
+                                            disabled={false}
                                             className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                             onClick={() => removeParticipant(p.userId)}
                                         >

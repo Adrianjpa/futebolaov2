@@ -450,7 +450,9 @@ export function UnifiedMatchCard({
                                     <span className="text-[11px] sm:text-[13px]">
                                         {match.championship_id === '2ecad449-e20f-4084-8ae6-c017083db04a'
                                             ? '2012'
-                                            : new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' }).format(matchDate)}
+                                            : match.championship_id === 'f5a811ac-82d4-49da-891d-d1118ce88ff8'
+                                                ? '2018'
+                                                : new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' }).format(matchDate)}
                                     </span>
                                 </>
                             )}
