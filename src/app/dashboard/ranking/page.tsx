@@ -12,6 +12,7 @@ import Link from "next/link";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 const TEAM_ISO_MAP: Record<string, string> = {
     'Polônia': 'pl', 'Grécia': 'gr', 'Rússia': 'ru', 'República Tcheca': 'cz',
@@ -51,7 +52,8 @@ export default function RankingPage() {
 
     const [users, setUsers] = useState<UserProfile[]>([]);
     const [loading, setLoading] = useState(true);
-    const [championships, setChampionships] = useState<Championship[]>([]);
+    const [championships, setChampionships] = useState<any[]>([]);
+    const [categoryFilter, setCategoryFilter] = useState<string>("all");
     const [selectedChampionship, setSelectedChampionship] = useState<string>(initialChampionshipId);
     const [sortBy, setSortBy] = useState<'total_points' | 'exact_scores' | 'outcomes'>('total_points');
 
@@ -62,14 +64,25 @@ export default function RankingPage() {
 
     useEffect(() => {
         const fetchInitial = async () => {
-            const { data: champs } = await (supabase.from("championships") as any).select("*").neq("status", "arquivado");
+            const { data: champs } = await (supabase.from("championships") as any)
+                .select("*")
+                .order("created_at", { ascending: false });
+
             setChampionships(champs || []);
+
             if (initialChampionshipId === "all" && champs && (champs as any[]).length > 0) {
-                setSelectedChampionship((champs as any[])[0].id);
+                const newest = (champs as any[])[0];
+                setSelectedChampionship(newest.id);
+                setCategoryFilter(newest.category || "all");
+            } else if (initialChampionshipId !== "all" && champs) {
+                const current = (champs as any[]).find(c => c.id === initialChampionshipId);
+                if (current) setCategoryFilter(current.category || "all");
             }
         };
         fetchInitial();
     }, []);
+
+    const categories = Array.from(new Set(championships.map((c: any) => c.category).filter(Boolean)));
 
     const fetchRankingAndSettings = async () => {
         if (!selectedChampionship || selectedChampionship === "all") return;
@@ -170,6 +183,9 @@ export default function RankingPage() {
 
         const isRankingReady = officialRanking.some(r => r && r !== "");
 
+        const currentChamp = championships.find(c => c.id === selectedChampionship);
+        const teamMode = currentChamp?.settings?.teamMode || 'clubes';
+
         if (!isRankingReady) {
             return teamSelections.map((team, idx) => {
                 const iso = TEAM_ISO_MAP[team] || 'xx';
@@ -177,7 +193,13 @@ export default function RankingPage() {
                     <Tooltip key={`${userId}-${idx}`}>
                         <TooltipTrigger asChild>
                             <div className="relative group/flag">
-                                <img src={`https://flagcdn.com/w40/${iso}.png`} className="h-3 w-4.5 object-cover rounded-[2px] border border-white/10" />
+                                <img
+                                    src={`https://flagcdn.com/w40/${iso}.png`}
+                                    className={cn(
+                                        "border border-white/10",
+                                        teamMode === 'selecoes' ? "h-5 w-5 rounded-full object-cover" : "h-3 w-4.5 rounded-[2px] object-cover"
+                                    )}
+                                />
                             </div>
                         </TooltipTrigger>
                         <TooltipContent>{idx + 1}º {team}</TooltipContent>
@@ -254,7 +276,11 @@ export default function RankingPage() {
                             <img
                                 src={`https://flagcdn.com/w40/${iso}.png`}
                                 alt={team}
-                                className={`h-3 w-4.5 object-cover rounded-[2px] shadow-sm cursor-help border transition-all ${isAbsoluteWinner && enablePriority ? `border-yellow-400 border-2` : (!enablePriority && isHit ? `border-emerald-400 border-2` : 'border-white/5')}`}
+                                className={cn(
+                                    "shadow-sm cursor-help border transition-all",
+                                    teamMode === 'selecoes' ? "h-5 w-5 rounded-full object-cover" : "h-3 w-4.5 rounded-[2px] object-cover",
+                                    isAbsoluteWinner && enablePriority ? `border-yellow-400 border-2` : (!enablePriority && isHit ? `border-emerald-400 border-2` : 'border-white/5')
+                                )}
                             />
                         </div>
                     </TooltipTrigger>
@@ -272,14 +298,39 @@ export default function RankingPage() {
             <div className="space-y-6">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <h1 className="text-3xl font-bold tracking-tight">Ranking</h1>
-                    <Select value={selectedChampionship} onValueChange={setSelectedChampionship}>
-                        <SelectTrigger className="w-full sm:w-[260px]">
-                            <SelectValue placeholder="Selecione um Campeonato" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {championships.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
+                    <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
+                        <Select
+                            value={categoryFilter}
+                            onValueChange={(val) => {
+                                setCategoryFilter(val);
+                                if (val !== "all") {
+                                    const inCat = championships.filter(c => c.category === val);
+                                    if (inCat.length > 0) setSelectedChampionship(inCat[0].id);
+                                }
+                            }}
+                        >
+                            <SelectTrigger className="w-full sm:w-[200px]">
+                                <SelectValue placeholder="Agrupamento" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">Todos os Agrupamentos</SelectItem>
+                                {categories.map((cat: any) => (
+                                    <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+
+                        <Select value={selectedChampionship} onValueChange={setSelectedChampionship}>
+                            <SelectTrigger className="w-full sm:w-[260px]">
+                                <SelectValue placeholder="Selecione um Campeonato" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {championships
+                                    .filter(c => categoryFilter === "all" || c.category === categoryFilter)
+                                    .map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                    </div>
                 </div>
 
                 <Card>

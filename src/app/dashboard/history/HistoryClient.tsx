@@ -65,19 +65,26 @@ export default function HistoryClient() {
 
     useEffect(() => {
         const fetchInitialData = async () => {
-            const { data: champs } = await (supabase.from("championships") as any).select("*").neq("status", "arquivado");
+            const { data: champs } = await (supabase.from("championships") as any)
+                .select("*")
+                .order("created_at", { ascending: false });
+
             const allChamps = champs || [];
             setChampionships(allChamps);
 
             const { data: profiles } = await (supabase.from("public_profiles") as any).select("*");
             setUsers(profiles || []);
 
-            // If we have a paramChamp, find its category and set it
+            // Handle default selection or URL params
             if (paramChamp) {
                 const champ = (allChamps as Championship[]).find((c: Championship) => c.id === paramChamp);
-                if (champ?.category) {
-                    setSelectedCategory(champ.category);
-                }
+                if (champ?.category) setSelectedCategory(champ.category);
+                setSelectedChampionship(paramChamp);
+            } else if (allChamps.length > 0) {
+                // DEFAULT: Newest championship
+                const newest = allChamps[0];
+                setSelectedChampionship(newest.id);
+                setSelectedCategory(newest.category || "all");
             }
         };
         fetchInitialData();
@@ -134,7 +141,8 @@ export default function HistoryClient() {
                     return {
                         ...m,
                         championshipName: champ?.name || "Campeonato Desconhecido",
-                        championshipLogoUrl: (champ as any)?.settings?.iconUrl
+                        championshipLogoUrl: (champ as any)?.settings?.iconUrl,
+                        teamMode: (champ as any)?.settings?.teamMode || 'clubes'
                     };
                 }).filter(Boolean) || [];
 
@@ -171,7 +179,8 @@ export default function HistoryClient() {
                     return {
                         ...m,
                         championshipName: champ?.name || "Campeonato Desconhecido",
-                        championshipLogoUrl: (champ as any)?.settings?.iconUrl
+                        championshipLogoUrl: (champ as any)?.settings?.iconUrl,
+                        teamMode: (champ as any)?.settings?.teamMode || 'clubes'
                     };
                 }).filter(Boolean) || [];
             }
@@ -202,12 +211,18 @@ export default function HistoryClient() {
 
     const handleCategoryChange = (val: string) => {
         setSelectedCategory(val);
-        // Reset championship if it's not under the new category
         if (val !== "all") {
-            const champ = championships.find(c => c.id === selectedChampionship);
-            if (champ && champ.category !== val) {
+            const inCat = championships
+                .filter(c => c.category === val)
+                .sort((a, b) => new Date((b as any).created_at || 0).getTime() - new Date((a as any).created_at || 0).getTime());
+
+            if (inCat.length > 0) {
+                setSelectedChampionship(inCat[0].id);
+            } else {
                 setSelectedChampionship("all");
             }
+        } else {
+            setSelectedChampionship("all");
         }
     };
 
@@ -288,6 +303,7 @@ export default function HistoryClient() {
                         finished
                         showBetButton={false}
                         showChampionshipName={selectedChampionship === 'all'}
+                        teamMode={match.teamMode}
                     />
                 ))}
 

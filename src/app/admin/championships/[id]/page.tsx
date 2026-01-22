@@ -12,7 +12,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import Link from "next/link";
 import { format, parseISO } from "date-fns";
-import { getFlagUrl } from "@/lib/utils";
+import { getFlagUrl, cn } from "@/lib/utils";
 
 interface Championship {
     id: string;
@@ -345,14 +345,14 @@ export default function ChampionshipDetailsPage() {
                     <CardTitle>Jogos Importados</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <MatchList championshipId={championship.id} />
+                    <MatchList championshipId={championship.id} teamMode={championship.settings?.teamMode} />
                 </CardContent>
             </Card>
         </div>
     );
 }
 
-function MatchList({ championshipId }: { championshipId: string }) {
+function MatchList({ championshipId, teamMode }: { championshipId: string, teamMode?: string }) {
     const [matches, setMatches] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const supabase = createClient();
@@ -428,7 +428,10 @@ function MatchList({ championshipId }: { championshipId: string }) {
                                                 <img
                                                     src={match.home_team_crest || getFlagUrl(match.home_team)}
                                                     alt={match.home_team}
-                                                    className="h-full w-full object-contain drop-shadow-lg"
+                                                    className={cn(
+                                                        "h-full w-full drop-shadow-lg",
+                                                        teamMode === 'selecoes' ? "rounded-full object-cover border border-white/10" : "object-contain"
+                                                    )}
                                                     onError={(e) => (e.currentTarget.style.display = 'none')}
                                                 />
                                             </div>
@@ -466,7 +469,10 @@ function MatchList({ championshipId }: { championshipId: string }) {
                                                 <img
                                                     src={match.away_team_crest || getFlagUrl(match.away_team)}
                                                     alt={match.away_team}
-                                                    className="h-full w-full object-contain drop-shadow-lg"
+                                                    className={cn(
+                                                        "h-full w-full drop-shadow-lg",
+                                                        teamMode === 'selecoes' ? "rounded-full object-cover border border-white/10" : "object-contain"
+                                                    )}
                                                     onError={(e) => (e.currentTarget.style.display = 'none')}
                                                 />
                                             </div>

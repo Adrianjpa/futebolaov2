@@ -13,6 +13,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { UnifiedMatchCard } from "@/components/UnifiedMatchCard";
 import { Trophy as TrophyIcon, Award, Info, CheckCircle2 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
 
 const TEAM_ISO_MAP: Record<string, string> = {
     'Polônia': 'pl', 'Grécia': 'gr', 'Rússia': 'ru', 'República Tcheca': 'cz',
@@ -60,6 +61,7 @@ export default function MatchesClient() {
     const {
         matches: allActiveMatches,
         championships: allChamps,
+        championshipsMap,
         userPredictions,
         loading: matchesLoading,
         refreshMatches: fetchMatches
@@ -89,11 +91,54 @@ export default function MatchesClient() {
     const [isSelectionLocked, setIsSelectionLocked] = useState(false);
     const [officialRanking, setOfficialRanking] = useState<string[]>([]);
     const [championshipTeams, setChampionshipTeams] = useState<any[]>([]);
+    const [bannerEnabled, setBannerEnabled] = useState(false);
+    const [selectionSlots, setSelectionSlots] = useState(3);
 
     const fetchUsers = async () => {
         const { data } = await (supabase.from("public_profiles") as any).select("*");
         setUsers(data || []);
     };
+
+    useEffect(() => {
+        fetchUsers();
+    }, []);
+
+    // Set default championship (newest)
+    useEffect(() => {
+        if (allChamps.length > 0 && selectedChampionship === "all" && categoryFilter === "all") {
+            const sortedChamps = [...allChamps].sort((a, b) =>
+                new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()
+            );
+            const newest = sortedChamps[0];
+            setSelectedChampionship(newest.id);
+            setCategoryFilter(newest.category || "all");
+        }
+    }, [allChamps]);
+
+    // Handle filtering and pagination
+    useEffect(() => {
+        let filtered = allActiveMatches;
+
+        if (selectedChampionship !== "all") {
+            filtered = filtered.filter(m => m.championship_id === selectedChampionship);
+        } else if (categoryFilter !== "all") {
+            const champIdsInCategory = allChamps
+                .filter(c => c.category === categoryFilter)
+                .map(c => c.id);
+            filtered = filtered.filter(m => champIdsInCategory.includes(m.championship_id));
+        }
+
+        const sorted = [...filtered].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+        const start = (currentPage - 1) * ITEMS_PER_PAGE;
+        const end = start + ITEMS_PER_PAGE;
+        const pageMatches = sorted.slice(start, end);
+
+        setMatches(pageMatches as any);
+        setIsLastPage(end >= sorted.length);
+    }, [allActiveMatches, selectedChampionship, categoryFilter, currentPage, allChamps]);
+
+    const categories = Array.from(new Set(allChamps.map((c: any) => c.category).filter(Boolean)));
 
     const fetchChampionshipData = async () => {
         if (selectedChampionship === "all" || !authUser) {
@@ -126,6 +171,8 @@ export default function MatchesClient() {
                 const settings = ((champ as any).settings as any) || {};
                 setOfficialRanking(settings.officialRanking || []);
                 setChampionshipTeams(settings.teams || []);
+                setBannerEnabled(settings.bannerEnabled ?? false);
+                setSelectionSlots(settings.selectionSlots ?? 3);
 
                 // Check if first match started
                 const { data: firstMatch } = await supabase
@@ -196,35 +243,67 @@ export default function MatchesClient() {
                 <h1 className="text-3xl font-bold tracking-tight">Próximas Partidas</h1>
 
                 <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
-                    <Select value={selectedChampionship} onValueChange={setSelectedChampionship}>
+                    {/* FILTRO DE AGRUPAMENTO */}
+                    <Select
+                        value={categoryFilter}
+                        onValueChange={(val) => {
+                            setCategoryFilter(val);
+                            // Quando trocar agrupamento, tenta pegar o campeonato mais recente deste novo agrupamento
+                            if (val !== "all") {
+                                const champsInInCat = allChamps
+                                    .filter(c => c.category === val)
+                                    .sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
+                                if (champsInInCat.length > 0) {
+                                    setSelectedChampionship(champsInInCat[0].id);
+                                } else {
+                                    setSelectedChampionship("all");
+                                }
+                            } else {
+                                setSelectedChampionship("all");
+                            }
+                            setCurrentPage(1);
+                        }}
+                    >
+                        <SelectTrigger className="w-full sm:w-[200px]">
+                            <SelectValue placeholder="Agrupamento" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">Todos os Agrupamentos</SelectItem>
+                            {categories.map((cat: any) => (
+                                <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+
+                    {/* FILTRO DE CAMPEONATO */}
+                    <Select
+                        value={selectedChampionship}
+                        onValueChange={(val) => {
+                            setSelectedChampionship(val);
+                            setCurrentPage(1);
+                        }}
+                    >
                         <SelectTrigger className="w-full sm:w-[260px]">
                             <SelectValue placeholder="Campeonato" />
                         </SelectTrigger>
                         <SelectContent>
                             <SelectItem value="all">Todos os Campeonatos</SelectItem>
-                            {allChamps.map((c: any) => (
-                                <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                            ))}
+                            {allChamps
+                                .filter((c: any) => categoryFilter === "all" || c.category === categoryFilter)
+                                .map((c: any) => (
+                                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                                ))}
                         </SelectContent>
                     </Select>
 
                     {isAdmin && (
                         (() => {
+                            // Se for Admin e tiver um campeonato selecionado (deriva do agrupamento), permite criar
                             const currentChamp = allChamps.find((c: any) => c.id === selectedChampionship);
                             const isManual = currentChamp?.settings?.type === 'MANUAL';
-                            const isAll = selectedChampionship === "all";
+                            const isAll = categoryFilter === "all" || selectedChampionship === "all";
 
-                            // Se for Todos, mostramos desativado para o usuário saber que precisa filtrar para criar
-                            if (isAll) {
-                                return (
-                                    <Button disabled title="Selecione um campeonato específico para criar uma partida">
-                                        <Plus className="mr-2 h-4 w-4" />
-                                        Nova
-                                    </Button>
-                                );
-                            }
-
-                            // Se não for manual (Auto ou Híbrido), não mostramos o botão
+                            if (isAll) return null; // Admin precisa escolher um agrupamento para criar partida no campeonato mais recente dele
                             if (!isManual) return null;
 
                             return (
@@ -238,7 +317,9 @@ export default function MatchesClient() {
                                     <DialogContent>
                                         <DialogHeader>
                                             <DialogTitle>Agendar Partida</DialogTitle>
-                                            <DialogDescription>Preencha os dados abaixo para agendar uma nova partida no campeonato selecionado.</DialogDescription>
+                                            <DialogDescription>
+                                                Criando partida para: <b>{currentChamp.name}</b>
+                                            </DialogDescription>
                                         </DialogHeader>
                                         <div className="grid gap-4 py-4">
                                             <div className="grid grid-cols-2 gap-4">
@@ -274,8 +355,12 @@ export default function MatchesClient() {
                 </div>
             </div>
 
-            {/* BANNER DE SELEÇÕES (Favoritos) */}
-            {selectedChampionship !== "all" && (
+            {/* BANNER DE SELEÇÕES (Favoritos) - Regras de Visibilidade:
+                1. Não aparece para ADMIN
+                2. Aparece se houver um campeonato selecionado (via agrupamento)
+                3. Aparece apenas se bannerEnabled estiver ativo no campeonato
+            */}
+            {selectedChampionship !== "all" && !isAdmin && bannerEnabled && (
                 <Card className="mb-6 overflow-hidden border-2 border-primary/20 bg-gradient-to-br from-blue-950/20 to-slate-950/40 backdrop-blur-md relative group">
                     <div className="absolute inset-0 bg-blue-500/5 opacity-50 group-hover:opacity-100 transition-opacity" />
                     <CardContent className="p-4 sm:p-6 relative">
@@ -297,13 +382,16 @@ export default function MatchesClient() {
 
                             {/* EXIBIÇÃO DAS BANDEIRAS */}
                             <div className="flex items-center gap-3 sm:gap-6">
-                                {[0, 1, 2].map((idx) => {
+                                {Array.from({ length: selectionSlots }).map((_, idx) => {
                                     const team = userSelection[idx];
                                     const iso = TEAM_ISO_MAP[team] || 'xx';
                                     const isCorrect = officialRanking.includes(team);
                                     // SÓ MOSTRA FADE SE O RANKING OFICIAL TIVER SIDO PREENCHIDO
                                     const isRankingReady = officialRanking.some(r => r && r !== "");
                                     const showFade = isRankingReady && !isCorrect;
+
+                                    const currentChamp = allChamps.find((c: any) => c.id === selectedChampionship);
+                                    const currentTeamMode = currentChamp?.settings?.teamMode || 'clubes';
 
                                     return (
                                         <div key={idx} className="flex flex-col items-center gap-1.5 p-2 rounded-xl bg-slate-900/40 border border-white/5 transition-all hover:bg-slate-900/60 min-w-[70px] sm:min-w-[80px]">
@@ -316,7 +404,12 @@ export default function MatchesClient() {
                                                                 <img
                                                                     src={`https://flagcdn.com/w80/${iso}.png`}
                                                                     alt={team}
-                                                                    className="h-6 sm:h-8 w-10 sm:w-12 object-cover rounded shadow-lg border border-white/10"
+                                                                    className={cn(
+                                                                        "shadow-lg border border-white/10 transition-all",
+                                                                        currentTeamMode === 'selecoes'
+                                                                            ? "h-10 w-10 sm:h-12 sm:w-12 object-cover rounded-full"
+                                                                            : "h-6 sm:h-8 w-10 sm:w-12 object-cover rounded"
+                                                                    )}
                                                                 />
                                                             </div>
                                                         </TooltipTrigger>
@@ -354,7 +447,7 @@ export default function MatchesClient() {
                                             </DialogDescription>
                                         </DialogHeader>
                                         <div className="space-y-6 py-4">
-                                            {[0, 1, 2].map((idx) => (
+                                            {Array.from({ length: selectionSlots }).map((_, idx) => (
                                                 <div key={idx} className="space-y-2">
                                                     <Label className="text-slate-300 font-bold">{idx + 1}º Opção</Label>
                                                     <Select
@@ -428,19 +521,24 @@ export default function MatchesClient() {
                     </div>
                 )}
 
-                {matches.map((match) => (
-                    <UnifiedMatchCard
-                        key={match.id}
-                        match={match}
-                        users={users}
-                        live={match.status === 'live'}
-                        showBetButton={!isAdmin}
-                        hasPrediction={userPredictions.has(match.id)}
-                        isAdmin={isAdmin}
-                        onUpdate={() => fetchMatches()}
-                        showChampionshipName={selectedChampionship === 'all'}
-                    />
-                ))}
+                {matches.map((match) => {
+                    const champ = championshipsMap[match.championship_id];
+                    const teamMode = champ?.settings?.teamMode || 'clubes';
+                    return (
+                        <UnifiedMatchCard
+                            key={match.id}
+                            match={match}
+                            users={users}
+                            live={match.status === 'live'}
+                            showBetButton={!isAdmin}
+                            hasPrediction={userPredictions.has(match.id)}
+                            isAdmin={isAdmin}
+                            onUpdate={() => fetchMatches()}
+                            showChampionshipName={selectedChampionship === 'all'}
+                            teamMode={teamMode}
+                        />
+                    );
+                })}
             </div>
 
             {(matches.length > 0 || currentPage > 1) && !loading && (

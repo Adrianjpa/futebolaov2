@@ -15,7 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import Link from "next/link";
 import { Countdown } from "@/components/ui/countdown";
-import { getFlagUrl } from "@/lib/utils";
+import { getFlagUrl, cn } from "@/lib/utils";
 
 const TEAM_ISO_MAP: Record<string, string> = {
     'Polônia': 'pl', 'Grécia': 'gr', 'Rússia': 'ru', 'República Tcheca': 'cz',
@@ -34,6 +34,7 @@ interface UnifiedMatchCardProps {
     isAdmin?: boolean;
     onUpdate?: () => void;
     users?: any[];
+    teamMode?: 'clubes' | 'selecoes' | 'mista';
 }
 
 export function UnifiedMatchCard({
@@ -45,7 +46,8 @@ export function UnifiedMatchCard({
     hasPrediction,
     isAdmin,
     onUpdate,
-    users = []
+    users = [],
+    teamMode = 'clubes'
 }: UnifiedMatchCardProps) {
     const { user, profile } = useAuth();
     const supabase = createClient();
@@ -348,11 +350,17 @@ export function UnifiedMatchCard({
                                 </span>
                                 <Popover>
                                     <PopoverTrigger asChild onClick={(e) => e.stopPropagation()}>
-                                        <button className="h-12 w-12 sm:h-14 sm:w-14 transition-transform hover:scale-110 flex items-center justify-center shrink-0 outline-none">
+                                        <button className={cn(
+                                            "h-12 w-12 sm:h-14 sm:w-14 transition-transform hover:scale-110 flex items-center justify-center shrink-0 outline-none overflow-hidden",
+                                            teamMode === 'selecoes' && "rounded-full border-2 border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900"
+                                        )}>
                                             <img
                                                 src={match.home_team_crest || getFlagUrl(match.home_team || match.homeTeamName)}
                                                 alt=""
-                                                className="max-h-full max-w-full object-contain filter drop-shadow-md"
+                                                className={cn(
+                                                    "max-h-full max-w-full drop-shadow-md",
+                                                    teamMode === 'selecoes' ? "w-full h-full object-cover" : "object-contain"
+                                                )}
                                                 onError={(e) => (e.currentTarget.style.display = 'none')}
                                             />
                                         </button>
@@ -404,11 +412,17 @@ export function UnifiedMatchCard({
                             <div className="flex items-center gap-2 flex-1 justify-start min-w-0">
                                 <Popover>
                                     <PopoverTrigger asChild onClick={(e) => e.stopPropagation()}>
-                                        <button className="h-12 w-12 sm:h-14 sm:w-14 transition-transform hover:scale-110 flex items-center justify-center shrink-0 outline-none">
+                                        <button className={cn(
+                                            "h-12 w-12 sm:h-14 sm:w-14 transition-transform hover:scale-110 flex items-center justify-center shrink-0 outline-none overflow-hidden",
+                                            teamMode === 'selecoes' && "rounded-full border-2 border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900"
+                                        )}>
                                             <img
                                                 src={match.away_team_crest || getFlagUrl(match.away_team || match.awayTeamName)}
                                                 alt=""
-                                                className="max-h-full max-w-full object-contain filter drop-shadow-md"
+                                                className={cn(
+                                                    "max-h-full max-w-full drop-shadow-md",
+                                                    teamMode === 'selecoes' ? "w-full h-full object-cover" : "object-contain"
+                                                )}
                                                 onError={(e) => (e.currentTarget.style.display = 'none')}
                                             />
                                         </button>
