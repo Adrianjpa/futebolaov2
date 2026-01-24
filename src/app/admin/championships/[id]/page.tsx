@@ -12,7 +12,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import Link from "next/link";
 import { format, parseISO } from "date-fns";
-import { getFlagUrl, cn } from "@/lib/utils";
+import { cn, getFlagUrl, formatMatchDate } from "@/lib/utils";
 
 interface Championship {
     id: string;
@@ -492,11 +492,7 @@ function MatchList({ championshipId, teamMode }: { championshipId: string, teamM
                                 <div className="flex items-center gap-1.5 text-[10px] font-medium text-muted-foreground">
                                     <Calendar className="h-3 w-3 opacity-70" />
                                     <span>
-                                        {match.championship_id === '2ecad449-e20f-4084-8ae6-c017083db04a'
-                                            ? '2012'
-                                            : match.championship_id === 'f5a811ac-82d4-49da-891d-d1118ce88ff8'
-                                                ? '2018'
-                                                : new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' }).format(new Date(match.date))}
+                                        {formatMatchDate(match.date, match.championship_id)}
                                     </span>
                                 </div>
                                 <Badge variant={match.status === 'live' ? 'destructive' : match.status === 'finished' ? 'secondary' : 'outline'} className="text-[9px] h-4 px-2 shadow-none border-0 bg-secondary/50 text-secondary-foreground uppercase tracking-wider">

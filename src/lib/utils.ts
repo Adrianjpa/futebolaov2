@@ -1,5 +1,7 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
+import { format, isToday, isTomorrow, isYesterday, parseISO } from "date-fns"
+import { ptBR } from "date-fns/locale"
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -33,3 +35,17 @@ export const getFlagUrl = (country: string) => {
   const code = countryMap[normalizedCountry];
   return code ? `https://flagcdn.com/w40/${code}.png` : "";
 };
+
+export function formatMatchDate(dateInput: string | Date, championshipId?: string) {
+  if (championshipId === '2ecad449-e20f-4084-8ae6-c017083db04a') return '2012';
+  if (championshipId === 'f5a811ac-82d4-49da-891d-d1118ce88ff8') return '2018';
+
+  const date = typeof dateInput === 'string' ? parseISO(dateInput) : dateInput;
+  const timeStr = format(date, "HH:mm", { locale: ptBR });
+
+  if (isToday(date)) return `Hoje, ${timeStr}`;
+  if (isTomorrow(date)) return `Amanhã, ${timeStr}`;
+  if (isYesterday(date)) return `Ontem, ${timeStr}`;
+
+  return format(date, "dd/MM HH:mm", { locale: ptBR });
+}

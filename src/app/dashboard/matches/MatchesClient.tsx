@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -71,7 +71,6 @@ export default function MatchesClient() {
     const supabase = createClient();
 
     const [selectedChampionship, setSelectedChampionship] = useState<string>("all");
-    const [categoryFilter, setCategoryFilter] = useState("all");
     const [matches, setMatches] = useState<Match[]>([]);
     const [users, setUsers] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
@@ -103,29 +102,29 @@ export default function MatchesClient() {
         fetchUsers();
     }, []);
 
-    // Set default championship (newest)
+    const activeChamps = useMemo(() => allChamps.filter((c: any) => c.status === 'ativo'), [allChamps]);
+
+    // Set default championship
     useEffect(() => {
-        if (allChamps.length > 0 && selectedChampionship === "all" && categoryFilter === "all") {
-            const sortedChamps = [...allChamps].sort((a, b) =>
-                new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()
-            );
-            const newest = sortedChamps[0];
-            setSelectedChampionship(newest.id);
-            setCategoryFilter(newest.category || "all");
+        if (activeChamps.length > 0 && selectedChampionship === "all") {
+            // If only one, select it automatically. If multiple, keep "all" as default to show everything in order.
+            if (activeChamps.length === 1) {
+                setSelectedChampionship(activeChamps[0].id);
+            }
         }
-    }, [allChamps]);
+    }, [activeChamps, selectedChampionship]);
 
     // Handle filtering and pagination
     useEffect(() => {
-        let filtered = allActiveMatches;
+        // Only show scheduled matches of active championships
+        const activeChampIds = activeChamps.map(c => c.id);
+        let filtered = allActiveMatches.filter(m =>
+            activeChampIds.includes(m.championship_id) &&
+            m.status === 'scheduled'
+        );
 
         if (selectedChampionship !== "all") {
             filtered = filtered.filter(m => m.championship_id === selectedChampionship);
-        } else if (categoryFilter !== "all") {
-            const champIdsInCategory = allChamps
-                .filter(c => c.category === categoryFilter)
-                .map(c => c.id);
-            filtered = filtered.filter(m => champIdsInCategory.includes(m.championship_id));
         }
 
         const sorted = [...filtered].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
@@ -136,9 +135,9 @@ export default function MatchesClient() {
 
         setMatches(pageMatches as any);
         setIsLastPage(end >= sorted.length);
-    }, [allActiveMatches, selectedChampionship, categoryFilter, currentPage, allChamps]);
+    }, [allActiveMatches, selectedChampionship, currentPage, activeChamps]);
 
-    const categories = Array.from(new Set(allChamps.map((c: any) => c.category).filter(Boolean)));
+    const categories = Array.from(new Set(activeChamps.map((c: any) => c.category).filter(Boolean)));
 
     const fetchChampionshipData = async () => {
         if (selectedChampionship === "all" || !authUser) {
@@ -243,67 +242,35 @@ export default function MatchesClient() {
                 <h1 className="text-3xl font-bold tracking-tight">Próximas Partidas</h1>
 
                 <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
-                    {/* FILTRO DE AGRUPAMENTO */}
-                    <Select
-                        value={categoryFilter}
-                        onValueChange={(val) => {
-                            setCategoryFilter(val);
-                            // Quando trocar agrupamento, tenta pegar o campeonato mais recente deste novo agrupamento
-                            if (val !== "all") {
-                                const champsInInCat = allChamps
-                                    .filter(c => c.category === val)
-                                    .sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
-                                if (champsInInCat.length > 0) {
-                                    setSelectedChampionship(champsInInCat[0].id);
-                                } else {
-                                    setSelectedChampionship("all");
-                                }
-                            } else {
-                                setSelectedChampionship("all");
-                            }
-                            setCurrentPage(1);
-                        }}
-                    >
-                        <SelectTrigger className="w-full sm:w-[200px]">
-                            <SelectValue placeholder="Agrupamento" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">Todos os Agrupamentos</SelectItem>
-                            {categories.map((cat: any) => (
-                                <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-
-                    {/* FILTRO DE CAMPEONATO */}
-                    <Select
-                        value={selectedChampionship}
-                        onValueChange={(val) => {
-                            setSelectedChampionship(val);
-                            setCurrentPage(1);
-                        }}
-                    >
-                        <SelectTrigger className="w-full sm:w-[260px]">
-                            <SelectValue placeholder="Campeonato" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">Todos os Campeonatos</SelectItem>
-                            {allChamps
-                                .filter((c: any) => categoryFilter === "all" || c.category === categoryFilter)
-                                .map((c: any) => (
+                    {/* FILTRO DE CAMPEONATO - Somente se houver mais de 1 ativo */}
+                    {activeChamps.length > 1 && (
+                        <Select
+                            value={selectedChampionship}
+                            onValueChange={(val) => {
+                                setSelectedChampionship(val);
+                                setCurrentPage(1);
+                            }}
+                        >
+                            <SelectTrigger className="w-full sm:w-[260px]">
+                                <SelectValue placeholder="Campeonato" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">Todos os Campeonatos</SelectItem>
+                                {activeChamps.map((c: any) => (
                                     <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                                 ))}
-                        </SelectContent>
-                    </Select>
+                            </SelectContent>
+                        </Select>
+                    )}
 
                     {isAdmin && (
                         (() => {
-                            // Se for Admin e tiver um campeonato selecionado (deriva do agrupamento), permite criar
-                            const currentChamp = allChamps.find((c: any) => c.id === selectedChampionship);
+                            // Se for Admin e tiver um campeonato selecionado, permite criar
+                            const currentChamp = activeChamps.find((c: any) => c.id === selectedChampionship);
                             const isManual = currentChamp?.settings?.type === 'MANUAL';
-                            const isAll = categoryFilter === "all" || selectedChampionship === "all";
+                            const isAll = selectedChampionship === "all";
 
-                            if (isAll) return null; // Admin precisa escolher um agrupamento para criar partida no campeonato mais recente dele
+                            if (isAll) return null; // Admin precisa escolher um campeonato específico para criar partida
                             if (!isManual) return null;
 
                             return (
