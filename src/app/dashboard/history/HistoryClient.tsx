@@ -26,6 +26,7 @@ interface Match {
     status: string;
     championship_id: string;
     championshipName?: string;
+    teamMode?: any;
 }
 
 const ITEMS_PER_PAGE = 10;
@@ -303,7 +304,7 @@ export default function HistoryClient() {
                         finished
                         showBetButton={false}
                         showChampionshipName={selectedChampionship === 'all'}
-                        teamMode={match.teamMode}
+                        teamMode={match.teamMode as any}
                     />
                 ))}
 
