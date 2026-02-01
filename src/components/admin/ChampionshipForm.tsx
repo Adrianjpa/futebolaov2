@@ -106,7 +106,7 @@ const formSchema = z.object({
     // API Integration
     creationType: z.enum(["manual", "hybrid", "auto"]),
     apiCode: z.string().optional(),
-    status: z.enum(["rascunho", "agendado", "ativo", "finished", "arquivado"]).default("rascunho"),
+    status: z.enum(["agendado", "ativo", "finalizado", "arquivado"]).default("agendado"),
     officialRanking: z.array(z.string()).default(["", "", "", "", ""]),
     teams: z.array(z.object({
         id: z.string(),
@@ -170,7 +170,7 @@ export function ChampionshipForm({ initialData, onSubmit, isSubmitting = false, 
             })),
             creationType: initialData?.creationType || "manual",
             apiCode: initialData?.apiCode || "",
-            status: (initialData?.status as any) === "ativo" ? "ativo" : (initialData?.status as any) === "finalizado" ? "finished" : (initialData?.status as any) === "agendado" ? "agendado" : (initialData?.status || "rascunho") as any,
+            status: initialData?.status || "agendado",
             officialRanking: initialData?.officialRanking || ["", "", "", "", ""],
             teams: (initialData?.teams || []).map((t: any) => ({
                 id: t.id,
@@ -573,10 +573,9 @@ export function ChampionshipForm({ initialData, onSubmit, isSubmitting = false, 
                                         <SelectValue placeholder="Selecione o status" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="rascunho">Rascunho (Não visível)</SelectItem>
-                                        <SelectItem value="agendado">Agendado (Futuro / Countdown)</SelectItem>
+                                        <SelectItem value="agendado">Agendado (Rascunho não visível)</SelectItem>
                                         <SelectItem value="ativo">Ativo (Em andamento)</SelectItem>
-                                        <SelectItem value="finished">Finalizado (Encerrado)</SelectItem>
+                                        <SelectItem value="finalizado">Finalizado (Encerrado)</SelectItem>
                                         <SelectItem value="arquivado">Arquivado (Oculto)</SelectItem>
                                     </SelectContent>
                                 </Select>
@@ -1060,7 +1059,7 @@ export function ChampionshipForm({ initialData, onSubmit, isSubmitting = false, 
                                 </div>
                             </div>
 
-                            {(form.watch("status") === "ativo" || form.watch("status") === "finished") && (
+                            {(form.watch("status") === "ativo" || form.watch("status") === "finalizado") && (
                                 <div className="flex items-center gap-2 bg-blue-500/10 text-blue-600 dark:text-blue-400 p-3 rounded-md border border-blue-500/50 text-sm">
                                     <AlertCircle className="h-4 w-4" />
                                     <span>

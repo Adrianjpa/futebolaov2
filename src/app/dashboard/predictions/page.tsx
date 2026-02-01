@@ -124,8 +124,7 @@ export default function PredictionsPage() {
                     user_id: user.id,
                     match_id: matchId,
                     home_score: pred.home_score ?? 0,
-                    away_score: pred.away_score ?? 0,
-                    championship_id: matches.find(m => m.id === matchId)?.championship_id
+                    away_score: pred.away_score ?? 0
                 });
 
             if (error) throw error;

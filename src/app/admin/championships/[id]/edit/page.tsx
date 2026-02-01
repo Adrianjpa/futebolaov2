@@ -46,20 +46,27 @@ export default function EditChampionshipPage() {
 
     const onSubmit = async (values: ChampionshipFormData) => {
         setIsSubmitting(true);
-        const { name, category, status, ...others } = values;
-        // Map form status to DB status
-        let dbStatus: "ativo" | "finalizado" | "arquivado" = "ativo";
-        if (status === "finished") dbStatus = "finalizado";
-        else if (status === "arquivado") dbStatus = "arquivado";
-
         try {
+            const { name, category, status, ...others } = values;
+
+            // Sanitize settings: Remove temporary input fields and convert Dates to strings
+            const sanitizedSettings = {
+                ...others,
+                startDate: values.startDate ? values.startDate.toISOString() : null,
+                endDate: values.endDate ? values.endDate.toISOString() : null,
+            };
+
+            // Remove helper fields that don't need to be in the database settings
+            delete (sanitizedSettings as any).startDateInput;
+            delete (sanitizedSettings as any).endDateInput;
+
             const { error } = await (supabase
                 .from("championships") as any)
                 .update({
                     name,
                     category,
-                    status: dbStatus,
-                    settings: others as any
+                    status: status, // status is now already mapped by the Form
+                    settings: sanitizedSettings as any
                 })
                 .eq("id", params.id as string);
 
@@ -67,9 +74,10 @@ export default function EditChampionshipPage() {
 
             alert("Campeonato atualizado com sucesso!");
             router.push(`/admin/championships/${params.id}`);
-        } catch (error) {
+        } catch (error: any) {
             console.error("Erro ao atualizar campeonato:", error);
-            alert("Erro ao atualizar campeonato.");
+            const msg = error.message || error.details || JSON.stringify(error);
+            alert("Erro ao atualizar campeonato: " + msg);
         } finally {
             setIsSubmitting(false);
         }

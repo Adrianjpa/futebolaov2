@@ -9,89 +9,121 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Verify if user is admin or moderator in profiles table
+    // Verify if user is admin
     const { data: profile } = await (supabase
         .from("profiles")
         .select("funcao")
         .eq("id", session.user.id)
         .single() as any);
 
-    if (profile?.funcao !== "admin" && profile?.funcao !== "moderator") {
+    if (profile?.funcao !== "admin") {
         return NextResponse.json({ error: "Forbidden - Admin access required" }, { status: 403 });
     }
 
     try {
         const body = await request.json();
-        const { legacyDocId, realUserId, championshipId } = body;
+        const { sourceUserId, targetUserId } = body;
 
-        if (!legacyDocId || !realUserId || !championshipId) {
+        if (!sourceUserId || !targetUserId) {
             return NextResponse.json({ error: "Missing parameters" }, { status: 400 });
         }
 
-        // 1. Get Legacy Stats
-        const { data: legacyStats, error: statsError } = await (supabaseAdmin
-            .from("legacy_stats")
+        // 1. Get Source Profile (Legacy)
+        const { data: legacyProfile, error: lpError } = await (supabaseAdmin
+            .from("profiles")
             .select("*")
-            .eq("id", legacyDocId)
+            .eq("id", sourceUserId)
             .single() as any);
 
-        if (statsError || !legacyStats) throw new Error("Legacy record not found");
+        if (lpError || !legacyProfile) throw new Error("Legacy profile not found");
 
-        // 2. Link User ID in legacy_stats
-        await (supabaseAdmin
+        const legacyName = legacyProfile.nome || legacyProfile.nickname;
+
+        console.log(`Migrating data from ${legacyProfile.email} (${sourceUserId}) to ${targetUserId}`);
+
+        // 2. Update all relational tables
+        // Predictions
+        const { error: predError } = await (supabaseAdmin
+            .from("predictions") as any)
+            .update({ user_id: targetUserId })
+            .eq("user_id", sourceUserId);
+
+        if (predError) console.error("Error updating predictions:", predError);
+
+        // Participants
+        const { error: partError } = await (supabaseAdmin
+            .from("championship_participants") as any)
+            .update({ user_id: targetUserId })
+            .eq("user_id", sourceUserId);
+
+        if (partError) console.error("Error updating participants:", partError);
+
+        // Legacy Stats (if any)
+        const { error: statsError } = await (supabaseAdmin
             .from("legacy_stats") as any)
-            .update({ user_id: realUserId })
-            .eq("id", legacyDocId);
+            .update({ user_id: targetUserId })
+            .eq("user_id", sourceUserId);
 
-        // 3. Update Championship Settings (Participants & Winners)
-        const { data: champ, error: champError } = await (supabaseAdmin
+        if (statsError) console.error("Error updating legacy_stats:", statsError);
+
+        // 3. Update Championship Settings (Participants, Winners, etc)
+        const { data: championships } = await (supabaseAdmin
             .from("championships")
-            .select("settings")
-            .eq("id", championshipId)
-            .single() as any);
+            .select("id, name, settings") as any);
 
-        if (champ && champ.settings) {
-            const settings = champ.settings as any;
-            let updated = false;
+        if (championships) {
+            for (const champ of championships) {
+                let settings = champ.settings || {};
+                let updated = false;
 
-            // Update Participants if they exist in settings
-            if (settings.participants) {
-                settings.participants = settings.participants.map((p: any) => {
-                    if (p.userId === legacyStats.legacy_user_name || p.displayName === legacyStats.legacy_user_name) {
-                        updated = true;
-                        return { ...p, userId: realUserId, originalLegacyId: p.userId };
-                    }
-                    return p;
-                });
-            }
-
-            // Update Winners
-            if (legacyStats.rank === 1) {
-                if (!settings.winners) settings.winners = [];
-                const existingIndex = settings.winners.findIndex((w: any) => w.position === 'champion');
-                if (existingIndex >= 0) {
-                    settings.winners[existingIndex] = { ...settings.winners[existingIndex], userId: realUserId, displayName: legacyStats.legacy_user_name };
-                } else {
-                    settings.winners.push({ userId: realUserId, displayName: legacyStats.legacy_user_name, position: 'champion' });
+                // Update Participants list in settings
+                if (settings.participants && Array.isArray(settings.participants)) {
+                    settings.participants = settings.participants.map((p: any) => {
+                        const pid = p.userId || p.id || p.user_id;
+                        // Match by ID OR by Name (if ID was originally the name)
+                        if (pid === sourceUserId || p.displayName === legacyName || p.nome === legacyName) {
+                            updated = true;
+                            return { ...p, userId: targetUserId, originalLegacyId: pid };
+                        }
+                        return p;
+                    });
                 }
-                updated = true;
-            }
 
-            if (updated) {
-                await (supabaseAdmin
-                    .from("championships") as any)
-                    .update({ settings })
-                    .eq("id", championshipId);
+                // Update Winners
+                if (settings.winners && Array.isArray(settings.winners)) {
+                    settings.winners = settings.winners.map((w: any) => {
+                        const wid = w.userId || w.id || w.user_id;
+                        if (wid === sourceUserId || w.displayName === legacyName) {
+                            updated = true;
+                            return { ...w, userId: targetUserId };
+                        }
+                        return w;
+                    });
+                }
+
+                if (updated) {
+                    await (supabaseAdmin
+                        .from("championships") as any)
+                        .update({ settings })
+                        .eq("id", champ.id);
+                }
             }
         }
 
-        // 4. Update User Profile (Legacy Stats summary)
-        // We'll use a JSONB field in profiles if needed, or just link in legacy_stats (which we already did)
-        // For now, linking in legacy_stats is sufficient for queries.
+        // 4. Mark Legacy Profile as Migrated (don't delete it yet, but rename email to avoid conflicts and clutter)
+        const newLegacyEmail = `migrated_${Date.now()}_${legacyProfile.email}`;
+        await (supabaseAdmin
+            .from("profiles") as any)
+            .update({
+                email: newLegacyEmail,
+                status: 'bloqueado', // Deactivate the legacy profile
+                nickname: `Legacy: ${legacyProfile.nickname || legacyProfile.nome}`
+            })
+            .eq("id", sourceUserId);
 
         return NextResponse.json({
             success: true,
-            message: `Linked ${legacyStats.legacy_user_name} to user ${realUserId}.`
+            message: `Dados migrados de ${legacyName} para o novo usuário.`
         });
 
     } catch (error: any) {

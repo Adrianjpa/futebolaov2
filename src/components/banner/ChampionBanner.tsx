@@ -177,7 +177,7 @@ export function ChampionBanner({ championshipName, config: rawConfig, winners, c
                                             )}
                                         </div>
                                     )) : (
-                                        <span style={{ color: namesColor, fontSize: "4cqw" }}>EM BREVE</span>
+                                        <span style={{ color: namesColor, fontSize: "4cqw" }}>A DEFINIR</span>
                                     )}
                                 </div>
                             </div>
@@ -269,7 +269,7 @@ export function ChampionBanner({ championshipName, config: rawConfig, winners, c
                                     </div>
                                 )) : (
                                     <div className="text-center mt-[5cqw]">
-                                        <h2 className="font-bold opacity-50" style={{ color: namesColor, fontSize: "4cqw" }}>A Definir</h2>
+                                        <h2 className="font-bold opacity-50" style={{ color: namesColor, fontSize: "4cqw" }}>A DEFINIR</h2>
                                     </div>
                                 )}
                             </div>
@@ -301,7 +301,7 @@ export function ChampionBanner({ championshipName, config: rawConfig, winners, c
                                     </div>
                                 )) : (
                                     <div className="text-center mt-[5cqw]">
-                                        <h2 className="font-bold opacity-50" style={{ color: namesColor, fontSize: "4cqw" }}>Em Breve</h2>
+                                        <h2 className="font-bold opacity-50" style={{ color: namesColor, fontSize: "4cqw" }}>A DEFINIR</h2>
                                     </div>
                                 )}
                             </div>

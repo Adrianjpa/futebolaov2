@@ -7,7 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Trophy, Calendar, ArrowRight, Loader2, Activity, History, Info } from "lucide-react";
 import Link from "next/link";
-import { isPast, parseISO } from "date-fns";
+import { isPast, parseISO, differenceInDays, format as formatDate } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { UnifiedMatchCard } from "@/components/UnifiedMatchCard";
 import { Countdown } from "@/components/ui/countdown";
@@ -248,26 +249,50 @@ export default function DashboardClient() {
                             <Card className="bg-gradient-to-r from-primary/20 to-primary/5 border-primary/30 hover:shadow-lg transition-all cursor-pointer group">
                                 <CardContent className="flex flex-col sm:flex-row items-center justify-between p-6 gap-6 text-center sm:text-left">
                                     <div className="flex items-center gap-4">
-                                        <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20 shadow-inner group-hover:scale-110 transition-transform">
-                                            <Trophy className="h-8 w-8 text-primary" />
+                                        <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20 shadow-inner group-hover:scale-110 transition-transform overflow-hidden p-2">
+                                            {(upcomingChampionship.settings as any)?.iconUrl || (upcomingChampionship as any).icon_url ? (
+                                                <img
+                                                    src={(upcomingChampionship.settings as any)?.iconUrl || (upcomingChampionship as any).icon_url}
+                                                    alt={upcomingChampionship.name}
+                                                    className="h-full w-full object-contain"
+                                                />
+                                            ) : (
+                                                <Trophy className="h-8 w-8 text-primary" />
+                                            )}
                                         </div>
-                                        <div>
+                                        <div className="text-left">
                                             <h3 className="text-lg font-black uppercase tracking-tight text-foreground">
-                                                {upcomingChampionship.earliestMatchDate ? "Prepare-se para o lançamento!" : "Campeonato em Breve!"}
+                                                {upcomingChampionship.earliestMatchDate
+                                                    ? (differenceInDays(upcomingChampionship.earliestMatchDate, currentTime) <= 7
+                                                        ? "Prepare-se para o lançamento!"
+                                                        : "Em Breve!")
+                                                    : "Campeonato em Breve!"
+                                                }
                                             </h3>
                                             <p className="text-sm text-muted-foreground font-medium">
-                                                O campeonato <span className="text-primary font-bold">{upcomingChampionship.name}</span> {upcomingChampionship.earliestMatchDate ? "vai começar em:" : "está sendo preparado."}
+                                                {upcomingChampionship.earliestMatchDate
+                                                    ? (differenceInDays(upcomingChampionship.earliestMatchDate, currentTime) <= 7
+                                                        ? <>O campeonato <span className="text-primary font-bold">{upcomingChampionship.name}</span> vai começar em:</>
+                                                        : <>Lançamento do torneio <span className="text-primary font-bold">{upcomingChampionship.name}</span> em {formatDate(upcomingChampionship.earliestMatchDate, "PP", { locale: ptBR })}</>)
+                                                    : <>O campeonato <span className="text-primary font-bold">{upcomingChampionship.name}</span> está sendo preparado.</>
+                                                }
                                             </p>
                                         </div>
                                     </div>
                                     <div className="flex flex-col items-center sm:items-end gap-1">
                                         {upcomingChampionship.earliestMatchDate ? (
-                                            <>
-                                                <Countdown targetDate={upcomingChampionship.earliestMatchDate} />
-                                                <div className="flex items-center gap-1 text-[10px] uppercase font-black text-muted-foreground/60 tracking-widest mt-1">
-                                                    <span>Dias</span> • <span>Horas</span> • <span>Minutos</span>
+                                            differenceInDays(upcomingChampionship.earliestMatchDate, currentTime) <= 7 ? (
+                                                <>
+                                                    <Countdown targetDate={upcomingChampionship.earliestMatchDate} />
+                                                    <div className="flex items-center gap-1 text-[10px] uppercase font-black text-muted-foreground/60 tracking-widest mt-1">
+                                                        <span>Dias</span> • <span>Horas</span> • <span>Minutos</span>
+                                                    </div>
+                                                </>
+                                            ) : (
+                                                <div className="bg-primary/5 text-muted-foreground px-4 py-2 rounded-lg font-bold text-xs uppercase tracking-widest border border-dashed border-primary/10">
+                                                    Inscrições Abertas
                                                 </div>
-                                            </>
+                                            )
                                         ) : (
                                             <div className="bg-primary/10 text-primary px-4 py-2 rounded-lg font-bold text-xs uppercase tracking-widest border border-primary/20 animate-pulse">
                                                 Aguardando Tabela
@@ -305,6 +330,7 @@ export default function DashboardClient() {
                                     onUpdate={fetchMatches}
                                     users={allUsers}
                                     showChampionshipName={true}
+                                    teamMode={championshipsMap[match.championship_id]?.settings?.teamMode || 'clubes'}
                                 />
                             ))}
                         </CardContent>
@@ -341,6 +367,7 @@ export default function DashboardClient() {
                                             onUpdate={fetchMatches}
                                             users={allUsers}
                                             showChampionshipName={true}
+                                            teamMode={championshipsMap[match.championship_id]?.settings?.teamMode || 'clubes'}
                                         />
                                     ))
                                 ) : (
@@ -380,6 +407,7 @@ export default function DashboardClient() {
                                             onUpdate={fetchMatches}
                                             users={allUsers}
                                             showChampionshipName={true}
+                                            teamMode={championshipsMap[match.championship_id]?.settings?.teamMode || 'clubes'}
                                         />
                                     ))
                                 ) : (

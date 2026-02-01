@@ -53,6 +53,15 @@ export function MatchesProvider({ children }: { children: ReactNode }) {
                 .select("championship_id")
                 .eq("user_id", user.id);
             const partSet = new Set((parts as any[])?.map(p => p.championship_id));
+
+            // Also check participants in championship settings
+            champs?.forEach((c: any) => {
+                const settingsParticipants = (c.settings as any)?.participants || [];
+                if (settingsParticipants.some((p: any) => p.userId === user.id)) {
+                    partSet.add(c.id);
+                }
+            });
+
             setUserParticipation(partSet);
 
             // 4. Fetch Matches (Next 7 days + Live)

@@ -13,16 +13,33 @@ export default function NewChampionshipPage() {
 
     const onSubmit = async (values: ChampionshipFormData) => {
         setIsSubmitting(true);
-        const { name, category, status, ...others } = values;
         try {
+            const { name, category, status, ...others } = values;
+
+            // Sanitize settings: Remove temporary input fields and convert Dates to strings
+            const sanitizedSettings = {
+                ...others,
+                startDate: values.startDate ? values.startDate.toISOString() : null,
+                endDate: values.endDate ? values.endDate.toISOString() : null,
+            };
+
+            // Remove helper fields that don't need to be in the database settings
+            delete (sanitizedSettings as any).startDateInput;
+            delete (sanitizedSettings as any).endDateInput;
+
+            console.log("Inserindo campeonato:", { name, category, status, settings: sanitizedSettings });
+
             const { data, error } = await (supabase.from("championships") as any).insert({
                 name,
                 category,
-                status: status || "rascunho",
-                settings: others
+                status: status || "agendado",
+                settings: sanitizedSettings
             }).select().single();
 
-            if (error) throw error;
+            if (error) {
+                console.error("Erro Supabase:", error);
+                throw error;
+            }
 
             alert("Campeonato criado com sucesso!");
             if (data?.id) {
@@ -30,9 +47,11 @@ export default function NewChampionshipPage() {
             } else {
                 router.push("/admin/championships");
             }
-        } catch (error) {
-            console.error("Erro ao criar campeonato:", error);
-            alert("Erro ao criar campeonato.");
+        } catch (error: any) {
+            console.error("Erro completo ao criar campeonato:", error);
+            // Better error message showing the Supabase error details if available
+            const msg = error.message || error.details || JSON.stringify(error);
+            alert("Erro ao criar campeonato: " + msg);
         } finally {
             setIsSubmitting(false);
         }

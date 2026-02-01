@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase";
 import { Card, CardContent } from "@/components/ui/card";
 import { format, isToday, isTomorrow, isYesterday, differenceInMinutes, differenceInHours, parseISO, isPast } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Calendar, ChevronDown, ChevronUp, CheckCircle2, Edit, Loader2, Trophy, Users, Clock } from "lucide-react";
+import { Calendar, ChevronDown, ChevronUp, CheckCircle2, Edit, Loader2, Trophy, Users, Clock, Save } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -80,6 +80,27 @@ export function UnifiedMatchCard({
     // Pred state for betting
     const [betHome, setBetHome] = useState<string>("");
     const [betAway, setBetAway] = useState<string>("");
+    const [justSaved, setJustSaved] = useState(false);
+
+    // Effect to load user's prediction into inputs
+    useEffect(() => {
+        const fetchUserPrediction = async () => {
+            if (!user || !showBetButton) return;
+            const { data, error } = await supabase
+                .from("predictions")
+                .select("home_score, away_score")
+                .eq("match_id", match.id)
+                .eq("user_id", user.id)
+                .maybeSingle();
+
+            if (data) {
+                const pred = data as any;
+                setBetHome(pred.home_score.toString());
+                setBetAway(pred.away_score.toString());
+            }
+        };
+        fetchUserPrediction();
+    }, [user, match.id, showBetButton, supabase]);
 
     // --- HIGHLANDER LOGIC (Strict Priority) ---
     // Calculates the "Highlander" winners: Find the highest ranking team that was selected,
@@ -197,15 +218,19 @@ export function UnifiedMatchCard({
             }, { onConflict: 'user_id,match_id' });
 
             if (error) throw error;
+            setJustSaved(true);
+            setTimeout(() => setJustSaved(false), 3000);
             if (onUpdate) onUpdate();
-        } catch (error) {
+        } catch (error: any) {
             console.error("Error saving prediction:", error);
+            const msg = error.message || error.details || JSON.stringify(error);
+            alert("Erro ao salvar palpite: " + msg);
         } finally {
             setSaving(false);
         }
     };
 
-    const canViewPredictions = isAdmin || match.status !== 'scheduled';
+    const canViewPredictions = isAdmin || isLive || isFinished;
 
     const handleToggleExpand = async () => {
         if (!canViewPredictions && !isAdmin) return;
@@ -293,7 +318,13 @@ export function UnifiedMatchCard({
 
     return (
         <TooltipProvider delayDuration={0}>
-            <Card className="group relative overflow-hidden transition-all duration-300 border border-border dark:border-slate-800 bg-card dark:bg-slate-950/50 hover:bg-muted/50 dark:hover:bg-slate-900/80 cursor-pointer shadow-lg" onClick={handleToggleExpand}>
+            <Card
+                className={cn(
+                    "group relative overflow-hidden transition-all duration-300 border border-border dark:border-slate-800 bg-card dark:bg-slate-950/50 shadow-lg",
+                    canViewPredictions ? "hover:bg-muted/50 dark:hover:bg-slate-900/80 cursor-pointer" : "cursor-default"
+                )}
+                onClick={handleToggleExpand}
+            >
                 <CardContent className="p-3 sm:p-6 relative min-h-[160px] flex flex-col justify-center">
                     {/* 1. TOP INFO BAR (Responsive) */}
                     <div className="flex items-center justify-between w-full mb-2 sm:mb-6 relative px-1 sm:px-2">
@@ -352,14 +383,14 @@ export function UnifiedMatchCard({
                                     <PopoverTrigger asChild onClick={(e) => e.stopPropagation()}>
                                         <button className={cn(
                                             "h-12 w-12 sm:h-14 sm:w-14 transition-transform hover:scale-110 flex items-center justify-center shrink-0 outline-none overflow-hidden",
-                                            teamMode === 'selecoes' && "rounded-full border-2 border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900"
+                                            teamMode === 'selecoes' ? "rounded-full border-2 border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm" : "rounded-lg"
                                         )}>
                                             <img
                                                 src={match.home_team_crest || getFlagUrl(match.home_team || match.homeTeamName)}
                                                 alt=""
                                                 className={cn(
-                                                    "max-h-full max-w-full drop-shadow-md",
-                                                    teamMode === 'selecoes' ? "w-full h-full object-cover" : "object-contain"
+                                                    "drop-shadow-sm",
+                                                    teamMode === 'selecoes' ? "w-full h-full object-cover rounded-full" : "max-h-full max-w-full object-contain"
                                                 )}
                                                 onError={(e) => (e.currentTarget.style.display = 'none')}
                                             />
@@ -379,16 +410,56 @@ export function UnifiedMatchCard({
                                             type="number"
                                             value={homeScore}
                                             onChange={(e) => setHomeScore(e.target.value)}
-                                            className="w-12 h-10 text-center font-bold bg-background border-input"
+                                            className="w-16 h-12 text-center text-xl font-bold bg-background border-input"
                                         />
                                         <Input
                                             type="number"
                                             value={awayScore}
                                             onChange={(e) => setAwayScore(e.target.value)}
-                                            className="w-12 h-10 text-center font-bold bg-background border-input"
+                                            className="w-16 h-12 text-center text-xl font-bold bg-background border-input"
                                         />
                                         <Button size="icon" variant="ghost" onClick={handleSaveScore} disabled={saving} className="h-8 w-8 text-green-600 dark:text-green-500">
                                             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-5 w-5" />}
+                                        </Button>
+                                    </div>
+                                ) : showBetButton && !isLocked ? (
+                                    <div className="flex flex-col items-center gap-3" onClick={(e) => e.stopPropagation()}>
+                                        <div className="flex items-center gap-2">
+                                            <Input
+                                                type="number"
+                                                min="0"
+                                                value={betHome}
+                                                onChange={(e) => setBetHome(e.target.value)}
+                                                className="w-16 h-12 text-center text-xl font-bold bg-background/50 border-primary/20 focus:border-primary"
+                                                placeholder="-"
+                                            />
+                                            <span className="text-muted-foreground font-bold">X</span>
+                                            <Input
+                                                type="number"
+                                                min="0"
+                                                value={betAway}
+                                                onChange={(e) => setBetAway(e.target.value)}
+                                                className="w-16 h-12 text-center text-xl font-bold bg-background/50 border-primary/20 focus:border-primary"
+                                                placeholder="-"
+                                            />
+                                        </div>
+                                        <Button
+                                            size="sm"
+                                            className={cn(
+                                                "h-7 text-[10px] font-bold px-4 rounded-full transition-all duration-300",
+                                                justSaved ? "bg-green-600 hover:bg-green-700" : "bg-primary hover:bg-primary/90"
+                                            )}
+                                            onClick={handleSavePrediction}
+                                            disabled={saving || betHome === "" || betAway === ""}
+                                        >
+                                            {saving ? (
+                                                <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                                            ) : justSaved ? (
+                                                <CheckCircle2 className="h-3 w-3 mr-1" />
+                                            ) : (
+                                                <Save className="h-3 w-3 mr-1" />
+                                            )}
+                                            {justSaved ? "SALVO!" : "SALVAR"}
                                         </Button>
                                     </div>
                                 ) : (
@@ -413,15 +484,15 @@ export function UnifiedMatchCard({
                                 <Popover>
                                     <PopoverTrigger asChild onClick={(e) => e.stopPropagation()}>
                                         <button className={cn(
-                                            "h-12 w-12 sm:h-14 sm:w-14 transition-transform hover:scale-110 flex items-center justify-center shrink-0 outline-none overflow-hidden",
-                                            teamMode === 'selecoes' && "rounded-full border-2 border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900"
+                                            "h-12 w-12 sm:h-14 sm:w-14 transition-transform hover:scale-110 flex items-center justify-center shrink-0 outline-none overflow-hidden rounded-lg",
+                                            teamMode === 'selecoes' ? "rounded-full border-2 border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm" : "rounded-lg"
                                         )}>
                                             <img
                                                 src={match.away_team_crest || getFlagUrl(match.away_team || match.awayTeamName)}
                                                 alt=""
                                                 className={cn(
-                                                    "max-h-full max-w-full drop-shadow-md",
-                                                    teamMode === 'selecoes' ? "w-full h-full object-cover" : "object-contain"
+                                                    "drop-shadow-sm",
+                                                    teamMode === 'selecoes' ? "w-full h-full object-cover rounded-full" : "max-h-full max-w-full object-contain"
                                                 )}
                                                 onError={(e) => (e.currentTarget.style.display = 'none')}
                                             />
@@ -469,9 +540,11 @@ export function UnifiedMatchCard({
                         </div>
 
                         {/* Footer indicator */}
-                        <div className="opacity-10 group-hover:opacity-40 transition-opacity">
-                            <ChevronDown className={`h-4 w-4 transition-transform duration-300 text-foreground ${expanded ? 'rotate-180' : ''}`} />
-                        </div>
+                        {canViewPredictions && (
+                            <div className="opacity-10 group-hover:opacity-40 transition-opacity">
+                                <ChevronDown className={`h-4 w-4 transition-transform duration-300 text-foreground ${expanded ? 'rotate-180' : ''}`} />
+                            </div>
+                        )}
 
                         {canEdit && !isEditing && (
                             <div className="absolute top-2 right-2">
@@ -509,9 +582,10 @@ export function UnifiedMatchCard({
                                 <div className="space-y-2">
                                     {predictions.map((pred) => {
                                         const userProfile = users.find(u => u.id === pred.user_id);
+                                        const isComputed = isLive || isFinished;
                                         const points = pred.points || 0;
-                                        const isZero = points === 0;
-                                        const isExact = !isLive && (pred.home_score === match.score_home && pred.away_score === match.score_away);
+                                        const isZero = isComputed && points === 0;
+                                        const isExact = isComputed && !isLive && (pred.home_score === match.score_home && pred.away_score === match.score_away);
 
                                         // TODO: Implementar lógica de fichas/combo/bonus
                                         const isGoalsOnly = false; // Roxo (Placeholder)
@@ -521,7 +595,10 @@ export function UnifiedMatchCard({
                                         let bgClass = "";
                                         let badgeClass = "";
 
-                                        if (isCombo) {
+                                        if (!isComputed) {
+                                            bgClass = "bg-slate-900/40 border-slate-800/60 hover:bg-slate-900/60";
+                                            badgeClass = "hidden"; // Esconde o badge de pontos para jogos futuros
+                                        } else if (isCombo) {
                                             bgClass = "bg-yellow-900/60 border-yellow-600/60 hover:bg-yellow-800/60";
                                             badgeClass = "bg-yellow-500 text-black font-bold";
                                         } else if (isBonus) {

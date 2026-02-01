@@ -235,8 +235,16 @@ export default function ChampionshipDetailsPage() {
                     <ArrowLeft className="h-4 w-4" />
                 </Button>
                 <h1 className="text-3xl font-bold tracking-tight">{championship.name}</h1>
-                <Badge variant={championship.status === "ativo" ? "default" : "secondary"}>
-                    {championship.status}
+                <Badge className={cn(
+                    championship.status === "ativo" ? "bg-green-500 hover:bg-green-600" :
+                        championship.status === "agendado" ? "bg-blue-500 hover:bg-blue-600" :
+                            championship.status === "arquivado" ? "bg-gray-500 hover:bg-gray-600" :
+                                "bg-yellow-500 hover:bg-yellow-600"
+                )}>
+                    {championship.status === "ativo" ? "Ativo" :
+                        championship.status === "agendado" ? "Agendado" :
+                            championship.status === "arquivado" ? "Arquivado" :
+                                "Finalizado"}
                 </Badge>
             </div>
 
@@ -423,14 +431,17 @@ function MatchList({ championshipId, teamMode }: { championshipId: string, teamM
                                 <div className="flex flex-col items-center gap-2 w-24">
                                     <Tooltip>
                                         <TooltipTrigger asChild>
-                                            <div className="relative h-12 w-12 transition-transform hover:scale-110 cursor-help">
+                                            <div className={cn(
+                                                "relative h-12 w-12 transition-transform hover:scale-110 cursor-help overflow-hidden",
+                                                teamMode === 'selecoes' ? "rounded-full border-2 border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm" : ""
+                                            )}>
                                                 <div className="absolute inset-0 bg-primary/10 rounded-full blur-xl opacity-0 group-hover:opacity-100 transition-opacity" />
                                                 <img
                                                     src={match.home_team_crest || getFlagUrl(match.home_team)}
                                                     alt={match.home_team}
                                                     className={cn(
-                                                        "h-full w-full drop-shadow-lg",
-                                                        teamMode === 'selecoes' ? "rounded-full object-cover border border-white/10" : "object-contain"
+                                                        "drop-shadow-sm",
+                                                        teamMode === 'selecoes' ? "w-full h-full object-cover rounded-full" : "max-h-full max-w-full object-contain"
                                                     )}
                                                     onError={(e) => (e.currentTarget.style.display = 'none')}
                                                 />
@@ -464,14 +475,17 @@ function MatchList({ championshipId, teamMode }: { championshipId: string, teamM
                                 <div className="flex flex-col items-center gap-2 w-24">
                                     <Tooltip>
                                         <TooltipTrigger asChild>
-                                            <div className="relative h-12 w-12 transition-transform hover:scale-110 cursor-help">
+                                            <div className={cn(
+                                                "relative h-12 w-12 transition-transform hover:scale-110 cursor-help overflow-hidden",
+                                                teamMode === 'selecoes' ? "rounded-full border-2 border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm" : ""
+                                            )}>
                                                 <div className="absolute inset-0 bg-primary/10 rounded-full blur-xl opacity-0 group-hover:opacity-100 transition-opacity" />
                                                 <img
                                                     src={match.away_team_crest || getFlagUrl(match.away_team)}
                                                     alt={match.away_team}
                                                     className={cn(
-                                                        "h-full w-full drop-shadow-lg",
-                                                        teamMode === 'selecoes' ? "rounded-full object-cover border border-white/10" : "object-contain"
+                                                        "drop-shadow-sm",
+                                                        teamMode === 'selecoes' ? "w-full h-full object-cover rounded-full" : "max-h-full max-w-full object-contain"
                                                     )}
                                                     onError={(e) => (e.currentTarget.style.display = 'none')}
                                                 />
