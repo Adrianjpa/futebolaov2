@@ -84,7 +84,14 @@ export default function ProfilePage() {
                     setPhotoURL(profileData.foto_perfil || "");
                 }
 
-                // 2. Fetch User Predictions with Match info to get Championship ID and Scores
+                // 2. Fetch Actual Participation (to get all championships the user ever joined)
+                const { data: participationData } = await (supabase
+                    .from("championship_participants") as any)
+                    .select("championship_id")
+                    .eq("user_id", user.id);
+                const participantIds = (participationData || []).map((p: any) => p.championship_id);
+
+                // 3. Fetch User Predictions with Match info
                 const { data: predictions } = await (supabase
                     .from("predictions") as any)
                     .select("*, matches(championship_id, score_home, score_away)")
@@ -96,9 +103,12 @@ export default function ProfilePage() {
                 }));
                 setUserPredictions(preds || []);
 
-                const uniqueChampionshipIds = Array.from(new Set(preds.map((p: any) => p.championship_id).filter(Boolean)));
+                const uniqueChampionshipIds = Array.from(new Set([
+                    ...preds.map((p: any) => p.championship_id).filter(Boolean),
+                    ...participantIds
+                ]));
 
-                // 3. Fetch All Championships
+                // 4. Fetch All Championships
                 const { data: allChamps } = await (supabase.from("championships") as any).select("*");
                 const champs = (allChamps || []) as any[];
                 const filteredChamps = champs
@@ -110,7 +120,7 @@ export default function ProfilePage() {
                     setSelectedChampionship(filteredChamps[0].id);
                 }
 
-                // Titles and Medals would come from a winners table or JSON settings in championship
+                // 5. Titles and Medals would come from a winners table or JSON settings in championship
                 // Here we use a placeholder or check if settings JSON has winners
                 // Calculate Titles (Champion positions)
                 const titlesWon = (allChamps || []).filter((c: any) => {
@@ -131,14 +141,7 @@ export default function ProfilePage() {
                     );
                 }).length;
 
-                // 4. Fetch Actual Participation (to count disputed correctly)
-                const { data: participationData } = await (supabase
-                    .from("championship_participants") as any)
-                    .select("championship_id")
-                    .eq("user_id", user.id);
-
-                const participantIds = (participationData || []).map((p: any) => p.championship_id);
-
+                // 6. Calculate Disputed Championships
                 // Disputed = Linked championships that are FINISHED
                 const championshipsDisputed = (allChamps || []).filter((c: any) => {
                     const isFinished = c.status === 'finalizado' || c.status === 'finished';
@@ -534,29 +537,31 @@ export default function ProfilePage() {
                 </div>
             </div>
 
-            <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                    <h2 className="text-xl font-bold">Estatísticas por Campeonato</h2>
-                    <div className="w-[250px]">
-                        <Select value={selectedChampionship} onValueChange={setSelectedChampionship}>
-                            <SelectTrigger><SelectValue placeholder="Selecione um campeonato" /></SelectTrigger>
-                            <SelectContent>
-                                {championships.map((champ) => <SelectItem key={champ.id} value={champ.id}>{champ.name}</SelectItem>)}
-                            </SelectContent>
-                        </Select>
+            {championships.length > 0 && (
+                <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                        <h2 className="text-xl font-bold">Estatísticas por Campeonato</h2>
+                        <div className="w-[250px]">
+                            <Select value={selectedChampionship} onValueChange={setSelectedChampionship}>
+                                <SelectTrigger><SelectValue placeholder="Selecione um campeonato" /></SelectTrigger>
+                                <SelectContent>
+                                    {championships.map((champ) => <SelectItem key={champ.id} value={champ.id}>{champ.name}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
+                        <StatCard title="Pontos" value={filteredStats.points} icon={<Gamepad2 className="h-4 w-4" />} color="bg-muted" text="text-foreground" description="Total de pontos no campeonato" />
+                        <StatCard title="Buchas" value={filteredStats.buchas} icon={<Target className="h-4 w-4" />} color="bg-green-600" description="Placares cravados" link={`/dashboard/history?championship=${selectedChampionship}&user=${user?.id}&type=bucha`} />
+                        <StatCard title="Situação" value={filteredStats.situacao} icon={<CheckCircle className="h-4 w-4" />} color="bg-blue-600" description="Vencedor/Empate corretos" link={`/dashboard/history?championship=${selectedChampionship}&user=${user?.id}&type=situacao`} />
+                        {filteredStats.combo > 0 && <StatCard title="Combo" value={filteredStats.combo} icon={<Gem className="h-4 w-4" />} color="bg-yellow-500" description="Bucha + Gols" pulse />}
+                        {filteredStats.bonus > 0 && <StatCard title="Bônus" value={filteredStats.bonus} icon={<Trophy className="h-4 w-4" />} color="bg-slate-300" text="text-slate-900" description="Situação + Gols" />}
+                        {filteredStats.gols > 0 && <StatCard title="Gols" value={filteredStats.gols} icon={<Goal className="h-4 w-4" />} color="bg-purple-600" description="Acerto apenas nos gols" />}
+                        <StatCard title="Erros" value={filteredStats.erros} icon={<XCircle className="h-4 w-4" />} color="bg-red-600" description="Palpites sem pontuação" link={`/dashboard/history?championship=${selectedChampionship}&user=${user?.id}&type=erro`} />
                     </div>
                 </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
-                    <StatCard title="Pontos" value={filteredStats.points} icon={<Gamepad2 className="h-4 w-4" />} color="bg-muted" text="text-foreground" description="Total de pontos no campeonato" />
-                    <StatCard title="Buchas" value={filteredStats.buchas} icon={<Target className="h-4 w-4" />} color="bg-green-600" description="Placares cravados" link={`/dashboard/history?championship=${selectedChampionship}&user=${user?.id}&type=bucha`} />
-                    <StatCard title="Situação" value={filteredStats.situacao} icon={<CheckCircle className="h-4 w-4" />} color="bg-blue-600" description="Vencedor/Empate corretos" link={`/dashboard/history?championship=${selectedChampionship}&user=${user?.id}&type=situacao`} />
-                    {filteredStats.combo > 0 && <StatCard title="Combo" value={filteredStats.combo} icon={<Gem className="h-4 w-4" />} color="bg-yellow-500" description="Bucha + Gols" pulse />}
-                    {filteredStats.bonus > 0 && <StatCard title="Bônus" value={filteredStats.bonus} icon={<Trophy className="h-4 w-4" />} color="bg-slate-300" text="text-slate-900" description="Situação + Gols" />}
-                    {filteredStats.gols > 0 && <StatCard title="Gols" value={filteredStats.gols} icon={<Goal className="h-4 w-4" />} color="bg-purple-600" description="Acerto apenas nos gols" />}
-                    <StatCard title="Erros" value={filteredStats.erros} icon={<XCircle className="h-4 w-4" />} color="bg-red-600" description="Palpites sem pontuação" link={`/dashboard/history?championship=${selectedChampionship}&user=${user?.id}&type=erro`} />
-                </div>
-            </div>
+            )}
         </div>
     );
 }

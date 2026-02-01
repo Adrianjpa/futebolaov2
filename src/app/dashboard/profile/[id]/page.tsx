@@ -243,29 +243,31 @@ export default function PublicProfilePage() {
                 </div>
             </div>
 
-            <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                    <h2 className="text-xl font-bold">Estatísticas por Campeonato</h2>
-                    <div className="w-[250px]">
-                        <Select value={selectedChampionship} onValueChange={setSelectedChampionship}>
-                            <SelectTrigger><SelectValue placeholder="Selecione um campeonato" /></SelectTrigger>
-                            <SelectContent>
-                                {championships.map((champ) => <SelectItem key={champ.id} value={champ.id}>{champ.name}</SelectItem>)}
-                            </SelectContent>
-                        </Select>
+            {championships.length > 0 && (
+                <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                        <h2 className="text-xl font-bold">Estatísticas por Campeonato</h2>
+                        <div className="w-[250px]">
+                            <Select value={selectedChampionship} onValueChange={setSelectedChampionship}>
+                                <SelectTrigger><SelectValue placeholder="Selecione um campeonato" /></SelectTrigger>
+                                <SelectContent>
+                                    {championships.map((champ) => <SelectItem key={champ.id} value={champ.id}>{champ.name}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
+                        <StatCard title="Pontos" value={filteredStats.points} icon={<Gamepad2 className="h-4 w-4" />} color="bg-muted" text="text-foreground" description="Total de pontos no campeonato" />
+                        <StatCard title="Buchas" value={filteredStats.buchas} icon={<Target className="h-4 w-4" />} color="bg-green-600" description="Placares cravados" link={`/dashboard/history?championship=${selectedChampionship}&user=${id}&type=bucha`} />
+                        <StatCard title="Situação" value={filteredStats.situacao} icon={<CheckCircle className="h-4 w-4" />} color="bg-blue-600" description="Vencedor/Empate corretos" link={`/dashboard/history?championship=${selectedChampionship}&user=${id}&type=situacao`} />
+                        {filteredStats.combo > 0 && <StatCard title="Combo" value={filteredStats.combo} icon={<Gem className="h-4 w-4" />} color="bg-yellow-500" description="Bucha + Gols" />}
+                        {filteredStats.bonus > 0 && <StatCard title="Bônus" value={filteredStats.bonus} icon={<Trophy className="h-4 w-4" />} color="bg-slate-300" text="text-slate-900" description="Situação + Gols" />}
+                        {filteredStats.gols > 0 && <StatCard title="Gols" value={filteredStats.gols} icon={<Goal className="h-4 w-4" />} color="bg-purple-600" description="Acerto apenas nos gols" />}
+                        <StatCard title="Erros" value={filteredStats.erros} icon={<XCircle className="h-4 w-4" />} color="bg-red-600" description="Palpites sem pontuação" link={`/dashboard/history?championship=${selectedChampionship}&user=${id}&type=erro`} />
                     </div>
                 </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
-                    <StatCard title="Pontos" value={filteredStats.points} icon={<Gamepad2 className="h-4 w-4" />} color="bg-muted" text="text-foreground" description="Total de pontos no campeonato" />
-                    <StatCard title="Buchas" value={filteredStats.buchas} icon={<Target className="h-4 w-4" />} color="bg-green-600" description="Placares cravados" link={`/dashboard/history?championship=${selectedChampionship}&user=${id}&type=bucha`} />
-                    <StatCard title="Situação" value={filteredStats.situacao} icon={<CheckCircle className="h-4 w-4" />} color="bg-blue-600" description="Vencedor/Empate corretos" link={`/dashboard/history?championship=${selectedChampionship}&user=${id}&type=situacao`} />
-                    {filteredStats.combo > 0 && <StatCard title="Combo" value={filteredStats.combo} icon={<Gem className="h-4 w-4" />} color="bg-yellow-500" description="Bucha + Gols" />}
-                    {filteredStats.bonus > 0 && <StatCard title="Bônus" value={filteredStats.bonus} icon={<Trophy className="h-4 w-4" />} color="bg-slate-300" text="text-slate-900" description="Situação + Gols" />}
-                    {filteredStats.gols > 0 && <StatCard title="Gols" value={filteredStats.gols} icon={<Goal className="h-4 w-4" />} color="bg-purple-600" description="Acerto apenas nos gols" />}
-                    <StatCard title="Erros" value={filteredStats.erros} icon={<XCircle className="h-4 w-4" />} color="bg-red-600" description="Palpites sem pontuação" link={`/dashboard/history?championship=${selectedChampionship}&user=${id}&type=erro`} />
-                </div>
-            </div>
+            )}
         </div>
     );
 }

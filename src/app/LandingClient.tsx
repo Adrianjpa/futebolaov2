@@ -26,6 +26,7 @@ export default function LandingClient() {
   const [regEmail, setRegEmail] = useState("");
   const [regPassword, setRegPassword] = useState("");
   const [regError, setRegError] = useState("");
+  const [isVerificationSent, setIsVerificationSent] = useState(false);
 
   // --- HANDLERS ---
 
@@ -66,12 +67,11 @@ export default function LandingClient() {
 
       if (error) throw error;
 
-      // With Supabase, we might need to wait for email confirmation or just redirect
-      // For this app, let's assume auto-confirm or just redirect to check email
-      router.push("/dashboard");
+      setIsVerificationSent(true);
     } catch (err: any) {
       console.error(err);
       setRegError(err.message || "Erro ao criar conta. Tente novamente.");
+    } finally {
       setLoading(false);
     }
   };
@@ -173,75 +173,96 @@ export default function LandingClient() {
             </TabsContent>
 
             <TabsContent value="register">
-              <form onSubmit={handleRegister} className="space-y-4">
-                {regError && <div className="text-red-500 text-sm p-2 bg-red-50/10 rounded border border-red-500/20 text-center">{regError}</div>}
+              {isVerificationSent ? (
+                <div className="space-y-4 py-8 animate-in fade-in zoom-in duration-500 text-center">
+                  <div className="bg-primary/10 border border-primary/20 rounded-xl p-6 space-y-4 shadow-inner">
+                    <div className="mx-auto w-16 h-16 bg-primary/20 rounded-full flex items-center justify-center">
+                      <svg className="w-8 h-8 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                      </svg>
+                    </div>
+                    <h3 className="text-xl font-bold">Verifique seu e-mail!</h3>
+                    <p className="text-sm text-muted-foreground leading-relaxed">
+                      Enviamos um link de confirmação para <span className="font-bold text-foreground">{regEmail}</span>.
+                      <br /><br />
+                      Acesse seu e-mail e clique no link para ativar sua conta e prosseguir para a aprovação administrativa.
+                    </p>
+                  </div>
+                  <Button variant="outline" className="w-full mt-4" onClick={() => setIsVerificationSent(false)}>
+                    Voltar para o cadastro
+                  </Button>
+                </div>
+              ) : (
+                <form onSubmit={handleRegister} className="space-y-4">
+                  {regError && <div className="text-red-500 text-sm p-2 bg-red-50/10 rounded border border-red-500/20 text-center">{regError}</div>}
 
-                <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="regName">Nome</Label>
+                      <Input
+                        id="regName"
+                        placeholder="Seu nome"
+                        value={regName}
+                        onChange={(e) => setRegName(e.target.value)}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="regNickname">Apelido (Opcional)</Label>
+                      <Input
+                        id="regNickname"
+                        placeholder="Apelido"
+                        value={regNickname}
+                        onChange={(e) => setRegNickname(e.target.value)}
+                      />
+                    </div>
+                  </div>
+
                   <div className="space-y-2">
-                    <Label htmlFor="regName">Nome</Label>
+                    <Label htmlFor="regEmail">Email</Label>
                     <Input
-                      id="regName"
-                      placeholder="Seu nome"
-                      value={regName}
-                      onChange={(e) => setRegName(e.target.value)}
+                      id="regEmail"
+                      type="email"
+                      placeholder="seu@email.com"
+                      value={regEmail}
+                      onChange={(e) => setRegEmail(e.target.value)}
                       required
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="regNickname">Apelido (Opcional)</Label>
+                    <Label htmlFor="regPassword">Senha</Label>
                     <Input
-                      id="regNickname"
-                      placeholder="Apelido"
-                      value={regNickname}
-                      onChange={(e) => setRegNickname(e.target.value)}
+                      id="regPassword"
+                      type="password"
+                      value={regPassword}
+                      onChange={(e) => setRegPassword(e.target.value)}
+                      required
+                      minLength={6}
                     />
                   </div>
-                </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="regEmail">Email</Label>
-                  <Input
-                    id="regEmail"
-                    type="email"
-                    placeholder="seu@email.com"
-                    value={regEmail}
-                    onChange={(e) => setRegEmail(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="regPassword">Senha</Label>
-                  <Input
-                    id="regPassword"
-                    type="password"
-                    value={regPassword}
-                    onChange={(e) => setRegPassword(e.target.value)}
-                    required
-                    minLength={6}
-                  />
-                </div>
+                  <Button type="submit" className="w-full font-bold shadow-lg shadow-primary/20" disabled={loading}>
+                    {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                    Criar Minha Conta
+                  </Button>
 
-                <Button type="submit" className="w-full font-bold" disabled={loading}>
-                  {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                  Criar Conta
-                </Button>
-
-                <div className="relative my-4">
-                  <div className="absolute inset-0 flex items-center">
-                    <span className="w-full border-t" />
+                  <div className="relative my-4">
+                    <div className="absolute inset-0 flex items-center">
+                      <span className="w-full border-t" />
+                    </div>
+                    <div className="relative flex justify-center text-xs uppercase">
+                      <span className="bg-card px-2 text-muted-foreground">Ou</span>
+                    </div>
                   </div>
-                  <div className="relative flex justify-center text-xs uppercase">
-                    <span className="bg-card px-2 text-muted-foreground">Ou</span>
-                  </div>
-                </div>
 
-                <Button variant="outline" type="button" className="w-full" onClick={() => handleGoogleAuth(true)} disabled={loading}>
-                  <svg className="mr-2 h-4 w-4" aria-hidden="true" focusable="false" data-prefix="fab" data-icon="google" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 488 512">
-                    <path fill="currentColor" d="M488 261.8C488 403.3 391.1 504 248 504 110.8 504 0 393.2 0 256S110.8 8 248 8c66.8 0 123 24.5 166.3 64.9l-67.5 64.9C258.5 52.6 94.3 116.6 94.3 256c0 86.5 69.1 156.6 153.7 156.6 98.2 0 135-70.4 140.8-106.9H248v-85.3h236.1c2.3 12.7 3.9 24.9 3.9 41.4z"></path>
-                  </svg>
-                  Cadastrar com Google
-                </Button>
-              </form>
+                  <Button variant="outline" type="button" className="w-full bg-primary/5 border-primary/10 hover:bg-primary/10" onClick={() => handleGoogleAuth(true)} disabled={loading}>
+                    <svg className="mr-2 h-4 w-4" aria-hidden="true" focusable="false" data-prefix="fab" data-icon="google" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 488 512">
+                      <path fill="currentColor" d="M488 261.8C488 403.3 391.1 504 248 504 110.8 504 0 393.2 0 256S110.8 8 248 8c66.8 0 123 24.5 166.3 64.9l-67.5 64.9C258.5 52.6 94.3 116.6 94.3 256c0 86.5 69.1 156.6 153.7 156.6 98.2 0 135-70.4 140.8-106.9H248v-85.3h236.1c2.3 12.7 3.9 24.9 3.9 41.4z"></path>
+                    </svg>
+                    Cadastrar com Google
+                  </Button>
+                </form>
+              )}
             </TabsContent>
           </Tabs>
         </CardContent>

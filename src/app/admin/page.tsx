@@ -1,5 +1,7 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, Trophy, Swords, AlertCircle } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Users, Trophy, Swords, AlertCircle, History, ArrowRight } from "lucide-react";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
 
 export default function AdminDashboardPage() {
     return (
@@ -61,6 +63,29 @@ export default function AdminDashboardPage() {
                         <p className="text-xs text-muted-foreground">
                             Requer atenção
                         </p>
+                    </CardContent>
+                </Card>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+                <Card className="bg-blue-500/5 border-blue-500/20 shadow-sm relative overflow-hidden group">
+                    <History className="absolute -right-8 -bottom-8 h-32 w-32 text-blue-500/10 group-hover:text-blue-500/20 transition-all rotate-12" />
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2 text-blue-700 dark:text-blue-400">
+                            <History className="h-5 w-5" />
+                            Migração de Dados Legados
+                        </CardTitle>
+                        <CardDescription>
+                            Vincule estatísticas históricas a usuários reais recém-cadastrados.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <Link href="/admin/migrations/linker">
+                            <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white gap-2">
+                                Abrir Ferramenta de Vínculo
+                                <ArrowRight className="h-4 w-4" />
+                            </Button>
+                        </Link>
                     </CardContent>
                 </Card>
             </div>

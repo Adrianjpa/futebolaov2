@@ -1,11 +1,23 @@
 import { NextResponse } from "next/server";
-import { supabaseAdmin } from "@/lib/supabase-server";
+import { createServerSupabaseClient, supabaseAdmin } from "@/lib/supabase-server";
 
 export async function POST(request: Request) {
-    // Security Check
-    const authHeader = request.headers.get("authorization");
-    if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    const supabase = await createServerSupabaseClient();
+    const { data: { session } } = await supabase.auth.getSession();
+
+    if (!session) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Verify if user is admin or moderator in profiles table
+    const { data: profile } = await (supabase
+        .from("profiles")
+        .select("funcao")
+        .eq("id", session.user.id)
+        .single() as any);
+
+    if (profile?.funcao !== "admin" && profile?.funcao !== "moderator") {
+        return NextResponse.json({ error: "Forbidden - Admin access required" }, { status: 403 });
     }
 
     try {

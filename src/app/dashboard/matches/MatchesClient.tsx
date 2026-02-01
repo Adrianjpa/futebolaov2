@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -63,6 +64,7 @@ export default function MatchesClient() {
         championships: allChamps,
         championshipsMap,
         userPredictions,
+        userParticipation,
         loading: matchesLoading,
         refreshMatches: fetchMatches
     } = useMatches();
@@ -70,7 +72,10 @@ export default function MatchesClient() {
     const isAdmin = profile?.funcao === 'admin' || profile?.funcao === 'moderator';
     const supabase = createClient();
 
-    const [selectedChampionship, setSelectedChampionship] = useState<string>("all");
+    const searchParams = useSearchParams();
+    const champParam = searchParams.get("championship");
+
+    const [selectedChampionship, setSelectedChampionship] = useState<string>(champParam || "all");
     const [matches, setMatches] = useState<Match[]>([]);
     const [users, setUsers] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
@@ -102,17 +107,26 @@ export default function MatchesClient() {
         fetchUsers();
     }, []);
 
-    const activeChamps = useMemo(() => allChamps.filter((c: any) => c.status === 'ativo'), [allChamps]);
+    const activeChamps = useMemo(() => {
+        return allChamps.filter((c: any) =>
+            (c.status === 'ativo' || c.status === 'agendado') && (isAdmin || userParticipation.has(c.id))
+        );
+    }, [allChamps, isAdmin, userParticipation]);
 
     // Set default championship
     useEffect(() => {
+        if (champParam) {
+            setSelectedChampionship(champParam);
+            return;
+        }
+
         if (activeChamps.length > 0 && selectedChampionship === "all") {
             // If only one, select it automatically. If multiple, keep "all" as default to show everything in order.
             if (activeChamps.length === 1) {
                 setSelectedChampionship(activeChamps[0].id);
             }
         }
-    }, [activeChamps, selectedChampionship]);
+    }, [activeChamps, selectedChampionship, champParam]);
 
     // Handle filtering and pagination
     useEffect(() => {
@@ -255,7 +269,7 @@ export default function MatchesClient() {
                                 <SelectValue placeholder="Campeonato" />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="all">Todos os Campeonatos</SelectItem>
+                                {activeChamps.length > 1 && <SelectItem value="all">Todos os Campeonatos</SelectItem>}
                                 {activeChamps.map((c: any) => (
                                     <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                                 ))}
@@ -475,16 +489,20 @@ export default function MatchesClient() {
             )}
 
             <div className="space-y-4">
-                {matches.length === 0 && !matchesLoading && (
-                    <div className="text-center py-12 text-muted-foreground">
-                        <CalendarIcon className="h-10 w-10 mx-auto mb-3 opacity-20" />
-                        <p>Nenhuma partida agendada encontrada.</p>
+                {matchesLoading && matches.length === 0 && (
+                    <div className="flex flex-col items-center justify-center p-12 min-h-[300px]">
+                        <Loader2 className="h-8 w-8 animate-spin text-primary mb-2" />
+                        <p className="text-xs text-muted-foreground font-medium">Carregando partidas...</p>
                     </div>
                 )}
 
-                {matchesLoading && matches.length === 0 && (
-                    <div className="flex justify-center p-8">
-                        <Loader2 className="h-8 w-8 animate-spin" />
+                {matches.length === 0 && !matchesLoading && (
+                    <div className="text-center py-20 bg-card/30 border border-dashed rounded-2xl m-4 animate-in fade-in zoom-in duration-500">
+                        <CalendarIcon className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-20" />
+                        <h3 className="text-xl font-bold">Sem Partidas</h3>
+                        <p className="text-muted-foreground max-w-sm mx-auto mt-2 leading-relaxed">
+                            Nenhuma partida agendada encontrada para os filtros selecionados.
+                        </p>
                     </div>
                 )}
 

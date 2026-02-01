@@ -18,7 +18,7 @@ export default function NewChampionshipPage() {
             const { data, error } = await (supabase.from("championships") as any).insert({
                 name,
                 category,
-                status: "ativo", // Force active on creation
+                status: status || "rascunho",
                 settings: others
             }).select().single();
 

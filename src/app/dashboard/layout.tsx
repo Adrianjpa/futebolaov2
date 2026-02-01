@@ -45,6 +45,7 @@ export default function DashboardLayout({
         { href: "/dashboard/history", label: "Histórico", icon: History }, // New Unified Page
         { href: "/dashboard/ranking", label: "Ranking", icon: Medal },
         { href: "/dashboard/fame", label: "Hall da Fama", icon: Trophy },
+        { href: "/dashboard/messages", label: "Mensagens", icon: MessageSquare },
         { href: "/dashboard/profile", label: "Meu Perfil", icon: UserIcon },
     ];
 

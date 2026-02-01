@@ -106,7 +106,7 @@ const formSchema = z.object({
     // API Integration
     creationType: z.enum(["manual", "hybrid", "auto"]),
     apiCode: z.string().optional(),
-    status: z.enum(["rascunho", "ativo", "finished", "arquivado"]).default("rascunho"),
+    status: z.enum(["rascunho", "agendado", "ativo", "finished", "arquivado"]).default("rascunho"),
     officialRanking: z.array(z.string()).default(["", "", "", "", ""]),
     teams: z.array(z.object({
         id: z.string(),
@@ -170,7 +170,7 @@ export function ChampionshipForm({ initialData, onSubmit, isSubmitting = false, 
             })),
             creationType: initialData?.creationType || "manual",
             apiCode: initialData?.apiCode || "",
-            status: (initialData?.status as any) === "ativo" ? "ativo" : (initialData?.status as any) === "finalizado" ? "finished" : (initialData?.status || "rascunho") as any,
+            status: (initialData?.status as any) === "ativo" ? "ativo" : (initialData?.status as any) === "finalizado" ? "finished" : (initialData?.status as any) === "agendado" ? "agendado" : (initialData?.status || "rascunho") as any,
             officialRanking: initialData?.officialRanking || ["", "", "", "", ""],
             teams: (initialData?.teams || []).map((t: any) => ({
                 id: t.id,
@@ -574,6 +574,7 @@ export function ChampionshipForm({ initialData, onSubmit, isSubmitting = false, 
                                     </SelectTrigger>
                                     <SelectContent>
                                         <SelectItem value="rascunho">Rascunho (Não visível)</SelectItem>
+                                        <SelectItem value="agendado">Agendado (Futuro / Countdown)</SelectItem>
                                         <SelectItem value="ativo">Ativo (Em andamento)</SelectItem>
                                         <SelectItem value="finished">Finalizado (Encerrado)</SelectItem>
                                         <SelectItem value="arquivado">Arquivado (Oculto)</SelectItem>

@@ -43,6 +43,8 @@ export default function HistoryClient() {
     const paramType = searchParams.get("type");
 
     const [championships, setChampionships] = useState<Championship[]>([]);
+    const [userChampionships, setUserChampionships] = useState<Championship[]>([]);
+    const [hasHistory, setHasHistory] = useState<boolean | null>(null);
     const [selectedCategory, setSelectedCategory] = useState<string>("all");
     const [selectedChampionship, setSelectedChampionship] = useState<string>(paramChamp || "all");
     const [matches, setMatches] = useState<Match[]>([]);
@@ -66,30 +68,55 @@ export default function HistoryClient() {
 
     useEffect(() => {
         const fetchInitialData = async () => {
-            const { data: champs } = await (supabase.from("championships") as any)
+            if (!currentUser) return;
+
+            // 1. Fetch ALL championships
+            const { data: allChamps } = await (supabase.from("championships") as any)
                 .select("*")
                 .order("created_at", { ascending: false });
 
-            const allChamps = champs || [];
-            setChampionships(allChamps);
+            const champs = (allChamps || []) as Championship[];
+            setChampionships(champs);
+
+            // 2. Fetch User Participation
+            const { data: participation } = await (supabase.from("championship_participants") as any)
+                .select("championship_id")
+                .eq("user_id", currentUser.id);
+
+            const participatedIds = (participation || []).map((p: any) => p.championship_id);
+
+            // 3. User might have predictions elsewhere
+            const { data: predChamps } = await (supabase.from("predictions") as any)
+                .select("matches(championship_id)")
+                .eq("user_id", currentUser.id);
+
+            const predictedIds = Array.from(new Set((predChamps || []).map((p: any) => p.matches?.championship_id).filter(Boolean)));
+            const allUserChampIds = Array.from(new Set([...participatedIds, ...predictedIds]));
+
+            const userHistoryChamps = champs.filter(c => allUserChampIds.includes(c.id));
+            setUserChampionships(userHistoryChamps);
+            const hasAnyHistory = userHistoryChamps.length > 0;
+            setHasHistory(hasAnyHistory);
 
             const { data: profiles } = await (supabase.from("public_profiles") as any).select("*");
             setUsers(profiles || []);
 
-            // Handle default selection or URL params
+            // 4. Handle default selection or URL params
             if (paramChamp) {
-                const champ = (allChamps as Championship[]).find((c: Championship) => c.id === paramChamp);
+                const champ = champs.find((c: Championship) => c.id === paramChamp);
                 if (champ?.category) setSelectedCategory(champ.category);
                 setSelectedChampionship(paramChamp);
-            } else if (allChamps.length > 0) {
-                // DEFAULT: Newest championship
-                const newest = allChamps[0];
+            } else if (hasAnyHistory) {
+                // DEFAULT: Newest championship user participated in
+                const newest = userHistoryChamps[0];
                 setSelectedChampionship(newest.id);
                 setSelectedCategory(newest.category || "all");
+            } else {
+                setSelectedChampionship("all");
             }
         };
         fetchInitialData();
-    }, []);
+    }, [currentUser]);
 
     const fetchMatches = async (page: number) => {
         setLoading(true);
@@ -245,58 +272,71 @@ export default function HistoryClient() {
                                 'Histórico de Partidas'}
                 </h1>
 
-                <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
-                    {isFiltered && (
-                        <Button variant="ghost" onClick={() => router.push('/dashboard/history')} className="text-muted-foreground h-10 px-4">
-                            Limpar Filtros
-                        </Button>
-                    )}
+                {hasHistory && (
+                    <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
+                        {isFiltered && (
+                            <Button variant="ghost" onClick={() => router.push('/dashboard/history')} className="text-muted-foreground h-10 px-4">
+                                Limpar Filtros
+                            </Button>
+                        )}
 
-                    {/* Filter by Category (Grouping) */}
-                    <Select value={selectedCategory} onValueChange={handleCategoryChange}>
-                        <SelectTrigger className="w-full sm:w-[200px] h-10">
-                            <SelectValue placeholder="Agrupamento" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">Todos os Agrupamentos</SelectItem>
-                            {availableCategories.map(cat => (
-                                <SelectItem key={cat} value={cat}>
-                                    {CATEGORY_MAP[cat] || cat}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
+                        {/* Filter by Category (Grouping) */}
+                        <Select value={selectedCategory} onValueChange={handleCategoryChange}>
+                            <SelectTrigger className="w-full sm:w-[200px] h-10">
+                                <SelectValue placeholder="Agrupamento" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">Todos os Agrupamentos</SelectItem>
+                                {availableCategories.map(cat => (
+                                    <SelectItem key={cat} value={cat}>
+                                        {CATEGORY_MAP[cat] || cat}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
 
-                    {/* Filter by Championship */}
-                    <Select value={selectedChampionship} onValueChange={setSelectedChampionship}>
-                        <SelectTrigger className="w-full sm:w-[240px] h-10">
-                            <SelectValue placeholder="Campeonato" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">Todos {selectedCategory !== 'all' ? `da ${CATEGORY_MAP[selectedCategory] || selectedCategory}` : 'os Campeonatos'}</SelectItem>
-                            {filteredChampionships.map(c => (
-                                <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                </div>
+                        {/* Filter by Championship */}
+                        <Select value={selectedChampionship} onValueChange={setSelectedChampionship}>
+                            <SelectTrigger className="w-full sm:w-[240px] h-10">
+                                <SelectValue placeholder="Campeonato" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">Todos {selectedCategory !== 'all' ? `da ${CATEGORY_MAP[selectedCategory] || selectedCategory}` : 'os Campeonatos'}</SelectItem>
+                                {filteredChampionships.map(c => (
+                                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                )}
             </div>
 
             <div className="grid gap-4">
-                {matches.length === 0 && !loading && (
-                    <div className="text-center py-12 text-muted-foreground">
-                        <CalendarIcon className="h-10 w-10 mx-auto mb-3 opacity-20" />
-                        <p>Nenhuma partida finalizada encontrada.</p>
-                    </div>
-                )}
-
                 {loading && (
-                    <div className="flex justify-center p-8">
-                        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                    <div className="flex flex-col items-center justify-center p-12 min-h-[300px]">
+                        <Loader2 className="h-8 w-8 animate-spin text-primary mb-2" />
+                        <p className="text-xs text-muted-foreground font-medium">Carregando histórico...</p>
                     </div>
                 )}
 
-                {!loading && matches.map((match) => (
+                {!loading && hasHistory === false && (
+                    <div className="text-center py-20 bg-card/30 border border-dashed rounded-2xl m-4 animate-in fade-in zoom-in duration-500">
+                        <CalendarIcon className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-20" />
+                        <h3 className="text-xl font-bold">Histórico Vazio</h3>
+                        <p className="text-muted-foreground max-w-sm mx-auto mt-2 px-4 leading-relaxed">
+                            Parece que você ainda não participou de nenhum campeonato que tenha partidas finalizadas. Participe de um bolão para ver seu histórico aqui!
+                        </p>
+                    </div>
+                )}
+
+                {!loading && hasHistory === true && matches.length === 0 && (
+                    <div className="text-center py-20 bg-card/30 border border-dashed rounded-2xl m-4">
+                        <CalendarIcon className="h-10 w-10 mx-auto mb-3 opacity-20" />
+                        <p className="text-muted-foreground">Nenhuma partida finalizada encontrada para este filtro.</p>
+                    </div>
+                )}
+
+                {!loading && hasHistory && matches.map((match) => (
                     <UnifiedMatchCard
                         key={match.id}
                         match={match}
@@ -308,7 +348,7 @@ export default function HistoryClient() {
                     />
                 ))}
 
-                {showPagination && !loading && (
+                {!loading && hasHistory && showPagination && (
                     <div className="flex items-center justify-between pt-4 border-t">
                         <Button variant="outline" onClick={handlePrevPage} disabled={currentPage === 1} className="w-[120px]">
                             <ChevronLeft className="mr-2 h-4 w-4" /> Anterior

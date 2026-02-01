@@ -9,6 +9,7 @@ interface MatchesContextType {
     championships: any[];
     championshipsMap: Record<string, any>;
     userPredictions: Set<string>;
+    userParticipation: Set<string>;
     loading: boolean;
     refreshMatches: () => Promise<void>;
 }
@@ -23,6 +24,7 @@ export function MatchesProvider({ children }: { children: ReactNode }) {
     const [championships, setChampionships] = useState<any[]>([]);
     const [championshipsMap, setChampionshipsMap] = useState<Record<string, any>>({});
     const [userPredictions, setUserPredictions] = useState<Set<string>>(new Set());
+    const [userParticipation, setUserParticipation] = useState<Set<string>>(new Set());
     const [loading, setLoading] = useState(true);
     const [isInitialLoad, setIsInitialLoad] = useState(true);
 
@@ -45,7 +47,15 @@ export function MatchesProvider({ children }: { children: ReactNode }) {
             const predSet = new Set((preds as any[])?.map(p => p.match_id));
             setUserPredictions(predSet);
 
-            // 3. Fetch Matches (Next 7 days + Live)
+            // 3. Fetch User Participation
+            const { data: parts } = await (supabase
+                .from("championship_participants") as any)
+                .select("championship_id")
+                .eq("user_id", user.id);
+            const partSet = new Set((parts as any[])?.map(p => p.championship_id));
+            setUserParticipation(partSet);
+
+            // 4. Fetch Matches (Next 7 days + Live)
             const todayStart = new Date();
             todayStart.setDate(todayStart.getDate() - 1); // Get Yesterday to show recent results
             todayStart.setHours(0, 0, 0, 0);
@@ -90,6 +100,11 @@ export function MatchesProvider({ children }: { children: ReactNode }) {
                     fetchMatches();
                 }
             })
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'championship_participants' }, (payload: any) => {
+                if (payload.new?.user_id === user.id || payload.old?.user_id === user.id) {
+                    fetchMatches();
+                }
+            })
             .subscribe();
 
         return () => {
@@ -103,6 +118,7 @@ export function MatchesProvider({ children }: { children: ReactNode }) {
             championships,
             championshipsMap,
             userPredictions,
+            userParticipation,
             loading: isInitialLoad, // Only show heavy loader on first app load
             refreshMatches: fetchMatches
         }}>

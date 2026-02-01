@@ -46,6 +46,7 @@ export default function AdminLayout({
 
 
         { href: "/admin/messaging", label: "Mensagens", icon: MessageSquare },
+        { href: "/admin/migrations/linker", label: "Vincular Legado", icon: History },
         { href: "/admin/settings", label: "Configurações", icon: Settings },
         { href: "/admin/debug", label: "Debug", icon: Activity },
     ];

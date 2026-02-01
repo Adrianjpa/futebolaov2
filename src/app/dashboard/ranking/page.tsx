@@ -45,7 +45,7 @@ interface Championship {
 }
 
 export default function RankingPage() {
-    const { user: currentUser } = useAuth();
+    const { user: currentUser, profile } = useAuth();
     const supabase = createClient();
     const searchParams = useSearchParams();
     const initialChampionshipId = searchParams.get("championship") || "all";
@@ -53,6 +53,7 @@ export default function RankingPage() {
     const [users, setUsers] = useState<UserProfile[]>([]);
     const [loading, setLoading] = useState(true);
     const [championships, setChampionships] = useState<any[]>([]);
+    const [hasHistory, setHasHistory] = useState<boolean | null>(null);
     const [categoryFilter, setCategoryFilter] = useState<string>("all");
     const [selectedChampionship, setSelectedChampionship] = useState<string>(initialChampionshipId);
     const [sortBy, setSortBy] = useState<'total_points' | 'exact_scores' | 'outcomes'>('total_points');
@@ -62,30 +63,68 @@ export default function RankingPage() {
     const [enablePriority, setEnablePriority] = useState<boolean>(true);
     const [participantsData, setParticipantsData] = useState<Map<string, string[]>>(new Map());
 
+    const isAdmin = profile?.funcao === "admin" || profile?.funcao === "moderator";
+
     useEffect(() => {
         const fetchInitial = async () => {
+            if (!currentUser) return;
+
+            // 1. Fetch ALL championships
             const { data: champs } = await (supabase.from("championships") as any)
                 .select("*")
                 .order("created_at", { ascending: false });
 
-            setChampionships(champs || []);
+            const allChamps = champs || [];
+            setChampionships(allChamps);
 
-            if (initialChampionshipId === "all" && champs && (champs as any[]).length > 0) {
-                const newest = (champs as any[])[0];
-                setSelectedChampionship(newest.id);
-                setCategoryFilter(newest.category || "all");
-            } else if (initialChampionshipId !== "all" && champs) {
-                const current = (champs as any[]).find(c => c.id === initialChampionshipId);
-                if (current) setCategoryFilter(current.category || "all");
+            // 2. Determine Participation History
+            const { data: participation } = await (supabase.from("championship_participants") as any)
+                .select("championship_id")
+                .eq("user_id", currentUser.id);
+
+            const participatedIds = (participation || []).map((p: any) => p.championship_id);
+
+            const { data: predChamps } = await (supabase.from("predictions") as any)
+                .select("matches(championship_id)")
+                .eq("user_id", currentUser.id);
+
+            const predictedIds = Array.from(new Set((predChamps || []).map((p: any) => p.matches?.championship_id).filter(Boolean)));
+            const allUserChampIds = Array.from(new Set([...participatedIds, ...predictedIds]));
+
+            const userHistoryChamps = allChamps.filter((c: any) => allUserChampIds.includes(c.id));
+            const hasAnyHistory = userHistoryChamps.length > 0 || isAdmin;
+            setHasHistory(hasAnyHistory);
+
+            // 3. Handle default selection or URL params
+            if (initialChampionshipId !== "all") {
+                const current = allChamps.find((c: any) => c.id === initialChampionshipId);
+                if (current) {
+                    setCategoryFilter(current.category || "all");
+                    setSelectedChampionship(initialChampionshipId);
+                }
+            } else if (hasAnyHistory) {
+                // If history exists, default to the most recent participated championship
+                // If admin, default to the most recent overall
+                const defaultChamp = isAdmin ? allChamps[0] : userHistoryChamps[0];
+                if (defaultChamp) {
+                    setSelectedChampionship(defaultChamp.id);
+                    setCategoryFilter(defaultChamp.category || "all");
+                }
+            } else {
+                setSelectedChampionship("all");
             }
+            setLoading(false);
         };
         fetchInitial();
-    }, []);
+    }, [currentUser, profile, isAdmin]);
 
     const categories = Array.from(new Set(championships.map((c: any) => c.category).filter(Boolean)));
 
     const fetchRankingAndSettings = async () => {
-        if (!selectedChampionship || selectedChampionship === "all") return;
+        if (!selectedChampionship || selectedChampionship === "all") {
+            setLoading(false);
+            return;
+        }
         setLoading(true);
         try {
             // 1. Fetch Ranking
@@ -298,74 +337,92 @@ export default function RankingPage() {
             <div className="space-y-6">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <h1 className="text-3xl font-bold tracking-tight">Ranking</h1>
-                    <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
-                        <Select
-                            value={categoryFilter}
-                            onValueChange={(val) => {
-                                setCategoryFilter(val);
-                                if (val !== "all") {
-                                    const inCat = championships.filter(c => c.category === val);
-                                    if (inCat.length > 0) setSelectedChampionship(inCat[0].id);
-                                }
-                            }}
-                        >
-                            <SelectTrigger className="w-full sm:w-[200px]">
-                                <SelectValue placeholder="Agrupamento" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">Todos os Agrupamentos</SelectItem>
-                                {categories.map((cat: any) => (
-                                    <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
+                    {(hasHistory || isAdmin) && (
+                        <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
+                            <Select
+                                value={categoryFilter}
+                                onValueChange={(val) => {
+                                    setCategoryFilter(val);
+                                    if (val !== "all") {
+                                        const inCat = championships.filter(c => c.category === val);
+                                        if (inCat.length > 0) setSelectedChampionship(inCat[0].id);
+                                    }
+                                }}
+                            >
+                                <SelectTrigger className="w-full sm:w-[200px]">
+                                    <SelectValue placeholder="Agrupamento" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">Todos os Agrupamentos</SelectItem>
+                                    {categories.map((cat: any) => (
+                                        <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
 
-                        <Select value={selectedChampionship} onValueChange={setSelectedChampionship}>
-                            <SelectTrigger className="w-full sm:w-[260px]">
-                                <SelectValue placeholder="Selecione um Campeonato" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {championships
-                                    .filter(c => categoryFilter === "all" || c.category === categoryFilter)
-                                    .map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-                            </SelectContent>
-                        </Select>
-                    </div>
+                            <Select value={selectedChampionship} onValueChange={setSelectedChampionship}>
+                                <SelectTrigger className="w-full sm:w-[260px]">
+                                    <SelectValue placeholder="Selecione um Campeonato" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {championships
+                                        .filter(c => categoryFilter === "all" || c.category === categoryFilter)
+                                        .map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    )}
                 </div>
 
                 <Card>
-                    <CardHeader className="border-b bg-muted/5 p-0">
-                        <div className="flex items-center text-xs font-bold text-muted-foreground px-4 py-3 gap-2 uppercase tracking-wider">
-                            <div className="w-8 text-center">Pos.</div>
-                            <div className="flex-1">Jogador</div>
+                    {!loading && (hasHistory || isAdmin) && (
+                        <CardHeader className="border-b bg-muted/5 p-0">
+                            <div className="flex items-center text-xs font-bold text-muted-foreground px-4 py-3 gap-2 uppercase tracking-wider">
+                                <div className="w-8 text-center">Pos.</div>
+                                <div className="flex-1">Jogador</div>
 
-                            {/* Desktop Headers */}
-                            <div className="hidden sm:flex items-center gap-0">
-                                <HeaderItem label="Pontos" active={sortBy === 'total_points'} onClick={() => setSortBy('total_points')} />
-                                <HeaderItem label="Buchas" active={sortBy === 'exact_scores'} onClick={() => setSortBy('exact_scores')} />
-                                <HeaderItem label="Situação" active={sortBy === 'outcomes'} onClick={() => setSortBy('outcomes')} />
-                            </div>
+                                {/* Desktop Headers */}
+                                <div className="hidden sm:flex items-center gap-0">
+                                    <HeaderItem label="Pontos" active={sortBy === 'total_points'} onClick={() => setSortBy('total_points')} />
+                                    <HeaderItem label="Buchas" active={sortBy === 'exact_scores'} onClick={() => setSortBy('exact_scores')} />
+                                    <HeaderItem label="Situação" active={sortBy === 'outcomes'} onClick={() => setSortBy('outcomes')} />
+                                </div>
 
-                            {/* Mobile Header with Switcher */}
-                            <div className="flex sm:hidden items-center justify-end">
-                                <Select value={sortBy} onValueChange={(val: any) => setSortBy(val)}>
-                                    <SelectTrigger className="h-7 border-0 bg-transparent focus:ring-0 p-0 text-[10px] font-bold uppercase w-20 justify-end gap-1">
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent align="end">
-                                        <SelectItem value="total_points">Pontos</SelectItem>
-                                        <SelectItem value="exact_scores">Buchas</SelectItem>
-                                        <SelectItem value="outcomes">Situação</SelectItem>
-                                    </SelectContent>
-                                </Select>
+                                {/* Mobile Header with Switcher */}
+                                <div className="flex sm:hidden items-center justify-end">
+                                    <Select value={sortBy} onValueChange={(val: any) => setSortBy(val)}>
+                                        <SelectTrigger className="h-7 border-0 bg-transparent focus:ring-0 p-0 text-[10px] font-bold uppercase w-20 justify-end gap-1">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent align="end">
+                                            <SelectItem value="total_points">Pontos</SelectItem>
+                                            <SelectItem value="exact_scores">Buchas</SelectItem>
+                                            <SelectItem value="outcomes">Situação</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
                             </div>
-                        </div>
-                    </CardHeader>
+                        </CardHeader>
+                    )}
                     <CardContent className="p-0">
                         {loading ? (
-                            <div className="p-12 text-center"><Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" /></div>
+                            <div className="p-12 text-center flex flex-col items-center justify-center min-h-[300px]">
+                                <Loader2 className="h-8 w-8 animate-spin text-primary mb-2" />
+                                <p className="text-xs text-muted-foreground font-medium">Carregando dados...</p>
+                            </div>
+                        ) : hasHistory === false && !isAdmin ? (
+                            <div className="p-20 text-center bg-card/30 border border-dashed rounded-2xl m-4 animate-in fade-in zoom-in duration-500">
+                                <Trophy className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-20" />
+                                <h3 className="text-xl font-bold text-foreground">Ranking não disponível</h3>
+                                <p className="text-muted-foreground max-w-sm mx-auto mt-2 leading-relaxed">
+                                    Você ainda não participa de nenhum campeonato ativo ou finalizado para visualizar o ranking.
+                                </p>
+                            </div>
                         ) : sortedUsers.length === 0 ? (
-                            <div className="p-12 text-center text-muted-foreground">Ninguém pontuou ainda.</div>
+                            <div className="p-20 text-center bg-card/30 border border-dashed rounded-2xl m-4">
+                                <Trophy className="h-10 w-10 mx-auto mb-3 opacity-20" />
+                                <p className="text-muted-foreground">Ninguém pontuou ainda neste campeonato.</p>
+                            </div>
                         ) : (
                             <div className="divide-y">
                                 {sortedUsers.map((user, index) => (
