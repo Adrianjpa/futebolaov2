@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase";
 import { Card, CardContent } from "@/components/ui/card";
 import { format, isToday, isTomorrow, isYesterday, differenceInMinutes, differenceInHours, parseISO, isPast } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Calendar, ChevronDown, ChevronUp, CheckCircle2, Edit, Loader2, Trophy, Users, Clock, Save } from "lucide-react";
+import { Calendar, ChevronDown, ChevronUp, CheckCircle2, Edit, Loader2, Trophy, Users, Clock, Save, UserX } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -15,7 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import Link from "next/link";
 import { Countdown } from "@/components/ui/countdown";
-import { getFlagUrl, cn, formatMatchDate } from "@/lib/utils";
+import { getFlagUrl, cn, formatMatchDate, translateRoundName } from "@/lib/utils";
 
 const TEAM_ISO_MAP: Record<string, string> = {
     'Polônia': 'pl', 'Grécia': 'gr', 'Rússia': 'ru', 'República Tcheca': 'cz',
@@ -338,7 +338,7 @@ export function UnifiedMatchCard({
                                 )}
                             </div>
                             <span className="hidden md:block text-[11px] font-bold text-muted-foreground bg-muted dark:bg-slate-800/40 px-2.5 py-1 rounded-md border border-border dark:border-slate-700/50 uppercase">
-                                {match.round_name || (match.round ? `Rodada ${match.round}` : "Rodada --")}
+                                {translateRoundName(match.round_name || match.round)}
                             </span>
                         </div>
 
@@ -377,7 +377,7 @@ export function UnifiedMatchCard({
                     {/* 2. MOBILE ONLY: Round (Centered) */}
                     <div className="md:hidden flex justify-center mb-4">
                         <span className="text-[11px] font-bold text-muted-foreground/80 dark:text-slate-400/80 uppercase">
-                            {match.round_name || (match.round ? `Rodada ${match.round}` : "Rodada --")}
+                            {translateRoundName(match.round_name || match.round)}
                         </span>
                     </div>
 
@@ -568,9 +568,40 @@ export function UnifiedMatchCard({
                             {/* Header Section */}
                             <div className="flex items-center justify-between mb-4">
                                 <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Palpites da Galera</h4>
-                                <span className="px-2 py-0.5 rounded-full bg-muted dark:bg-slate-800 text-[10px] font-bold text-muted-foreground border border-border">
-                                    {predictions.length} palpites
-                                </span>
+                                <div className="flex items-center gap-2">
+                                    {isAdmin && participantsData.length > 0 && (() => {
+                                        const predictedIds = new Set(predictions.map(p => p.user_id));
+                                        const missing = participantsData.filter(p => !predictedIds.has(p.userId));
+
+                                        if (missing.length === 0) return null;
+
+                                        return (
+                                            <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                    <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-red-500/10 border border-red-500/20 text-red-500 cursor-help">
+                                                        <UserX className="h-3 w-3" />
+                                                        <span className="text-[10px] font-bold">{missing.length} pendentes</span>
+                                                    </div>
+                                                </TooltipTrigger>
+                                                <TooltipContent className="bg-slate-900 border-slate-800 text-white max-w-[200px]">
+                                                    <div className="space-y-1">
+                                                        <p className="text-[10px] font-bold text-muted-foreground uppercase border-b border-white/10 pb-1 mb-1">Faltam Palpitar:</p>
+                                                        <div className="flex flex-wrap gap-1">
+                                                            {missing.map((p, i) => (
+                                                                <span key={i} className="text-[10px] bg-white/10 px-1.5 py-0.5 rounded text-slate-200">
+                                                                    {p.nickname || "User" + p.userId.slice(0, 4)}
+                                                                </span>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                </TooltipContent>
+                                            </Tooltip>
+                                        );
+                                    })()}
+                                    <span className="px-2 py-0.5 rounded-full bg-muted dark:bg-slate-800 text-[10px] font-bold text-muted-foreground border border-border">
+                                        {predictions.length} palpites
+                                    </span>
+                                </div>
                             </div>
 
                             {loadingPreds ? (
@@ -813,7 +844,9 @@ export function UnifiedMatchCard({
                                 </div>
                             ) : (
                                 <div className="p-8 text-center rounded-2xl border-2 border-dashed border-muted bg-muted/10">
-                                    <p className="text-xs text-muted-foreground">Ninguém palpitou ainda. Seja o primeiro!</p>
+                                    <p className="text-xs text-muted-foreground">
+                                        {isAdmin ? "Nenhum palpite registrado ainda." : "Nenhum palpite para exibir."}
+                                    </p>
                                 </div>
                             )}
                         </div>

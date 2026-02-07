@@ -49,3 +49,27 @@ export function formatMatchDate(dateInput: string | Date, championshipId?: strin
 
   return format(date, "dd/MM HH:mm", { locale: ptBR });
 }
+
+export function translateRoundName(round: string) {
+  if (!round) return "Rodada --";
+
+  // Check if it's a number (e.g. "1", "38")
+  if (!isNaN(Number(round))) return `Rodada ${round}`;
+
+  const map: Record<string, string> = {
+    "REGULAR_SEASON": "Temporada Regular",
+    "GROUP_STAGE": "Fase de Grupos",
+    "ROUND_OF_16": "Oitavas de Final",
+    "QUARTER_FINALS": "Quartas de Final",
+    "SEMI_FINALS": "Semifinal",
+    "FINAL": "Final",
+    "Playoffs": "Playoffs",
+    "Relegation Round": "Rebaixamento"
+  };
+
+  // Normalize comparison
+  const key = round.replace(/_/g, " ").toUpperCase().replace(/\s+/g, "_");
+
+  // Try exact match or mapped key
+  return map[round] || map[key] || round;
+}
