@@ -5,7 +5,7 @@ import { format, addDays } from "date-fns";
 type Championship = Database['public']['Tables']['championships']['Row'];
 type Match = Database['public']['Tables']['matches']['Row'];
 
-export async function syncMatchesFromExternalApi() {
+export async function syncMatchesFromExternalApi(force: boolean = false) {
     try {
         console.log("Starting match synchronization service...");
         const logs: string[] = [];
@@ -142,7 +142,14 @@ export async function syncMatchesFromExternalApi() {
                 // Priority Logic (Smart Sync):
                 let shouldUpdate = false;
 
-                if (newStatus === 'finished' && localMatch.status !== 'finished') {
+                if (force) {
+                    // FORCE OVERRIDE: Admin explicitly requested update.
+                    // Update if there is ANY difference in score or status.
+                    if (localMatch.status !== newStatus || localHomeScore !== apiHomeScore || localAwayScore !== apiAwayScore) {
+                        shouldUpdate = true;
+                        console.log(`[Sync-Force] Overwriting ${localMatch.home_team} vs ${localMatch.away_team}`);
+                    }
+                } else if (newStatus === 'finished' && localMatch.status !== 'finished') {
                     // 1. Transitioning to finished: always update to lock in final API score
                     shouldUpdate = true;
                 } else if (localMatch.status === 'finished' && newStatus === 'finished') {

@@ -24,8 +24,8 @@ export async function POST(request: Request) {
 
         console.log("Admin forcing manual update...");
 
-        // 2. Perform Real Sync
-        const result = await syncMatchesFromExternalApi();
+        // 2. Perform Real Sync (Force Mode = true)
+        const result = await syncMatchesFromExternalApi(true);
 
         if (!result.success) {
             return NextResponse.json(result, { status: 500 });

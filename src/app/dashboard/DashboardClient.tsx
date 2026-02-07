@@ -12,6 +12,7 @@ import { ptBR } from "date-fns/locale";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { UnifiedMatchCard } from "@/components/UnifiedMatchCard";
 import { Countdown } from "@/components/ui/countdown";
+import { LeaderConfetti } from "@/components/effects/LeaderConfetti";
 
 import { useMatches } from "@/contexts/MatchesContext";
 
@@ -225,6 +226,9 @@ export default function DashboardClient() {
 
 
                 </div>
+
+                {/* Confetti Animation for Leaders */}
+                <LeaderConfetti leadersMap={leadersMap} championshipsMap={championshipsMap} />
             </div>
 
             {/* Dashboard Alerts / Empty States for Users */}
