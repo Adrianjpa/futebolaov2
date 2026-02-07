@@ -105,23 +105,12 @@ export async function syncMatchesFromExternalApi(force: boolean = false) {
                 if (['IN_PLAY', 'PAUSED', 'LIVE'].includes(rawStatus)) newStatus = 'live';
                 if (['FINISHED', 'AWARDED'].includes(rawStatus)) newStatus = 'finished';
 
-                // Get Score Type from Championship Settings
-                const champSettings = champSettingsMap.get(localMatch.championship_id || '');
-                const scoreType = champSettings?.apiScoreType || 'fullTime'; // Default to fullTime
+                // User Strategy: "Always get Full Time (90m + ET)". 
+                // If a specific League/Cup rule requires 90m only, Admin will fix manually.
+                const scoreType = 'FULL (90m+ET)';
 
-                // Extract score based on setting
-                let apiHomeScoreRaw = null;
-                let apiAwayScoreRaw = null;
-
-                if (scoreType === 'regularTime' && apiMatch.score?.regularTime && apiMatch.score.regularTime.home !== null) {
-                    // Admin requested 90 min only, and API provides it
-                    apiHomeScoreRaw = apiMatch.score.regularTime.home;
-                    apiAwayScoreRaw = apiMatch.score.regularTime.away;
-                } else {
-                    // Default to Full Time (which includes extra time in Cups)
-                    apiHomeScoreRaw = apiMatch.score?.fullTime?.home ?? null;
-                    apiAwayScoreRaw = apiMatch.score?.fullTime?.away ?? null;
-                }
+                const apiHomeScoreRaw = apiMatch.score?.fullTime?.home ?? null;
+                const apiAwayScoreRaw = apiMatch.score?.fullTime?.away ?? null;
 
                 const apiHomeScore = apiHomeScoreRaw ?? 0;
                 const apiAwayScore = apiAwayScoreRaw ?? 0;
