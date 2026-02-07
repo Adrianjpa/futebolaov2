@@ -110,46 +110,57 @@ export async function syncMatchesFromExternalApi() {
                 const scoreType = champSettings?.apiScoreType || 'fullTime'; // Default to fullTime
 
                 // Extract score based on setting
-                let apiHomeScore = 0;
-                let apiAwayScore = 0;
+                let apiHomeScoreRaw = null;
+                let apiAwayScoreRaw = null;
 
-                if (scoreType === 'regularTime' && apiMatch.score.regularTime) {
-                    apiHomeScore = apiMatch.score.regularTime.home ?? 0;
-                    apiAwayScore = apiMatch.score.regularTime.away ?? 0;
+                if (scoreType === 'regularTime' && apiMatch.score?.regularTime && apiMatch.score.regularTime.home !== null) {
+                    // Admin requested 90 min only, and API provides it
+                    apiHomeScoreRaw = apiMatch.score.regularTime.home;
+                    apiAwayScoreRaw = apiMatch.score.regularTime.away;
                 } else {
-                    // Default to fullTime (which usually includes extra time if it happened)
-                    apiHomeScore = apiMatch.score.fullTime?.home ?? 0;
-                    apiAwayScore = apiMatch.score.fullTime?.away ?? 0;
+                    // Default to Full Time (which includes extra time in Cups)
+                    apiHomeScoreRaw = apiMatch.score?.fullTime?.home ?? null;
+                    apiAwayScoreRaw = apiMatch.score?.fullTime?.away ?? null;
+                }
+
+                const apiHomeScore = apiHomeScoreRaw ?? 0;
+                const apiAwayScore = apiAwayScoreRaw ?? 0;
+
+                // Safety: If API says FINISHED but score is NULL, 
+                // keep local status (don't finalize yet) to avoid 0-0 lock.
+                if (newStatus === 'finished' && apiHomeScoreRaw === null) {
+                    newStatus = localMatch.status;
                 }
 
                 const apiDate = apiMatch.utcDate ? new Date(apiMatch.utcDate).toISOString() : localMatch.date;
 
-                // Ensure we compare numbers and handle nulls correctly
                 const localHomeScore = localMatch.score_home ?? 0;
                 const localAwayScore = localMatch.score_away ?? 0;
                 const apiTotalGoals = apiHomeScore + apiAwayScore;
                 const localTotalGoals = localHomeScore + localAwayScore;
 
                 // Priority Logic (Smart Sync):
-                // 1. API says it's FINISHED: authoritative word. Sync everything.
-                // 2. Local is FINISHED: Admin finalized manually. Don't let a trailing API (Live) revert it.
-                // 3. API has MORE goals: API is newer than local state.
-                // 4. API EQUAL goals: Only sync if status changed (e.g. Scheduled -> Live) or score distribution differs.
-                // 5. API LESS goals: Admin was faster than API. Keep Admin's score until API catches up.
-
                 let shouldUpdate = false;
-                if (newStatus === 'finished') {
-                    shouldUpdate = localMatch.status !== 'finished' || localHomeScore !== apiHomeScore || localAwayScore !== apiAwayScore;
-                } else if (localMatch.status === 'finished') {
-                    shouldUpdate = false;
-                } else if (apiTotalGoals > localTotalGoals) {
+
+                if (newStatus === 'finished' && localMatch.status !== 'finished') {
+                    // 1. Transitioning to finished: always update to lock in final API score
                     shouldUpdate = true;
-                } else if (apiTotalGoals === localTotalGoals) {
-                    shouldUpdate = localMatch.status !== newStatus || localHomeScore !== apiHomeScore || localAwayScore !== apiAwayScore;
+                } else if (localMatch.status === 'finished' && newStatus === 'finished') {
+                    // 2. Both finished: only update if local is 0-0 and API has goals (handles finalization lag)
+                    if (localHomeScore === 0 && localAwayScore === 0 && (apiHomeScore > 0 || apiAwayScore > 0)) {
+                        shouldUpdate = true;
+                    }
+                } else if (localMatch.status !== 'finished') {
+                    // 3. Match in progress or scheduled: update if API has more/different data
+                    if (apiTotalGoals > localTotalGoals) {
+                        shouldUpdate = true;
+                    } else if (apiTotalGoals === localTotalGoals) {
+                        shouldUpdate = localMatch.status !== newStatus || localHomeScore !== apiHomeScore || localAwayScore !== apiAwayScore;
+                    }
                 }
 
                 if (shouldUpdate) {
-                    console.log(`[Sync] Updating ${localMatch.home_team}x${localMatch.away_team}: ${localHomeScore}x${localAwayScore} [${localMatch.status}] -> ${apiHomeScore}x${apiAwayScore} [${newStatus}]`);
+                    console.log(`[Sync] Updating ${localMatch.home_team}x${localMatch.away_team} (${scoreType}): ${localHomeScore}x${localAwayScore} [${localMatch.status}] -> ${apiHomeScore}x${apiAwayScore} [${newStatus}]`);
 
                     const { error: updateError } = await (supabaseAdmin
                         .from("matches") as any)

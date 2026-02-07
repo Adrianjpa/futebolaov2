@@ -56,7 +56,7 @@ export async function POST() {
         }
 
         if (legacyRecords.length > 0) {
-            const { error } = await (supabaseAdmin.from("legacy_stats").insert(legacyRecords) as any);
+            const { error } = await (supabaseAdmin.from("legacy_stats") as any).insert(legacyRecords);
             if (error) throw error;
         }
 

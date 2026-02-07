@@ -33,9 +33,10 @@ const ITEMS_PER_PAGE = 10;
 
 export default function HistoryClient() {
     const supabase = createClient();
-    const { user: currentUser } = useAuth();
+    const { user: currentUser, profile } = useAuth();
     const router = useRouter();
     const searchParams = useSearchParams();
+    const isAdmin = profile?.funcao === 'admin' || profile?.funcao === 'moderator';
 
     // Read Initial Filters from URL
     const paramChamp = searchParams.get("championship");
@@ -65,6 +66,7 @@ export default function HistoryClient() {
     // Pagination State
     const [currentPage, setCurrentPage] = useState(1);
     const [isLastPage, setIsLastPage] = useState(false);
+    const [totalCount, setTotalCount] = useState(0);
 
     useEffect(() => {
         const fetchInitialData = async () => {
@@ -95,18 +97,22 @@ export default function HistoryClient() {
 
             const userHistoryChamps = champs.filter(c => allUserChampIds.includes(c.id));
             setUserChampionships(userHistoryChamps);
-            const hasAnyHistory = userHistoryChamps.length > 0;
-            setHasHistory(hasAnyHistory);
-
             const { data: profiles } = await (supabase.from("public_profiles") as any).select("*");
             setUsers(profiles || []);
+
+            const hasAnyHistory = userHistoryChamps.length > 0 || isAdmin;
+            setHasHistory(hasAnyHistory);
 
             // 4. Handle default selection or URL params
             if (paramChamp) {
                 const champ = champs.find((c: Championship) => c.id === paramChamp);
                 if (champ?.category) setSelectedCategory(champ.category);
                 setSelectedChampionship(paramChamp);
-            } else if (hasAnyHistory) {
+            } else if (isAdmin && champs.length > 0) {
+                // DEFAULT for Admin: Newest championship overall
+                setSelectedChampionship(champs[0].id);
+                setSelectedCategory(champs[0].category || "all");
+            } else if (hasAnyHistory && userHistoryChamps.length > 0) {
                 // DEFAULT: Newest championship user participated in
                 const newest = userHistoryChamps[0];
                 setSelectedChampionship(newest.id);
@@ -138,7 +144,7 @@ export default function HistoryClient() {
                     query = query.filter("matches.championship_id", "eq", selectedChampionship);
                 }
 
-                query = query.order("date", { foreignTable: "matches", ascending: true });
+                query = query.order("date", { foreignTable: "matches", ascending: false });
 
                 const { data, error } = await query;
                 if (error) throw error;
@@ -182,7 +188,7 @@ export default function HistoryClient() {
                     query = (supabase.from("predictions") as any)
                         .select("*, matches(*)", { count: "exact" })
                         .eq("user_id", paramUser);
-                    query = query.order("date", { foreignTable: "matches", ascending: true });
+                    query = query.order("date", { foreignTable: "matches", ascending: false });
                     if (selectedChampionship !== "all") {
                         query = query.filter("matches.championship_id", "eq", selectedChampionship);
                     }
@@ -190,7 +196,7 @@ export default function HistoryClient() {
                     query = (supabase.from("matches") as any)
                         .select("*", { count: "exact" })
                         .eq("status", "finished")
-                        .order("date", { ascending: true });
+                        .order("date", { ascending: false });
                     if (selectedChampionship !== "all") {
                         query = query.eq("championship_id", selectedChampionship);
                     }
@@ -214,6 +220,7 @@ export default function HistoryClient() {
             }
 
             setMatches(formattedMatches);
+            setTotalCount(totalCount);
             setIsLastPage(from + formattedMatches.length >= totalCount);
             setCurrentPage(page);
         } catch (error) {
@@ -259,8 +266,8 @@ export default function HistoryClient() {
 
     const availableCategories = Array.from(new Set(championships.map((c: Championship) => c.category || "other"))).sort();
     const filteredChampionships = selectedCategory === "all"
-        ? championships
-        : championships.filter((c: Championship) => (c.category || "other") === selectedCategory);
+        ? (isAdmin ? championships : userChampionships)
+        : (isAdmin ? championships : userChampionships).filter((c: Championship) => (c.category || "other") === selectedCategory);
 
     return (
         <div className="space-y-6">
@@ -342,6 +349,8 @@ export default function HistoryClient() {
                         match={match}
                         users={users}
                         finished
+                        isAdmin={isAdmin}
+                        onUpdate={() => fetchMatches(currentPage)}
                         showBetButton={false}
                         showChampionshipName={selectedChampionship === 'all'}
                         teamMode={match.teamMode as any}
@@ -349,14 +358,55 @@ export default function HistoryClient() {
                 ))}
 
                 {!loading && hasHistory && showPagination && (
-                    <div className="flex items-center justify-between pt-4 border-t">
-                        <Button variant="outline" onClick={handlePrevPage} disabled={currentPage === 1} className="w-[120px]">
-                            <ChevronLeft className="mr-2 h-4 w-4" /> Anterior
-                        </Button>
-                        <span className="text-sm text-muted-foreground font-mono">Página {currentPage}</span>
-                        <Button variant="outline" onClick={handleNextPage} disabled={isLastPage} className="w-[120px]">
-                            Próxima <ChevronRight className="ml-2 h-4 w-4" />
-                        </Button>
+                    <div className="flex flex-col items-center gap-4 pt-6 border-t">
+                        <div className="flex items-center justify-between w-full">
+                            <Button variant="outline" onClick={handlePrevPage} disabled={currentPage === 1} className="w-[100px] sm:w-[120px] text-xs">
+                                <ChevronLeft className="mr-2 h-4 w-4" /> Anterior
+                            </Button>
+
+                            <div className="hidden sm:flex items-center gap-1">
+                                {Array.from({ length: Math.ceil(totalCount / ITEMS_PER_PAGE) }).map((_, i) => {
+                                    const p = i + 1;
+                                    const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
+
+                                    // Show first, last, and pages around current
+                                    if (
+                                        p === 1 ||
+                                        p === totalPages ||
+                                        (p >= currentPage - 1 && p <= currentPage + 1)
+                                    ) {
+                                        return (
+                                            <Button
+                                                key={p}
+                                                variant={currentPage === p ? "default" : "outline"}
+                                                size="sm"
+                                                onClick={() => fetchMatches(p)}
+                                                className="h-8 w-8 text-xs p-0"
+                                            >
+                                                {p}
+                                            </Button>
+                                        );
+                                    }
+
+                                    if (p === currentPage - 2 || p === currentPage + 2) {
+                                        return <span key={p} className="text-muted-foreground">...</span>;
+                                    }
+
+                                    return null;
+                                })}
+                            </div>
+
+                            <span className="sm:hidden text-xs font-bold text-muted-foreground">
+                                {currentPage} / {Math.ceil(totalCount / ITEMS_PER_PAGE)}
+                            </span>
+
+                            <Button variant="outline" onClick={handleNextPage} disabled={isLastPage} className="w-[100px] sm:w-[120px] text-xs">
+                                Próxima <ChevronRight className="ml-2 h-4 w-4" />
+                            </Button>
+                        </div>
+                        <div className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest bg-muted/30 px-3 py-1 rounded-full">
+                            Total de {totalCount} partidas encontradas
+                        </div>
                     </div>
                 )}
             </div>

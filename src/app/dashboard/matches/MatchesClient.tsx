@@ -84,6 +84,7 @@ export default function MatchesClient() {
     // Pagination
     const [currentPage, setCurrentPage] = useState(1);
     const [isLastPage, setIsLastPage] = useState(false);
+    const [totalCount, setTotalCount] = useState(0);
 
     // Form State (Admin)
     const [homeTeam, setHomeTeam] = useState("");
@@ -148,6 +149,7 @@ export default function MatchesClient() {
         const pageMatches = sorted.slice(start, end);
 
         setMatches(pageMatches as any);
+        setTotalCount(sorted.length);
         setIsLastPage(end >= sorted.length);
     }, [allActiveMatches, selectedChampionship, currentPage, activeChamps]);
 
@@ -527,14 +529,54 @@ export default function MatchesClient() {
             </div>
 
             {(matches.length > 0 || currentPage > 1) && !loading && (
-                <div className="flex items-center justify-between pt-4 border-t">
-                    <Button variant="outline" onClick={handlePrevPage} disabled={currentPage === 1} className="w-[120px]">
-                        <ChevronLeft className="mr-2 h-4 w-4" /> Anterior
-                    </Button>
-                    <span className="text-sm text-muted-foreground font-mono">Página {currentPage}</span>
-                    <Button variant="outline" onClick={handleNextPage} disabled={isLastPage} className="w-[120px]">
-                        Próxima <ChevronRight className="ml-2 h-4 w-4" />
-                    </Button>
+                <div className="flex flex-col items-center gap-4 pt-6 border-t">
+                    <div className="flex items-center justify-between w-full">
+                        <Button variant="outline" onClick={handlePrevPage} disabled={currentPage === 1} className="w-[100px] sm:w-[120px] text-xs">
+                            <ChevronLeft className="mr-2 h-4 w-4" /> Anterior
+                        </Button>
+
+                        <div className="hidden sm:flex items-center gap-1">
+                            {Array.from({ length: Math.ceil(totalCount / ITEMS_PER_PAGE) }).map((_, i) => {
+                                const p = i + 1;
+                                const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
+
+                                if (
+                                    p === 1 ||
+                                    p === totalPages ||
+                                    (p >= currentPage - 1 && p <= currentPage + 1)
+                                ) {
+                                    return (
+                                        <Button
+                                            key={p}
+                                            variant={currentPage === p ? "default" : "outline"}
+                                            size="sm"
+                                            onClick={() => setCurrentPage(p)}
+                                            className="h-8 w-8 text-xs p-0"
+                                        >
+                                            {p}
+                                        </Button>
+                                    );
+                                }
+
+                                if (p === currentPage - 2 || p === currentPage + 2) {
+                                    return <span key={p} className="text-muted-foreground">...</span>;
+                                }
+
+                                return null;
+                            })}
+                        </div>
+
+                        <span className="sm:hidden text-xs font-bold text-muted-foreground">
+                            {currentPage} / {Math.ceil(totalCount / ITEMS_PER_PAGE)}
+                        </span>
+
+                        <Button variant="outline" onClick={handleNextPage} disabled={isLastPage} className="w-[100px] sm:w-[120px] text-xs">
+                            Próxima <ChevronRight className="ml-2 h-4 w-4" />
+                        </Button>
+                    </div>
+                    <div className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest bg-muted/30 px-3 py-1 rounded-full">
+                        Total de {totalCount} partidas agendadas
+                    </div>
                 </div>
             )}
         </div>

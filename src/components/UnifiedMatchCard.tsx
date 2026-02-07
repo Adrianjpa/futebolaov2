@@ -60,7 +60,7 @@ export function UnifiedMatchCard({
 
     // Default Lock: Time passed OR Game Live/Finished
     const isLocked = now >= matchDate || isLive || isFinished;
-    const canEdit = isAdmin && isLive;
+    const canEdit = isAdmin && (isLive || isFinished);
     // O cronômetro aparece se faltar menos de 60 minutos OU se já passou do horário mas não está AO VIVO/FINALIZADO
     const showCountdown = !isLive && !isFinished && minutesToStart <= 60;
 
@@ -410,13 +410,13 @@ export function UnifiedMatchCard({
                                             type="number"
                                             value={homeScore}
                                             onChange={(e) => setHomeScore(e.target.value)}
-                                            className="w-16 h-12 text-center text-xl font-bold bg-background border-input"
+                                            className="w-20 h-14 text-center text-2xl font-bold bg-background border-input"
                                         />
                                         <Input
                                             type="number"
                                             value={awayScore}
                                             onChange={(e) => setAwayScore(e.target.value)}
-                                            className="w-16 h-12 text-center text-xl font-bold bg-background border-input"
+                                            className="w-20 h-14 text-center text-2xl font-bold bg-background border-input"
                                         />
                                         <Button size="icon" variant="ghost" onClick={handleSaveScore} disabled={saving} className="h-8 w-8 text-green-600 dark:text-green-500">
                                             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-5 w-5" />}
