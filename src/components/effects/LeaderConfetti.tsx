@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import confetti from "canvas-confetti";
 import { Card, CardContent } from "@/components/ui/card";
-import { Rocket, Trophy, Crown } from "lucide-react";
+import { Trophy, Crown } from "lucide-react";
+import { RocketIcon } from "@radix-ui/react-icons";
 import { useAuth } from "@/contexts/AuthContext";
 
 interface LeaderConfettiProps {
@@ -98,7 +99,7 @@ export function LeaderConfetti({ leadersMap, championshipsMap }: LeaderConfettiP
 
                     <CardContent className="p-4 flex items-center gap-4 relative z-10">
                         <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-full bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center shadow-lg shrink-0 animate-bounce">
-                            <Rocket className="h-5 w-5 sm:h-6 sm:w-6 text-white fill-current" />
+                            <RocketIcon className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
                         </div>
 
                         <div className="flex-1 min-w-0">
