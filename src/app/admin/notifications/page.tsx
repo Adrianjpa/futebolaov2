@@ -69,9 +69,9 @@ export default function AdminNotificationsPage() {
         setLoading(true);
         try {
             // Fetch users (all or active only logic could be added)
-            const { data: users, error: usersError } = await supabase
+            const { data: users, error: usersError } = await (supabase
                 .from("profiles")
-                .select("id");
+                .select("id") as any);
 
             if (usersError) throw usersError;
             if (!users || users.length === 0) {
@@ -79,7 +79,7 @@ export default function AdminNotificationsPage() {
                 return;
             }
 
-            const notifications = users.map((user: any) => ({
+            const notifications = (users as any[]).map(user => ({
                 user_id: user.id,
                 title,
                 message,
@@ -111,7 +111,7 @@ export default function AdminNotificationsPage() {
             // This is a bit complex. easier to get all predictions for match, then exclusion.
 
             // Get all profiles
-            const { data: allUsers } = await supabase.from("profiles").select("id");
+            const { data: allUsers } = await (supabase.from("profiles").select("id") as any);
             if (!allUsers) return;
 
             // Get existing predictions
@@ -120,9 +120,11 @@ export default function AdminNotificationsPage() {
                 .select("user_id")
                 .eq("match_id", matchId);
 
-            const predictedUserIds = new Set((predictions || []).map((p: any) => p.user_id));
+            const predictionsData = predictions as any[] || [];
+            const predictedUserIds = new Set(predictionsData.map(p => p.user_id));
 
-            const usersToRemind = allUsers.filter((u: any) => !predictedUserIds.has(u.id));
+            const allUsersData = allUsers as any[];
+            const usersToRemind = allUsersData.filter((u: any) => !predictedUserIds.has(u.id));
 
             if (usersToRemind.length === 0) {
                 toast.info("Todos os usuários já palpitaram neste jogo!");
