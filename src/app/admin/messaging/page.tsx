@@ -72,7 +72,7 @@ export default function AdminMessagingPage() {
 
             // Group conversations
             const userIds = new Set<string>();
-            msgsData?.forEach(m => {
+            (msgsData as unknown as Message[])?.forEach(m => {
                 // If I am admin (sender) -> receiver is the partner
                 // If I am admin (receiver/null) -> sender is the partner
                 if (m.sender_id === currentUser?.id) {
@@ -298,7 +298,7 @@ export default function AdminMessagingPage() {
                                                 <div className={`text-[10px] mt-1 opacity-70 flex items-center gap-1 ${isMe ? 'justify-end' : 'justify-start'}`}>
                                                     {format(new Date(msg.created_at), "dd MMM HH:mm", { locale: ptBR })}
                                                     {isMe && (
-                                                        <MessageStatus isRead={msg.read} isDelivered={msg.delivered} />
+                                                        <MessageStatus isRead={msg.read} isDelivered={msg.delivered || false} />
                                                     )}
                                                 </div>
                                             </div>
