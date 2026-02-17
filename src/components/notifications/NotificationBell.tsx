@@ -14,6 +14,7 @@ import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useRouter } from "next/navigation";
 
 interface Notification {
     id: string;
@@ -22,11 +23,13 @@ interface Notification {
     read: boolean;
     created_at: string;
     type: string;
+    link?: string;
     meta?: any;
 }
 
 export function NotificationBell() {
     const { user } = useAuth();
+    const router = useRouter();
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [unreadCount, setUnreadCount] = useState(0);
     const [loading, setLoading] = useState(false);
@@ -51,7 +54,8 @@ export function NotificationBell() {
                 },
                 (payload) => {
                     const newNotif = payload.new as Notification;
-                    setNotifications(prev => [newNotif, ...prev]);
+                    setNotifications(prev => [newNotif, ...prev].slice(0, 5));
+
                     if (!newNotif.read) {
                         setUnreadCount(prev => prev + 1);
                     }
@@ -72,14 +76,19 @@ export function NotificationBell() {
                 .from("notifications")
                 .select("*")
                 .eq("user_id", user.id)
-                .order("created_at", { ascending: false }) // Show newest first
-                .limit(20);
+                .order("created_at", { ascending: false })
+                .limit(5);
 
             if (error) throw error;
 
-            const notifs = data as Notification[];
-            setNotifications(notifs);
-            setUnreadCount(notifs.filter(n => !n.read).length);
+            const { count } = await supabase
+                .from("notifications")
+                .select("*", { count: 'exact', head: true })
+                .eq("user_id", user.id)
+                .eq("read", false);
+
+            setNotifications(data as Notification[]);
+            setUnreadCount(count || 0);
         } catch (error) {
             console.error("Error fetching notifications:", error);
         } finally {
@@ -90,9 +99,12 @@ export function NotificationBell() {
     const markAsRead = async (id: string) => {
         if (!user) return;
         try {
-            // Optimistic update
+            const wasUnread = notifications.find(n => n.id === id && !n.read);
             setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
-            setUnreadCount(prev => Math.max(0, prev - 1));
+
+            if (wasUnread) {
+                setUnreadCount(prev => Math.max(0, prev - 1));
+            }
 
             await (supabase.from("notifications") as any)
                 .update({ read: true })
@@ -106,17 +118,26 @@ export function NotificationBell() {
         if (!user || unreadCount === 0) return;
         try {
             const unreadIds = notifications.filter(n => !n.read).map(n => n.id);
-            if (unreadIds.length === 0) return;
-
-            // Optimistic update
+            // Updating UI state optimistically
             setNotifications(prev => prev.map(n => ({ ...n, read: true })));
             setUnreadCount(0);
 
             await (supabase.from("notifications") as any)
                 .update({ read: true })
-                .in("id", unreadIds);
+                .eq("user_id", user.id)
+                .eq("read", false);
         } catch (error) {
             console.error("Error marking all read:", error);
+        }
+    };
+
+    const handleNotificationClick = async (notif: Notification) => {
+        if (!notif.read) {
+            await markAsRead(notif.id);
+        }
+        setIsOpen(false);
+        if (notif.link) {
+            router.push(notif.link);
         }
     };
 
@@ -143,18 +164,18 @@ export function NotificationBell() {
                             onClick={markAllAsRead}
                             className="text-xs text-primary hover:text-primary/80 h-auto p-0 px-2"
                         >
-                            Marcar todas como lidas
+                            Marcar lidas
                         </Button>
                     )}
                 </div>
-                <ScrollArea className="h-[300px]">
+                <div className="max-h-[300px] overflow-y-auto">
                     {loading ? (
-                        <div className="flex flex-col items-center justify-center h-full gap-2 text-muted-foreground">
+                        <div className="flex flex-col items-center justify-center p-8 gap-2 text-muted-foreground">
                             <Loader2 className="h-6 w-6 animate-spin" />
                             <span className="text-xs">Carregando...</span>
                         </div>
                     ) : notifications.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center h-full text-center p-4 text-muted-foreground">
+                        <div className="flex flex-col items-center justify-center p-8 text-center text-muted-foreground">
                             <Bell className="h-8 w-8 mb-2 opacity-20" />
                             <p className="text-sm">Nenhuma notificação</p>
                             <p className="text-xs opacity-70">Você está em dia!</p>
@@ -164,26 +185,13 @@ export function NotificationBell() {
                             {notifications.map((notif) => (
                                 <div
                                     key={notif.id}
-                                    className={`relative flex flex-col gap-1 p-4 text-sm transition-colors hover:bg-muted/50 ${!notif.read ? "bg-muted/30 border-l-2 border-primary" : "border-l-2 border-transparent"}`}
+                                    onClick={() => handleNotificationClick(notif)}
+                                    className={`relative flex flex-col gap-1 p-4 text-sm transition-colors hover:bg-muted/50 cursor-pointer ${!notif.read ? "bg-muted/30 border-l-2 border-primary" : "border-l-2 border-transparent"}`}
                                 >
                                     <div className="flex justify-between items-start gap-2">
                                         <span className={`font-semibold ${!notif.read ? "text-foreground" : "text-muted-foreground"}`}>
                                             {notif.title}
                                         </span>
-                                        {!notif.read && (
-                                            <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                className="h-5 w-5 -mt-1 -mr-2 text-muted-foreground hover:text-primary"
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    markAsRead(notif.id);
-                                                }}
-                                                title="Marcar como lida"
-                                            >
-                                                <Check className="h-3 w-3" />
-                                            </Button>
-                                        )}
                                     </div>
                                     <p className={`text-xs ${!notif.read ? "text-foreground/90" : "text-muted-foreground"}`}>
                                         {notif.message}
@@ -195,8 +203,20 @@ export function NotificationBell() {
                             ))}
                         </div>
                     )}
-                </ScrollArea>
-                {/* Footer if needed */}
+                </div>
+                <div className="p-2 border-t bg-muted/20">
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        className="w-full text-xs h-8"
+                        onClick={() => {
+                            setIsOpen(false);
+                            router.push("/dashboard/notifications");
+                        }}
+                    >
+                        Ver todas as notificações
+                    </Button>
+                </div>
             </PopoverContent>
         </Popover>
     );

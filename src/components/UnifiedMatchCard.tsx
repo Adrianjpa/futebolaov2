@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase";
 import { Card, CardContent } from "@/components/ui/card";
 import { format, isToday, isTomorrow, isYesterday, differenceInMinutes, differenceInHours, parseISO, isPast } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Calendar, ChevronDown, ChevronUp, CheckCircle2, Edit, Loader2, Trophy, Users, Clock, Save, UserX } from "lucide-react";
+import { Calendar, ChevronDown, ChevronUp, CheckCircle2, Edit, Loader2, Trophy, Users, Clock, Save, UserX, AlertTriangle } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -57,6 +57,17 @@ export function UnifiedMatchCard({
 
     const isLive = live ?? (match.status === 'live');
     const isFinished = finished ?? (match.status === 'finished');
+
+    // --- URGENCY LOGIC (New) ---
+    const isUrgent = !hasPrediction && !isFinished && !isLive && minutesToStart > 0 && minutesToStart <= 120; // 2 hours
+    const isCritical = !hasPrediction && !isFinished && !isLive && minutesToStart > 0 && minutesToStart <= 30; // 30 mins
+
+    const urgencyClass = isCritical
+        ? "border-red-500/50 shadow-[0_0_15px_-3px_rgba(239,68,68,0.3)] animate-pulse bg-red-500/5"
+        : isUrgent
+            ? "border-yellow-500/50 shadow-[0_0_15px_-3px_rgba(234,179,8,0.3)] bg-yellow-500/5"
+            : "";
+    // ---------------------------
 
     // Default Lock: Time passed OR Game Live/Finished
     const isLocked = now >= matchDate || isLive || isFinished;
@@ -346,6 +357,19 @@ export function UnifiedMatchCard({
                 FINAL
             </span>
         );
+
+        // Urgency Badges
+        if (isCritical) return (
+            <span className="flex items-center gap-1 text-[10px] sm:text-[11px] font-bold text-red-500 bg-red-500/10 px-2 py-1 sm:px-3 sm:py-1.5 rounded-lg border border-red-500/20 animate-pulse tracking-wider">
+                <AlertTriangle className="h-3 w-3" /> ÚLTIMA CHANCE
+            </span>
+        );
+        if (isUrgent) return (
+            <span className="flex items-center gap-1 text-[10px] sm:text-[11px] font-bold text-yellow-500 bg-yellow-500/10 px-2 py-1 sm:px-3 sm:py-1.5 rounded-lg border border-yellow-500/20 tracking-wider">
+                <Clock className="h-3 w-3" /> NÃO ESQUEÇA
+            </span>
+        );
+
         return null;
     };
 
@@ -354,7 +378,8 @@ export function UnifiedMatchCard({
             <Card
                 className={cn(
                     "group relative overflow-hidden transition-all duration-300 border border-border dark:border-slate-800 bg-card dark:bg-slate-950/50 shadow-lg",
-                    canViewPredictions ? "hover:bg-muted/50 dark:hover:bg-slate-900/80 cursor-pointer" : "cursor-default"
+                    canViewPredictions ? "hover:bg-muted/50 dark:hover:bg-slate-900/80 cursor-pointer" : "cursor-default",
+                    urgencyClass // Added urgency logic
                 )}
                 onClick={handleToggleExpand}
             >

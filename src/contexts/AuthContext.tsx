@@ -63,35 +63,53 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             }
         };
 
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+        // Check active session immediately to catch refresh token errors
+        supabase.auth.getSession().then(({ data, error }) => {
+            if (error) {
+                console.error("Session verification error:", error);
+                if (error.message.includes("Refresh Token")) {
+                    console.log("Invalid refresh token detected. Force signing out...");
+                    supabase.auth.signOut().then(() => {
+                        window.location.href = "/login";
+                    });
+                }
+            }
+        });
+
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+            // Handle token refresh errors explicitly
+            if (event === 'SIGNED_OUT') {
+                setUser(null);
+                setProfile(null);
+                setLoading(false);
+                return;
+            }
+
             const currentUser = session?.user ?? null;
             setUser(currentUser);
 
             if (currentUser) {
-                // Fetch profile
-                supabase
-                    .from("profiles")
-                    .select("*")
-                    .eq("id", currentUser.id)
-                    .single()
-                    .then(({ data: profileData, error }) => {
-                        if (error || !profileData) {
-                            console.error("Profile not found or error:", error);
-                            setProfile(null);
+                try {
+                    const { data: profileData, error } = await supabase
+                        .from("profiles")
+                        .select("*")
+                        .eq("id", currentUser.id)
+                        .single();
 
-                            // For manual deletions or stale sessions: 
-                            // if we can't find a profile for a logged-in user, sign out to clear the session.
-                            // We don't sign out during initial signup (handled by the flow)
-                            if (event !== 'SIGNED_IN') {
-                                supabase.auth.signOut().then(() => setLoading(false));
-                            } else {
-                                setLoading(false);
-                            }
-                        } else {
-                            setProfile(profileData as UserProfile);
-                            setLoading(false);
-                        }
-                    });
+                    if (error || !profileData) {
+                        console.error("Profile fetch error:", error);
+                        // Only sign out if truly necessary/critical, otherwise might be temp network
+                        // For now, if no profile, we just don't set it.
+                        setProfile(null);
+                    } else {
+                        setProfile(profileData as UserProfile);
+                    }
+                } catch (err) {
+                    console.error("Profile fetch exception:", err);
+                    setProfile(null);
+                } finally {
+                    setLoading(false);
+                }
             } else {
                 setProfile(null);
                 setLoading(false);

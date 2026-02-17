@@ -78,6 +78,7 @@ export interface Database {
                     id: string
                     championship_id: string
                     round: number
+                    round_name: string | null
                     date: string
                     status: string
                     home_team: string
@@ -93,6 +94,7 @@ export interface Database {
                     id?: string
                     championship_id: string
                     round: number
+                    round_name?: string | null
                     date: string
                     status: string
                     home_team: string
@@ -108,6 +110,7 @@ export interface Database {
                     id?: string
                     championship_id?: string
                     round?: number
+                    round_name?: string | null
                     date?: string
                     status?: string
                     home_team?: string
@@ -231,6 +234,44 @@ export interface Database {
                     read?: boolean
                     delivered?: boolean
                     created_at?: string
+                }
+            }
+            notifications: {
+                Row: {
+                    id: string
+                    user_id: string
+                    title: string
+                    message: string
+                    type: string
+                    read: boolean
+                    link: string | null
+                    meta: Json | null
+                    created_at: string
+                    updated_at: string
+                }
+                Insert: {
+                    id?: string
+                    user_id: string
+                    title: string
+                    message: string
+                    type: string
+                    read?: boolean
+                    link?: string | null
+                    meta?: Json | null
+                    created_at?: string
+                    updated_at?: string
+                }
+                Update: {
+                    id?: string
+                    user_id?: string
+                    title?: string
+                    message?: string
+                    type?: string
+                    read?: boolean
+                    link?: string | null
+                    meta?: Json | null
+                    created_at?: string
+                    updated_at?: string
                 }
             }
         }

@@ -1,18 +1,19 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { createClient } from "@/lib/supabase";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Trophy, Calendar, ArrowRight, Loader2, Activity, History, Info } from "lucide-react";
 import Link from "next/link";
-import { isPast, parseISO, differenceInDays, format as formatDate } from "date-fns";
+import { isPast, parseISO, differenceInDays, format as formatDate, differenceInMinutes } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { UnifiedMatchCard } from "@/components/UnifiedMatchCard";
 import { Countdown } from "@/components/ui/countdown";
 import { LeaderConfetti } from "@/components/effects/LeaderConfetti";
+import { toast } from "sonner";
 
 import { useMatches } from "@/contexts/MatchesContext";
 
@@ -219,6 +220,40 @@ export default function DashboardClient() {
             return a.earliestMatchDate.getTime() - b.earliestMatchDate.getTime();
         });
 
+    // 6. Urgency Notification for Matches < 2h
+    const hasShownUrgencyToast = useRef(false);
+
+    // Stable reference for nextMatches to prevent dependency array size issues
+    const nextMatchesIds = nextMatches.map(m => m.id).join(',');
+
+    useEffect(() => {
+        if (matchesLoading || nextMatches.length === 0 || isAdmin) return;
+
+        const now = new Date();
+        const urgentMatches = nextMatches.filter(match => {
+            const matchDate = parseISO(match.date);
+            const minutesToStart = differenceInMinutes(matchDate, now);
+            const hasPrediction = userPredictions.has(match.id);
+            return !hasPrediction && minutesToStart > 0 && minutesToStart <= 120;
+        });
+
+        if (urgentMatches.length > 0 && !hasShownUrgencyToast.current) {
+            toast("Palpite Pendente!", {
+                description: `Você tem ${urgentMatches.length} jogo(s) começando em breve. Não esqueça de palpitar!`,
+                action: {
+                    label: "Preencher Agora",
+                    onClick: () => {
+                        const element = document.getElementById("upcoming-matches-section");
+                        if (element) element.scrollIntoView({ behavior: "smooth" });
+                    }
+                },
+                duration: 10000,
+            });
+            hasShownUrgencyToast.current = true;
+        }
+        // Using string dependency instead of array object to prevent "size changed" errors
+    }, [nextMatchesIds, userPredictions, matchesLoading, isAdmin]);
+
     const upcomingChampionship = upcomingChampionships[0];
 
     const activeChampsCount = allChampionships.filter(c => c.status === 'ativo' || c.status === 'agendado').length;
@@ -256,8 +291,8 @@ export default function DashboardClient() {
                     </div>
                 )}
 
-                {/* Confetti Animation for Leaders */}
-                <LeaderConfetti leadersMap={leadersMap} championshipsMap={championshipsMap} />
+                {/* Confetti Animation for Leaders - REMOVED AS REQUESTED */}
+                {/* <LeaderConfetti leadersMap={leadersMap} championshipsMap={championshipsMap} /> */}
             </div>
 
             {/* Dashboard Alerts / Empty States for Users */}
@@ -381,7 +416,7 @@ export default function DashboardClient() {
                     {/* Main Content (Left) */}
                     <div className="lg:col-span-4 space-y-6">
                         {/* Upcoming Matches */}
-                        <Card className="overflow-hidden">
+                        <Card className="overflow-hidden" id="upcoming-matches-section">
                             <CardHeader className="bg-muted/10 pb-4 border-b">
                                 <CardTitle className="flex items-center text-lg">
                                     <Calendar className="mr-2 h-5 w-5 text-primary" />

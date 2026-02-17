@@ -13,6 +13,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import Link from "next/link";
 import { format, parseISO } from "date-fns";
 import { cn, getFlagUrl, formatMatchDate } from "@/lib/utils";
+import { CreateMatchDialog } from "@/components/admin/CreateMatchDialog";
 
 interface Championship {
     id: string;
@@ -344,6 +345,10 @@ export default function ChampionshipDetailsPage() {
                                 Importar Jogos da API
                             </Button>
                         )}
+
+                        <div className="pt-2 border-t">
+                            <CreateMatchDialog championshipId={championship.id} onMatchCreated={() => { }} />
+                        </div>
                     </CardContent>
                 </Card>
             </div>
