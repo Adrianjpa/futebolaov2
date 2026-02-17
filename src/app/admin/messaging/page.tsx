@@ -20,6 +20,7 @@ interface Message {
     content: string;
     created_at: string;
     read: boolean;
+    delivered?: boolean;
 }
 
 interface Profile {
@@ -171,8 +172,8 @@ export default function AdminMessagingPage() {
         setSending(true);
 
         try {
-            const { data, error } = await supabase
-                .from("messages")
+            const { data, error } = await (supabase
+                .from("messages") as any)
                 .insert({
                     sender_id: currentUser.id,
                     receiver_id: selectedUserId, // Explicitly to the user

@@ -45,8 +45,8 @@ export function UnreadMessagesProvider({ children }: { children: React.ReactNode
 
             // 2. Get Latest Message Sender if count > 0
             if (count > 0) {
-                const { data: latestMsg } = await supabase
-                    .from("messages")
+                const { data: latestMsg } = await (supabase
+                    .from("messages") as any)
                     .select("sender_id")
                     .is("receiver_id", null)
                     .eq("read", false)
@@ -55,8 +55,8 @@ export function UnreadMessagesProvider({ children }: { children: React.ReactNode
                     .single();
 
                 if (latestMsg) {
-                    const { data: senderArgs } = await supabase
-                        .from("profiles")
+                    const { data: senderArgs } = await (supabase
+                        .from("profiles") as any)
                         .select("id, nickname, nome, foto_perfil")
                         .eq("id", latestMsg.sender_id)
                         .single();
@@ -77,8 +77,8 @@ export function UnreadMessagesProvider({ children }: { children: React.ReactNode
         if (!isAdmin) return;
 
         // Mark all messages from this user as read
-        await supabase
-            .from("messages")
+        await (supabase
+            .from("messages") as any)
             .update({ read: true })
             .eq("sender_id", senderId)
             .is("receiver_id", null)
@@ -113,8 +113,8 @@ export function UnreadMessagesProvider({ children }: { children: React.ReactNode
                         setUnreadCount((prev) => prev + 1);
 
                         // Fetch sender profile immediately
-                        const { data: senderProfile } = await supabase
-                            .from("profiles")
+                        const { data: senderProfile } = await (supabase
+                            .from("profiles") as any)
                             .select("id, nickname, nome, foto_perfil")
                             .eq("id", newMessage.sender_id)
                             .single();

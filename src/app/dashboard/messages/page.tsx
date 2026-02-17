@@ -19,6 +19,7 @@ interface Message {
     content: string;
     created_at: string;
     read: boolean;
+    delivered?: boolean;
 }
 
 export default function MessagesPage() {
@@ -219,7 +220,7 @@ export default function MessagesPage() {
                                             <div className={`text-[10px] mt-1 opacity-70 flex items-center gap-1 ${isMe ? 'justify-end' : 'justify-start'}`}>
                                                 {format(new Date(msg.created_at), "dd MMM HH:mm", { locale: ptBR })}
                                                 {isMe && (
-                                                    <MessageStatus isRead={msg.read} isDelivered={msg.delivered} />
+                                                    <MessageStatus isRead={msg.read} isDelivered={msg.delivered || false} />
                                                 )}
                                             </div>
                                         </div>
