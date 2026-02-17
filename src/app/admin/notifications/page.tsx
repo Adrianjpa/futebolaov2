@@ -120,16 +120,16 @@ export default function AdminNotificationsPage() {
                 .select("user_id")
                 .eq("match_id", matchId);
 
-            const predictedUserIds = new Set((predictions || []).map(p => p.user_id));
+            const predictedUserIds = new Set((predictions || []).map((p: any) => p.user_id));
 
-            const usersToRemind = allUsers.filter(u => !predictedUserIds.has(u.id));
+            const usersToRemind = allUsers.filter((u: any) => !predictedUserIds.has(u.id));
 
             if (usersToRemind.length === 0) {
                 toast.info("Todos os usuários já palpitaram neste jogo!");
                 return;
             }
 
-            const notifications = usersToRemind.map(user => ({
+            const notifications = usersToRemind.map((user: any) => ({
                 user_id: user.id,
                 title: "Lembrete de Palpite ⚽",
                 message: `O jogo ${matchTitle} começa em breve e você ainda não palpitou!`,
