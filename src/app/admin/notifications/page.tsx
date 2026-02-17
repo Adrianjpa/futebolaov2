@@ -79,7 +79,7 @@ export default function AdminNotificationsPage() {
                 return;
             }
 
-            const notifications = users.map(user => ({
+            const notifications = users.map((user: any) => ({
                 user_id: user.id,
                 title,
                 message,
@@ -89,7 +89,7 @@ export default function AdminNotificationsPage() {
                 link: target === 'all' ? '/dashboard' : undefined // Link generic
             }));
 
-            const { error } = await supabase.from("notifications").insert(notifications);
+            const { error } = await (supabase.from("notifications") as any).insert(notifications);
 
             if (error) throw error;
 
@@ -139,7 +139,7 @@ export default function AdminNotificationsPage() {
                 created_at: new Date().toISOString()
             }));
 
-            const { error } = await supabase.from("notifications").insert(notifications);
+            const { error } = await (supabase.from("notifications") as any).insert(notifications);
 
             if (error) throw error;
 
