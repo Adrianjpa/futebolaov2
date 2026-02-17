@@ -22,6 +22,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { useUnreadMessages } from "@/contexts/UnreadMessagesContext";
+import { Badge } from "@/components/ui/badge";
 
 export default function AdminLayout({
     children,
@@ -31,6 +33,7 @@ export default function AdminLayout({
     const { profile } = useAuth();
     const pathname = usePathname();
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+    const { unreadCount } = useUnreadMessages();
 
     const supabase = createClient();
 
@@ -73,14 +76,16 @@ export default function AdminLayout({
                         <span className="font-bold text-lg text-red-600">Área Admin</span>
                     </div>
 
-                    <div className="flex-1 overflow-y-auto p-4 space-y-2">
+                    <div className="p-4 border-b border-white/10 bg-white/5">
                         <Link href="/dashboard" onClick={() => setIsSidebarOpen(false)}>
-                            <Button variant="outline" className="w-full justify-start mb-4 border-dashed border-gray-300 hover:bg-white/50 hover:border-gray-400 transition-all">
+                            <Button variant="ghost" className="w-full justify-start text-muted-foreground hover:text-foreground hover:bg-white/10">
                                 <ArrowLeft className="mr-2 h-4 w-4" />
                                 <span className="truncate">Voltar ao App</span>
                             </Button>
                         </Link>
+                    </div>
 
+                    <div className="flex-1 overflow-y-auto p-4 space-y-1">
                         {navItems.map((item) => {
                             const Icon = item.icon;
                             const isActive = pathname === item.href;
@@ -92,6 +97,11 @@ export default function AdminLayout({
                                     >
                                         <Icon className="mr-2 h-4 w-4 shrink-0" />
                                         <span className="truncate">{item.label}</span>
+                                        {item.href === "/admin/messaging" && unreadCount > 0 && (
+                                            <Badge variant="destructive" className="ml-auto h-5 w-auto min-w-[20px] px-1 rounded-full flex items-center justify-center text-[10px]">
+                                                {unreadCount}
+                                            </Badge>
+                                        )}
                                     </Button>
                                 </Link>
                             );

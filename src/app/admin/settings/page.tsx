@@ -54,7 +54,19 @@ export default function AdminSettingsPage() {
                 if (error && error.code !== 'PGRST116') throw error; // PGRST116 is 'no rows found'
 
                 if (data) {
-                    setSettings(data.data as SystemSettings);
+                    // Merge with defaults to ensure no undefined values (fixes uncontrolled input warning)
+                    setSettings(prev => ({
+                        ...prev,
+                        ...data.data,
+                        maintenanceMessage: data.data.maintenanceMessage || "",
+                        maintenanceTitle: data.data.maintenanceTitle || "",
+                        lockDate: data.data.lockDate || "",
+                        lockTime: data.data.lockTime || "",
+                        returnDate: data.data.returnDate || "",
+                        returnTime: data.data.returnTime || "",
+                        announcement: data.data.announcement || "",
+                        apiKey: data.data.apiKey || ""
+                    }));
                 }
             } catch (error) {
                 console.error("Error fetching settings:", error);

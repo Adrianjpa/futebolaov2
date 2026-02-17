@@ -50,5 +50,18 @@ export default function AuthGuard({ children, requiredRole }: AuthGuardProps) {
         return null; // Will redirect
     }
 
+    // Prevent flash of dashboard content if user is pending or blocked
+    if (profile?.status === "pendente" && typeof window !== 'undefined' && window.location.pathname !== "/pending") {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-background">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+        );
+    }
+
+    if (profile?.status === "bloqueado") {
+        return null; // Will redirect or stay here
+    }
+
     return <>{children}</>;
 }

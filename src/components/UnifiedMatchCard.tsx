@@ -81,6 +81,8 @@ export function UnifiedMatchCard({
     const [betHome, setBetHome] = useState<string>("");
     const [betAway, setBetAway] = useState<string>("");
     const [justSaved, setJustSaved] = useState(false);
+    const [predictionCreatedAt, setPredictionCreatedAt] = useState<Date | null>(null);
+    const [predictionUpdatedAt, setPredictionUpdatedAt] = useState<Date | null>(null);
 
     // Effect to load user's prediction into inputs
     useEffect(() => {
@@ -88,7 +90,7 @@ export function UnifiedMatchCard({
             if (!user || !showBetButton) return;
             const { data, error } = await supabase
                 .from("predictions")
-                .select("home_score, away_score")
+                .select("home_score, away_score, updated_at, created_at")
                 .eq("match_id", match.id)
                 .eq("user_id", user.id)
                 .maybeSingle();
@@ -97,6 +99,16 @@ export function UnifiedMatchCard({
                 const pred = data as any;
                 setBetHome(pred.home_score.toString());
                 setBetAway(pred.away_score.toString());
+
+                if (pred.created_at) {
+                    setPredictionCreatedAt(new Date(pred.created_at));
+                }
+
+                if (pred.updated_at) {
+                    setPredictionUpdatedAt(new Date(pred.updated_at));
+                } else {
+                    setPredictionUpdatedAt(null);
+                }
             }
         };
         fetchUserPrediction();
@@ -210,15 +222,36 @@ export function UnifiedMatchCard({
         if (!user || isLocked) return;
         setSaving(true);
         try {
-            const { error } = await (supabase.from("predictions") as any).upsert({
+            const nowIso = new Date().toISOString();
+            const isUpdate = !!predictionCreatedAt; // If we have a creation date, it's an update
+
+            const payload: any = {
                 user_id: user.id,
                 match_id: match.id,
                 home_score: parseInt(betHome),
                 away_score: parseInt(betAway)
-            }, { onConflict: 'user_id,match_id' });
+            };
+
+            // Only update timestamp if it's an edit
+            if (isUpdate) {
+                payload.updated_at = nowIso;
+            }
+
+            const { error } = await (supabase.from("predictions") as any).upsert(payload, { onConflict: 'user_id,match_id' });
 
             if (error) throw error;
             setJustSaved(true);
+            const savedDate = new Date();
+
+            if (isUpdate) {
+                setPredictionUpdatedAt(savedDate);
+            } else {
+                // First save: Set creation date locally
+                setPredictionCreatedAt(savedDate);
+                // Leave updated_at null to signify it's still clean
+                setPredictionUpdatedAt(null);
+            }
+
             setTimeout(() => setJustSaved(false), 3000);
             if (onUpdate) onUpdate();
         } catch (error: any) {
@@ -433,44 +466,66 @@ export function UnifiedMatchCard({
                                         </Button>
                                     </div>
                                 ) : showBetButton && !isLocked ? (
-                                    <div className="flex flex-col items-center gap-3" onClick={(e) => e.stopPropagation()}>
-                                        <div className="flex items-center gap-2">
-                                            <Input
-                                                type="number"
-                                                min="0"
-                                                value={betHome}
-                                                onChange={(e) => setBetHome(e.target.value)}
-                                                className="w-16 h-12 text-center text-xl font-bold bg-background/50 border-primary/20 focus:border-primary"
-                                                placeholder="-"
-                                            />
-                                            <span className="text-muted-foreground font-bold">X</span>
-                                            <Input
-                                                type="number"
-                                                min="0"
-                                                value={betAway}
-                                                onChange={(e) => setBetAway(e.target.value)}
-                                                className="w-16 h-12 text-center text-xl font-bold bg-background/50 border-primary/20 focus:border-primary"
-                                                placeholder="-"
-                                            />
+                                    <div className="flex flex-col items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                                        <div className="flex flex-col items-center gap-3">
+                                            <div className="flex items-center gap-2">
+                                                <Input
+                                                    type="number"
+                                                    min="0"
+                                                    value={betHome}
+                                                    onChange={(e) => setBetHome(e.target.value)}
+                                                    className="w-16 h-12 text-center text-xl font-bold bg-background/50 border-primary/20 focus:border-primary"
+                                                    placeholder="-"
+                                                />
+                                                <span className="text-muted-foreground font-bold">X</span>
+                                                <Input
+                                                    type="number"
+                                                    min="0"
+                                                    value={betAway}
+                                                    onChange={(e) => setBetAway(e.target.value)}
+                                                    className="w-16 h-12 text-center text-xl font-bold bg-background/50 border-primary/20 focus:border-primary"
+                                                    placeholder="-"
+                                                />
+                                            </div>
+                                            <Button
+                                                size="sm"
+                                                className={cn(
+                                                    "h-7 text-[10px] font-bold px-4 rounded-full transition-all duration-300",
+                                                    justSaved ? "bg-green-600 hover:bg-green-700" : "bg-primary hover:bg-primary/90"
+                                                )}
+                                                onClick={handleSavePrediction}
+                                                disabled={saving || betHome === "" || betAway === ""}
+                                            >
+                                                {saving ? (
+                                                    <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                                                ) : justSaved ? (
+                                                    <CheckCircle2 className="h-3 w-3 mr-1" />
+                                                ) : (
+                                                    <Save className="h-3 w-3 mr-1" />
+                                                )}
+                                                {justSaved ? "SALVO!" : "SALVAR"}
+                                            </Button>
                                         </div>
-                                        <Button
-                                            size="sm"
-                                            className={cn(
-                                                "h-7 text-[10px] font-bold px-4 rounded-full transition-all duration-300",
-                                                justSaved ? "bg-green-600 hover:bg-green-700" : "bg-primary hover:bg-primary/90"
-                                            )}
-                                            onClick={handleSavePrediction}
-                                            disabled={saving || betHome === "" || betAway === ""}
-                                        >
-                                            {saving ? (
-                                                <Loader2 className="h-3 w-3 animate-spin mr-1" />
-                                            ) : justSaved ? (
-                                                <CheckCircle2 className="h-3 w-3 mr-1" />
-                                            ) : (
-                                                <Save className="h-3 w-3 mr-1" />
-                                            )}
-                                            {justSaved ? "SALVO!" : "SALVAR"}
-                                        </Button>
+                                        {(predictionCreatedAt || predictionUpdatedAt) && (
+                                            <div className="flex items-center gap-1 mt-1 text-[9px] text-muted-foreground font-medium opacity-70">
+                                                <Clock className="h-2.5 w-2.5" />
+                                                <span>
+                                                    {(() => {
+                                                        const showDate = predictionUpdatedAt || predictionCreatedAt;
+                                                        // It is altered ONLY if updated_at exists AND is different from created_at
+                                                        // (with 2 sec tolerance for legacy records that might have identical timestamps)
+                                                        const isAltered = predictionUpdatedAt && predictionCreatedAt && Math.abs(predictionUpdatedAt.getTime() - predictionCreatedAt.getTime()) > 2000;
+
+                                                        return (
+                                                            <>
+                                                                {isAltered ? "Alterado em: " : "Adicionado em: "}
+                                                                {showDate && format(showDate, "dd/MM HH:mm", { locale: ptBR })}
+                                                            </>
+                                                        );
+                                                    })()}
+                                                </span>
+                                            </div>
+                                        )}
                                     </div>
                                 ) : (
                                     <div className="flex flex-col items-center">

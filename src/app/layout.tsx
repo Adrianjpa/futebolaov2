@@ -4,7 +4,9 @@ import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/components/theme-provider";
 import { MaintenanceGuard } from "@/components/MaintenanceGuard";
-// import { Toaster } from "@/components/ui/toaster";
+import { Toaster } from "@/components/ui/sonner";
+import { UnreadMessagesProvider } from "@/contexts/UnreadMessagesContext";
+import { AdminChatBubble } from "@/components/admin/AdminChatBubble";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -45,10 +47,13 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <AuthProvider>
-            <MaintenanceGuard>
-              {children}
-            </MaintenanceGuard>
-            {/* <Toaster /> */}
+            <UnreadMessagesProvider>
+              <MaintenanceGuard>
+                {children}
+              </MaintenanceGuard>
+              <Toaster />
+              <AdminChatBubble />
+            </UnreadMessagesProvider>
           </AuthProvider>
         </ThemeProvider>
       </body>

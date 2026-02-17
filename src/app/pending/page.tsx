@@ -44,7 +44,7 @@ export default function PendingPage() {
                         className="text-muted-foreground hover:text-foreground"
                     >
                         <LogOut className="mr-2 h-4 w-4" />
-                        Sair da conta
+                        Voltar
                     </Button>
                 </CardFooter>
             </Card>

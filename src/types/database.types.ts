@@ -48,7 +48,7 @@ export interface Database {
                 Row: {
                     id: string
                     name: string
-                    status: 'ativo' | 'finalizado' | 'arquivado'
+                    status: 'ativo' | 'finalizado' | 'arquivado' | 'agendado'
                     category: string | null
                     settings: Json | null
                     legacy_import: boolean
@@ -57,7 +57,7 @@ export interface Database {
                 Insert: {
                     id?: string
                     name: string
-                    status?: 'ativo' | 'finalizado' | 'arquivado'
+                    status?: 'ativo' | 'finalizado' | 'arquivado' | 'agendado'
                     category?: string | null
                     settings?: Json | null
                     legacy_import?: boolean
@@ -66,7 +66,7 @@ export interface Database {
                 Update: {
                     id?: string
                     name?: string
-                    status?: 'ativo' | 'finalizado' | 'arquivado'
+                    status?: 'ativo' | 'finalizado' | 'arquivado' | 'agendado'
                     category?: string | null
                     settings?: Json | null
                     legacy_import?: boolean
@@ -138,6 +138,7 @@ export interface Database {
                     away_score: number
                     points?: number
                     created_at?: string
+                    updated_at?: string
                 }
                 Update: {
                     id?: string
@@ -147,6 +148,7 @@ export interface Database {
                     away_score?: number
                     points?: number
                     created_at?: string
+                    updated_at?: string
                 }
             }
             legacy_stats: {
@@ -200,6 +202,35 @@ export interface Database {
                     team_picks?: Json | null
                     achievements?: string[] | null
                     imported_at?: string
+                }
+            }
+            messages: {
+                Row: {
+                    id: string
+                    sender_id: string
+                    receiver_id: string | null
+                    content: string
+                    read: boolean
+                    delivered: boolean
+                    created_at: string
+                }
+                Insert: {
+                    id?: string
+                    sender_id: string
+                    receiver_id?: string | null
+                    content: string
+                    read?: boolean
+                    delivered?: boolean
+                    created_at?: string
+                }
+                Update: {
+                    id?: string
+                    sender_id?: string
+                    receiver_id?: string | null
+                    content?: string
+                    read?: boolean
+                    delivered?: boolean
+                    created_at?: string
                 }
             }
         }

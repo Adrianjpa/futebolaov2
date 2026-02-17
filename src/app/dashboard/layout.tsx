@@ -24,7 +24,9 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { UserNav } from "@/components/dashboard/UserNav";
+import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { GlobalAdminTimer } from "@/components/admin/GlobalAdminTimer";
+import { WelcomeModal } from "@/components/dashboard/WelcomeModal";
 
 import { MatchesProvider } from "@/contexts/MatchesContext";
 
@@ -58,8 +60,13 @@ export default function DashboardLayout({
         { href: "/admin/debug", label: "System Debug", icon: Activity },
     ];
 
-    // Filter prediction link for admins if needed (optional, keeping it as it was in previous code if any)
     const filteredMainNav = mainNavItems.filter(item => {
+        // Remove "Mensagens" (User View) from Sidebar IF user is Admin
+        // Because Admins already have "Mensagens" in the Admin Section below
+        if (isAdmin && item.href === "/dashboard/messages") {
+            return false;
+        }
+
         if (isAdmin && item.href === "/dashboard/predictions") {
             // Keep it unless user really doesn't want it. 
             // Logic: Admins *can* bet, but often use admin tools.
@@ -150,6 +157,7 @@ export default function DashboardLayout({
                                 <Menu className="h-6 w-6" />
                             </Button>
                             <div className="ml-auto flex items-center gap-4">
+                                <NotificationBell />
                                 <ThemeToggle />
                                 <UserNav />
                             </div>
@@ -157,6 +165,7 @@ export default function DashboardLayout({
 
                         {/* Global Admin Timer (Fixed bar below header) */}
                         <GlobalAdminTimer />
+                        <WelcomeModal />
 
                         <main className="flex-1 overflow-y-auto p-4 md:p-6 custom-scrollbar">
                             {children}

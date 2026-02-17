@@ -34,26 +34,27 @@ export default function DashboardClient() {
     const [allUsers, setAllUsers] = useState<any[]>([]);
     // const [topUsers, setTopUsers] = useState<any[]>([]); // Deprecated for global simple list
     const [leadersMap, setLeadersMap] = useState<Record<string, any>>({});
+    const [announcement, setAnnouncement] = useState<string>("");
     const [currentTime, setCurrentTime] = useState(new Date());
-
-
 
     const supabase = createClient();
     const isAdmin = profile?.funcao === "admin" || profile?.funcao === "moderator";
 
-
-
-
-
-    // 1. Fetch Users & Ranking Per Championship
+    // 1. Fetch Users, Ranking & System Settings
     useEffect(() => {
         if (!user) return;
 
         const fetchData = async () => {
             try {
+                // Fetch System Settings (Announcement)
+                const { data: settingsData } = await (supabase.from("system_settings").select("data").eq("id", "config").single() as any);
+                if (settingsData?.data?.announcement) {
+                    setAnnouncement(settingsData.data.announcement);
+                }
+
                 // Fetch All Users (public_profiles)
                 const { data: usersData } = await (supabase.from("public_profiles").select("*") as any);
-                setAllUsers(usersData || []); // Top-level const? we need to verify if allUsers is defined in scope. It was in previous code.
+                setAllUsers(usersData || []);
 
                 // Fetch Leaders for Active Championships
                 // We use 'ranking_by_championship' view which splits points by championship
@@ -171,24 +172,43 @@ export default function DashboardClient() {
     const filteredRecent = recentMatches.filter(m => isAdmin || userParticipation.has(m.championship_id));
 
     // 5. Calculate Upcoming Championships for the user
-    // A champ hasn't started if all its matches are 'scheduled' and in the future.
     const upcomingChampionships = Array.from(userParticipation)
         .map(id => championshipsMap[id])
-        .filter(c => c && (c.status === 'ativo' || c.status === 'agendado' || isAdmin)) // Admins see even if not 'ativo' for testing
+        .filter(c => c && (c.status === 'ativo' || c.status === 'agendado' || isAdmin))
         .map(c => {
-            const champMatches = allActiveMatches.filter(m => m.championship_id === c.id);
+            // Robust check: Use start_date if available
+            if (c.start_date) {
+                const startDate = parseISO(c.start_date);
+                // If start date is in the past (and not just today), it has started.
+                // We add a small buffer or just strict comparison.
+                if (isPast(startDate)) return null;
 
-            // If it has matches, check if any started
+                return {
+                    ...c,
+                    earliestMatchDate: startDate,
+                    matchCount: 0 // Not needed for banner really
+                };
+            }
+
+            // Fallback: If no start_date...
+            // If status is 'ativo', assume it started unless proven otherwise by start_date (handled above).
+            // So if we are here (no start_date), and it's active, DO NOT show banner.
+            if (c.status === 'ativo') return null;
+
+            // Only for 'agendado' or others, try to infer from matches
+            const champMatches = allActiveMatches.filter(m => m.championship_id === c.id);
             const hasStarted = champMatches.some(m => m.status === 'live' || m.status === 'finished' || isPast(parseISO(m.date)));
 
             if (hasStarted) return null;
 
-            // Earliest match
             const earliestMatch = [...champMatches].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())[0];
+
+            if (!earliestMatch) return null; // No matches and no start date -> ignore or keep? 
+            // If no matches, maybe it's "TBD"? But let's return it with null date
 
             return {
                 ...c,
-                earliestMatchDate: earliestMatch ? parseISO(earliestMatch.date) : null,
+                earliestMatchDate: parseISO(earliestMatch.date),
                 matchCount: champMatches.length
             };
         })
@@ -223,9 +243,18 @@ export default function DashboardClient() {
             <div className="flex flex-col space-y-4">
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                     <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-
-
                 </div>
+
+                {/* System Announcement Banner */}
+                {announcement && (
+                    <div className="bg-primary/10 border border-primary/20 text-primary-foreground p-4 rounded-xl flex items-start gap-3 shadow-sm animate-in fade-in slide-in-from-top-2">
+                        <Info className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+                        <div>
+                            <p className="font-bold text-sm text-primary uppercase tracking-wide mb-1">Comunicado Oficial</p>
+                            <p className="text-sm text-foreground/90 whitespace-pre-wrap">{announcement}</p>
+                        </div>
+                    </div>
+                )}
 
                 {/* Confetti Animation for Leaders */}
                 <LeaderConfetti leadersMap={leadersMap} championshipsMap={championshipsMap} />
