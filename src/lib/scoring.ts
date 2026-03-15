@@ -1,6 +1,9 @@
 export interface ScoringRules {
     exactScorePoints: number;
     winnerPoints: number;
+    comboEnabled?: boolean;
+    comboPoints?: number;
+    bonusPoints?: number;
 }
 
 export function calculatePoints(
@@ -8,20 +11,39 @@ export function calculatePoints(
     predAway: number,
     realHome: number,
     realAway: number,
-    rules: ScoringRules = { exactScorePoints: 3, winnerPoints: 1 }
+    rules: ScoringRules = { exactScorePoints: 3, winnerPoints: 1 },
+    isCombo: boolean = false,
+    comboTotalGoals?: number | null
 ): number {
-    // 1. Exact Score (Bucha)
-    if (predHome === realHome && predAway === realAway) {
-        return rules.exactScorePoints;
-    }
+    let points = 0;
 
-    // 2. Winner or Draw (Situação)
+    // 1. Setup exact score and situation
+    const isExactScore = predHome === realHome && predAway === realAway;
     const predWinner = predHome > predAway ? 'home' : predHome < predAway ? 'away' : 'draw';
     const realWinner = realHome > realAway ? 'home' : realHome < realAway ? 'away' : 'draw';
+    const isSituation = predWinner === realWinner;
 
-    if (predWinner === realWinner) {
-        return rules.winnerPoints;
+    // 2. Combo System setup (Total Goals)
+    const realTotalGoals = realHome + realAway;
+    const betTotalGoals = comboTotalGoals !== undefined && comboTotalGoals !== null ? comboTotalGoals : (predHome + predAway);
+    const hitExactGoals = betTotalGoals === realTotalGoals;
+
+    // 3. Calculation
+    if (isExactScore) {
+        if (isCombo && rules.comboEnabled && rules.comboPoints !== undefined) {
+            points = rules.comboPoints; // Full Combo replacement value
+        } else {
+            points = rules.exactScorePoints; // Traditional Bucha
+        }
+    } else {
+        if (isSituation) {
+            points += rules.winnerPoints; // Traditional Winner Situation
+        }
+        
+        if (isCombo && rules.comboEnabled && hitExactGoals && rules.bonusPoints !== undefined) {
+            points += rules.bonusPoints; // Goals Bonus 
+        }
     }
 
-    return 0;
+    return points;
 }

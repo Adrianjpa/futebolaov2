@@ -26,6 +26,7 @@ export default function NewChampionshipPage() {
             // Remove helper fields that don't need to be in the database settings
             delete (sanitizedSettings as any).startDateInput;
             delete (sanitizedSettings as any).endDateInput;
+            delete (sanitizedSettings as any).phaseRules;
 
             console.log("Inserindo campeonato:", { name, category, status, settings: sanitizedSettings });
 
@@ -39,6 +40,18 @@ export default function NewChampionshipPage() {
             if (error) {
                 console.error("Erro Supabase:", error);
                 throw error;
+            }
+            
+            // Handle Phase Rules
+            const phaseRules = values.phaseRules || [];
+            if (data?.id && values.comboEnabled && phaseRules.length > 0) {
+                const rulesPayload = phaseRules.map((r: any) => ({
+                    championship_id: data.id,
+                    phase: r.phase,
+                    combo_tokens: r.combo_tokens
+                }));
+                const { error: rulesError } = await (supabase.from('championship_phase_rules') as any).insert(rulesPayload);
+                if (rulesError) console.error("Error saving phase rules:", rulesError);
             }
 
             alert("Campeonato criado com sucesso!");

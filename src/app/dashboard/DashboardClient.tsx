@@ -25,6 +25,8 @@ export default function DashboardClient() {
         championshipsMap,
         userPredictions,
         userParticipation,
+        globalPhaseRules,
+        globalComboUsage,
         loading: matchesLoading,
         refreshMatches: fetchMatches
     } = useMatches();
@@ -399,6 +401,15 @@ export default function DashboardClient() {
                                     users={allUsers}
                                     showChampionshipName={true}
                                     teamMode={championshipsMap[match.championship_id]?.settings?.teamMode || 'clubes'}
+                                    comboEnabled={!!championshipsMap[match.championship_id]?.settings?.comboEnabled}
+                                    totalPhaseTokens={
+                                        globalPhaseRules[match.championship_id]?.[match.round_name || match.round.toString()] || 
+                                        championshipsMap[match.championship_id]?.settings?.defaultComboTokens || 0
+                                    }
+                                    availableComboTokens={Math.max(0, 
+                                        (globalPhaseRules[match.championship_id]?.[match.round_name || match.round.toString()] || championshipsMap[match.championship_id]?.settings?.defaultComboTokens || 0) - 
+                                        (globalComboUsage[match.championship_id]?.[match.round_name || match.round.toString()] || 0)
+                                    )}
                                 />
                             ))}
                         </CardContent>
@@ -436,6 +447,15 @@ export default function DashboardClient() {
                                             users={allUsers}
                                             showChampionshipName={true}
                                             teamMode={championshipsMap[match.championship_id]?.settings?.teamMode || 'clubes'}
+                                            comboEnabled={!!championshipsMap[match.championship_id]?.settings?.comboEnabled}
+                                            totalPhaseTokens={
+                                                globalPhaseRules[match.championship_id]?.[match.round_name || match.round.toString()] || 
+                                                championshipsMap[match.championship_id]?.settings?.defaultComboTokens || 0
+                                            }
+                                            availableComboTokens={Math.max(0, 
+                                                (globalPhaseRules[match.championship_id]?.[match.round_name || match.round.toString()] || championshipsMap[match.championship_id]?.settings?.defaultComboTokens || 0) - 
+                                                (globalComboUsage[match.championship_id]?.[match.round_name || match.round.toString()] || 0)
+                                            )}
                                         />
                                     ))
                                 ) : (
@@ -476,6 +496,15 @@ export default function DashboardClient() {
                                             users={allUsers}
                                             showChampionshipName={true}
                                             teamMode={championshipsMap[match.championship_id]?.settings?.teamMode || 'clubes'}
+                                            comboEnabled={!!championshipsMap[match.championship_id]?.settings?.comboEnabled}
+                                            totalPhaseTokens={
+                                                globalPhaseRules[match.championship_id]?.[match.round_name || match.round.toString()] || 
+                                                championshipsMap[match.championship_id]?.settings?.defaultComboTokens || 0
+                                            }
+                                            availableComboTokens={Math.max(0, 
+                                                (globalPhaseRules[match.championship_id]?.[match.round_name || match.round.toString()] || championshipsMap[match.championship_id]?.settings?.defaultComboTokens || 0) - 
+                                                (globalComboUsage[match.championship_id]?.[match.round_name || match.round.toString()] || 0)
+                                            )}
                                         />
                                     ))
                                 ) : (

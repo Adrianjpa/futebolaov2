@@ -59,6 +59,7 @@ export default function EditChampionshipPage() {
             // Remove helper fields that don't need to be in the database settings
             delete (sanitizedSettings as any).startDateInput;
             delete (sanitizedSettings as any).endDateInput;
+            delete (sanitizedSettings as any).phaseRules; // Store phaseRules separately
 
             const { error } = await (supabase
                 .from("championships") as any)
@@ -71,6 +72,22 @@ export default function EditChampionshipPage() {
                 .eq("id", params.id as string);
 
             if (error) throw error;
+            
+            // Handle Phase Rules
+            const phaseRules = values.phaseRules || [];
+            
+            // Delete existing rules for this championship
+            await supabase.from('championship_phase_rules').delete().eq('championship_id', params.id as string);
+            
+            if (values.comboEnabled && phaseRules.length > 0) {
+                const rulesPayload = phaseRules.map((r: any) => ({
+                    championship_id: params.id as string,
+                    phase: r.phase,
+                    combo_tokens: r.combo_tokens
+                }));
+                const { error: rulesError } = await (supabase.from('championship_phase_rules') as any).insert(rulesPayload);
+                if (rulesError) console.error("Error saving phase rules:", rulesError);
+            }
 
             alert("Campeonato atualizado com sucesso!");
             router.push(`/admin/championships/${params.id}`);

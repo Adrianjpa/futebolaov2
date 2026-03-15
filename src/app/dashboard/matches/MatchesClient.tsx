@@ -14,7 +14,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { UnifiedMatchCard } from "@/components/UnifiedMatchCard";
 import { Trophy as TrophyIcon, Award, Info, CheckCircle2 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { cn } from "@/lib/utils";
+import { cn, translateRoundName } from "@/lib/utils";
 
 const TEAM_ISO_MAP: Record<string, string> = {
     'Polônia': 'pl', 'Grécia': 'gr', 'Rússia': 'ru', 'República Tcheca': 'cz',
@@ -44,6 +44,7 @@ interface Match {
     id: string;
     championship_id: string;
     round: number;
+    round_name?: string;
     date: string;
     status: string;
     home_team: string;
@@ -64,7 +65,10 @@ export default function MatchesClient() {
         championships: allChamps,
         championshipsMap,
         userPredictions,
+        userCombos,
         userParticipation,
+        globalPhaseRules,
+        globalComboUsage,
         loading: matchesLoading,
         refreshMatches: fetchMatches
     } = useMatches();
@@ -94,10 +98,16 @@ export default function MatchesClient() {
     const [round, setRound] = useState(1);
     const [userSelection, setUserSelection] = useState<string[]>([]);
     const [isSelectionLocked, setIsSelectionLocked] = useState(false);
-    const [officialRanking, setOfficialRanking] = useState<string[]>([]);
     const [championshipTeams, setChampionshipTeams] = useState<any[]>([]);
     const [bannerEnabled, setBannerEnabled] = useState(false);
     const [selectionSlots, setSelectionSlots] = useState(3);
+    const [officialRanking, setOfficialRanking] = useState<string[]>([]);
+    
+    // Combo Feature State
+    const [comboEnabled, setComboEnabled] = useState(false);
+    const [defaultComboTokens, setDefaultComboTokens] = useState(0);
+    const [phaseRules, setPhaseRules] = useState<Record<string, number>>({});
+    const [comboUsage, setComboUsage] = useState<Record<string, number>>({});
 
     const fetchUsers = async () => {
         const { data } = await (supabase.from("public_profiles") as any).select("*");
@@ -188,6 +198,36 @@ export default function MatchesClient() {
                 setChampionshipTeams(settings.teams || []);
                 setBannerEnabled(settings.bannerEnabled ?? false);
                 setSelectionSlots(settings.selectionSlots ?? 3);
+                
+                setComboEnabled(settings.comboEnabled ?? false);
+                setDefaultComboTokens(settings.defaultComboTokens ?? 0);
+
+                // Fetch phase rules for Combo
+                if (settings.comboEnabled) {
+                    const { data: rules } = await supabase
+                        .from('championship_phase_rules')
+                        .select('phase, combo_tokens')
+                        .eq('championship_id', selectedChampionship);
+                        
+                    const pRules: Record<string, number> = {};
+                    rules?.forEach((r: any) => { pRules[r.phase] = r.combo_tokens; });
+                    setPhaseRules(pRules);
+
+                    // Fetch user's exact combo usage for this championship across all time
+                    const { data: usageData } = await (supabase
+                        .from('predictions') as any)
+                        .select('match_id, matches!inner(championship_id, round, round_name)')
+                        .eq('user_id', authUser.id)
+                        .eq('matches.championship_id', selectedChampionship)
+                        .eq('is_combo', true);
+
+                    const usage: Record<string, number> = {};
+                    usageData?.forEach((pred: any) => {
+                        const phase = pred.matches?.round_name || pred.matches?.round?.toString();
+                        if (phase) usage[phase] = (usage[phase] || 0) + 1;
+                    });
+                    setComboUsage(usage);
+                }
 
                 // Check if first match started
                 const { data: firstMatch } = await supabase
@@ -255,7 +295,14 @@ export default function MatchesClient() {
     return (
         <div className="space-y-6">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <h1 className="text-3xl font-bold tracking-tight">Próximas Partidas</h1>
+                <div className="flex flex-col gap-1">
+                    <h1 className="text-3xl font-bold tracking-tight">Próximas Partidas</h1>
+                    {comboEnabled && !isAdmin && (
+                        <p className="text-xs text-muted-foreground">
+                            Use suas 🌟 Fichas Douradas nas partidas para ganhar pontos bônus.
+                        </p>
+                    )}
+                </div>
 
                 <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
                     {/* FILTRO DE CAMPEONATO - Somente se houver mais de 1 ativo */}
@@ -490,7 +537,8 @@ export default function MatchesClient() {
                 </Card>
             )}
 
-            <div className="space-y-4">
+            {/* MATCHECS LIST */}
+            <div className="space-y-4 pt-4">
                 {matchesLoading && matches.length === 0 && (
                     <div className="flex flex-col items-center justify-center p-12 min-h-[300px]">
                         <Loader2 className="h-8 w-8 animate-spin text-primary mb-2" />
@@ -511,6 +559,24 @@ export default function MatchesClient() {
                 {matches.map((match) => {
                     const champ = championshipsMap[match.championship_id];
                     const teamMode = champ?.settings?.teamMode || 'clubes';
+                    const phaseId = match.round_name || match.round.toString();
+                    const champId = match.championship_id;
+
+                    // When viewing a specific championship, use the local fetched data.
+                    // When viewing "all", use the global context maps (indexed by championship_id then phase).
+                    const isAllView = selectedChampionship === 'all';
+                    const allowed = isAllView
+                        ? (globalPhaseRules[champId]?.[phaseId] ?? champ?.settings?.defaultComboTokens ?? 0)
+                        : (phaseRules[phaseId] ?? defaultComboTokens);
+                    const used = isAllView
+                        ? (globalComboUsage[champId]?.[phaseId] || 0)
+                        : (comboUsage[phaseId] || 0);
+
+                    const activePhaseInView = matches.length > 0 ? (matches[0].round_name || matches[0].round.toString()) : null;
+                    const isFutureBlock = (isAllView ? !!champ?.settings?.comboEnabled : comboEnabled) && activePhaseInView && phaseId !== activePhaseInView;
+
+                    const availableTokens = Math.max(0, allowed - used);
+                    
                     return (
                         <UnifiedMatchCard
                             key={match.id}
@@ -520,9 +586,17 @@ export default function MatchesClient() {
                             showBetButton={!isAdmin}
                             hasPrediction={userPredictions.has(match.id)}
                             isAdmin={isAdmin}
-                            onUpdate={() => fetchMatches()}
+                            onUpdate={async () => {
+                                // Refresh everything to update counters
+                                await fetchMatches();
+                                await fetchChampionshipData();
+                            }}
                             showChampionshipName={selectedChampionship === 'all'}
                             teamMode={teamMode}
+                            comboEnabled={!!champ?.settings?.comboEnabled}
+                            availableComboTokens={availableTokens}
+                            totalPhaseTokens={allowed}
+                            isFutureBlock={!!isFutureBlock}
                         />
                     );
                 })}

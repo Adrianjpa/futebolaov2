@@ -75,6 +75,11 @@ const formSchema = z.object({
     comboEnabled: z.boolean().default(false),
     bonusPoints: z.coerce.number().min(0).default(2).optional(),
     comboPoints: z.coerce.number().min(0).default(5).optional(),
+    defaultComboTokens: z.coerce.number().min(0).default(1).optional(),
+    phaseRules: z.array(z.object({
+        phase: z.string(),
+        combo_tokens: z.number().min(0)
+    })).default([]),
     // Banner
     bannerEnabled: z.boolean().default(false),
     bannerConfig: z.object({
@@ -147,6 +152,8 @@ export function ChampionshipForm({ initialData, onSubmit, isSubmitting = false, 
             comboEnabled: initialData?.comboEnabled ?? false,
             bonusPoints: initialData?.bonusPoints ?? 2,
             comboPoints: initialData?.comboPoints ?? 5,
+            defaultComboTokens: initialData?.defaultComboTokens ?? 1,
+            phaseRules: initialData?.phaseRules || [],
             bannerEnabled: initialData?.bannerEnabled ?? false,
             bannerConfig: initialData?.bannerConfig || {
                 active: false,
@@ -187,6 +194,40 @@ export function ChampionshipForm({ initialData, onSubmit, isSubmitting = false, 
     const [duplicateTeam, setDuplicateTeam] = useState<any>(null);
     const [showDuplicateDialog, setShowDuplicateDialog] = useState(false);
     const [isCreatingTeam, setIsCreatingTeam] = useState(false);
+    
+    // Combo Phase Rules State
+    const [availablePhases, setAvailablePhases] = useState<string[]>([]);
+    
+    const champId = (initialData as any)?.id;
+
+    // Fetch distinct phases and existing rules when combo is enabled
+    useEffect(() => {
+        if (!champId || !form.watch("comboEnabled")) return;
+        
+        async function fetchPhasesAndRules() {
+            // Fetch matches to find distinct phases
+            const { data: matches } = await supabase
+                .from('matches')
+                .select('round, round_name')
+                .eq('championship_id', champId);
+             
+            const phases = Array.from(new Set((matches || []).map((m: any) => m.round_name || String(m.round))));
+            setAvailablePhases(phases);
+
+            // Fetch existing rules
+            const { data: rules } = await supabase
+                .from('championship_phase_rules')
+                .select('phase, combo_tokens')
+                .eq('championship_id', champId);
+            
+            const currentRules = form.getValues("phaseRules") || [];
+            if (currentRules.length === 0 && rules && rules.length > 0) {
+               form.setValue("phaseRules", rules);
+            }
+        }
+        
+        fetchPhasesAndRules();
+    }, [champId, supabase, form.watch("comboEnabled")]);
 
     const participants = form.watch("participants") || [];
     const manualWinners = form.watch("manualWinners") || [];
@@ -827,6 +868,92 @@ export function ChampionshipForm({ initialData, onSubmit, isSubmitting = false, 
                                     onCheckedChange={(checked) => form.setValue("enableSelectionPriority", checked)}
                                 />
                             </div>
+
+                            {form.watch("comboEnabled") && (
+                                <div className="rounded-lg border p-4 bg-yellow-500/5 border-yellow-500/20 animate-in fade-in slide-in-from-top-2 duration-300">
+                                    <div className="flex items-center gap-2 mb-4">
+                                        <Award className="h-5 w-5 text-yellow-500" />
+                                        <h3 className="font-bold text-lg text-yellow-600 dark:text-yellow-500">Distribuição de Fichas de Combo</h3>
+                                    </div>
+                                    <p className="text-sm text-muted-foreground mb-4">
+                                        Como você ativou o Sistema de Combo na aba "Pontuação", defina quantas fichas os usuários terão para apostar disponíveis.
+                                    </p>
+                                    
+                                    <div className="grid gap-2 border bg-background p-4 rounded text-sm">
+                                        <div className="flex flex-col sm:flex-row gap-4 sm:items-center justify-between">
+                                            <div>
+                                                <Label className="font-bold">Fichas Padrão (Por Fase/Rodada)</Label>
+                                                <p className="text-xs text-muted-foreground mt-0.5">
+                                                    {form.watch("creationType") === "manual" 
+                                                        ? "Quantidade universal de fichas por rodada." 
+                                                        : "Quantidade padrão aplicada para fases futuras importadas da API."}
+                                                </p>
+                                            </div>
+                                            <div className="w-full sm:w-32">
+                                                <Input 
+                                                    type="number" 
+                                                    {...form.register("defaultComboTokens")} 
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {form.watch("creationType") !== "manual" && availablePhases.length > 0 && (
+                                        <div className="mt-4 rounded-lg border p-4 bg-background">
+                                            <div className="flex items-center justify-between mb-4">
+                                                <Label className="font-semibold text-lg hover:text-yellow-600 transition-colors">Exceções e Fases Especiais (Regras por Fase)</Label>
+                                            </div>
+                                            <p className="text-xs text-muted-foreground mb-4">
+                                                Abaixo estão as fases detectadas pelas partidas importadas. Defina limites personalizados para sobrepor o valor Padrão estabelecido acima. Deixe em branco para usar o padrão.
+                                            </p>
+                                            <div className="space-y-3">
+                                                {availablePhases.map((phase) => {
+                                                    const rules = form.watch("phaseRules") || [];
+                                                    const ruleForPhase = rules.find(r => r.phase === phase);
+                                                    const value = ruleForPhase ? ruleForPhase.combo_tokens : "";
+                                                    
+                                                    // Map API phases to readable names
+                                                    let phaseName = phase;
+                                                    if (phase === 'REGULAR_SEASON' || phase === 'GROUP_STAGE') phaseName = 'Fase de Grupos';
+                                                    if (phase === 'LAST_16' || phase === 'ROUND_OF_16') phaseName = 'Oitavas de Final';
+                                                    if (phase === 'QUARTER_FINALS') phaseName = 'Quartas de Final';
+                                                    if (phase === 'SEMI_FINALS') phaseName = 'Semifinais';
+                                                    if (phase === 'FINAL') phaseName = 'Final';
+                                                    
+                                                    return (
+                                                        <div key={phase} className="flex items-center justify-between py-2 border-b border-border/50 last:border-0 hover:bg-muted/30 px-2 rounded-md transition-colors">
+                                                            <span className="text-sm font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">{phaseName}</span>
+                                                            <div className="flex items-center gap-2">
+                                                                <Input 
+                                                                    type="number" 
+                                                                    min="0"
+                                                                    placeholder={`Padrão: ${form.watch("defaultComboTokens")}`}
+                                                                    className="w-28 text-center bg-transparent focus:bg-background h-8 font-bold text-yellow-600 dark:text-yellow-500"
+                                                                    value={value}
+                                                                    onChange={(e) => {
+                                                                        const val = e.target.value;
+                                                                        let newRules = [...rules];
+                                                                        const idx = newRules.findIndex(r => r.phase === phase);
+                                                                        
+                                                                        if (val === "") {
+                                                                            if (idx > -1) newRules.splice(idx, 1);
+                                                                        } else {
+                                                                            if (idx > -1) newRules[idx].combo_tokens = parseInt(val, 10);
+                                                                            else newRules.push({ phase, combo_tokens: parseInt(val, 10) });
+                                                                        }
+                                                                        form.setValue("phaseRules", newRules, { shouldDirty: true });
+                                                                    }}
+                                                                />
+                                                                <span className="text-[10px] text-muted-foreground w-8">Fichas</span>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
 
                             {/* Em breve: Drag & Drop de Critérios de Desempate */}
                             <div className="rounded-lg border p-4 bg-muted/10 opacity-60 cursor-not-allowed">

@@ -1,6 +1,7 @@
 import { supabaseAdmin } from "./supabase-server";
 import { Database } from "@/types/database.types";
 import { format, addDays } from "date-fns";
+import { updateMatchPredictions } from "./prediction-scoring";
 
 type Championship = Database['public']['Tables']['championships']['Row'];
 type Match = Database['public']['Tables']['matches']['Row'];
@@ -175,6 +176,12 @@ export async function syncMatchesFromExternalApi(force: boolean = false) {
                     } else {
                         updatesCount++;
                         updatedMatchNames.push(`${localMatch.home_team} ${apiHomeScore}x${apiAwayScore} ${localMatch.away_team}`);
+                        
+                        // Recalculate predictions if match is finished or updated
+                        // Real-time thrill: calculate even if it's Live or just transitioning to finished
+                        if (newStatus === 'finished' || newStatus === 'live') {
+                            await updateMatchPredictions(localMatch.id, apiHomeScore, apiAwayScore);
+                        }
                     }
                 }
             } else {

@@ -35,6 +35,10 @@ interface UnifiedMatchCardProps {
     onUpdate?: () => void;
     users?: any[];
     teamMode?: 'clubes' | 'selecoes' | 'mista';
+    comboEnabled?: boolean;
+    availableComboTokens?: number;
+    totalPhaseTokens?: number;
+    isFutureBlock?: boolean;
 }
 
 export function UnifiedMatchCard({
@@ -47,7 +51,11 @@ export function UnifiedMatchCard({
     isAdmin,
     onUpdate,
     users = [],
-    teamMode = 'clubes'
+    teamMode = 'clubes',
+    comboEnabled = false,
+    availableComboTokens = 0,
+    totalPhaseTokens = 0,
+    isFutureBlock = false
 }: UnifiedMatchCardProps) {
     const { user, profile } = useAuth();
     const supabase = createClient();
@@ -94,6 +102,9 @@ export function UnifiedMatchCard({
     const [justSaved, setJustSaved] = useState(false);
     const [predictionCreatedAt, setPredictionCreatedAt] = useState<Date | null>(null);
     const [predictionUpdatedAt, setPredictionUpdatedAt] = useState<Date | null>(null);
+    const [isComboActive, setIsComboActive] = useState<boolean>(false);
+    const [initialComboActive, setInitialComboActive] = useState<boolean>(false);
+    const [betTotalGoals, setBetTotalGoals] = useState<string>("");
 
     // Effect to load user's prediction into inputs
     useEffect(() => {
@@ -101,7 +112,7 @@ export function UnifiedMatchCard({
             if (!user || !showBetButton) return;
             const { data, error } = await supabase
                 .from("predictions")
-                .select("home_score, away_score, updated_at, created_at")
+                .select("home_score, away_score, updated_at, created_at, is_combo, combo_total_goals")
                 .eq("match_id", match.id)
                 .eq("user_id", user.id)
                 .maybeSingle();
@@ -110,6 +121,11 @@ export function UnifiedMatchCard({
                 const pred = data as any;
                 setBetHome(pred.home_score.toString());
                 setBetAway(pred.away_score.toString());
+                setIsComboActive(pred.is_combo || false);
+                setInitialComboActive(pred.is_combo || false);
+                if (pred.combo_total_goals !== null && pred.combo_total_goals !== undefined) {
+                    setBetTotalGoals(pred.combo_total_goals.toString());
+                }
 
                 if (pred.created_at) {
                     setPredictionCreatedAt(new Date(pred.created_at));
@@ -240,7 +256,9 @@ export function UnifiedMatchCard({
                 user_id: user.id,
                 match_id: match.id,
                 home_score: parseInt(betHome),
-                away_score: parseInt(betAway)
+                away_score: parseInt(betAway),
+                is_combo: isComboActive,
+                combo_total_goals: isComboActive && betTotalGoals !== "" ? parseInt(betTotalGoals) : null
             };
 
             // Only update timestamp if it's an edit
@@ -262,6 +280,8 @@ export function UnifiedMatchCard({
                 // Leave updated_at null to signify it's still clean
                 setPredictionUpdatedAt(null);
             }
+            
+            setInitialComboActive(isComboActive);
 
             setTimeout(() => setJustSaved(false), 3000);
             if (onUpdate) onUpdate();
@@ -269,6 +289,49 @@ export function UnifiedMatchCard({
             console.error("Error saving prediction:", error);
             const msg = error.message || error.details || JSON.stringify(error);
             alert("Erro ao salvar palpite: " + msg);
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const handleDeactivateCombo = async (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (!user || isLocked) return;
+        
+        // If there's no saved prediction yet, just clear local state
+        if (!predictionCreatedAt && !predictionUpdatedAt) {
+            setIsComboActive(false);
+            setBetTotalGoals("");
+            return;
+        }
+
+        setSaving(true);
+        try {
+            const nowIso = new Date().toISOString();
+            const payload: any = {
+                user_id: user.id,
+                match_id: match.id,
+                home_score: parseInt(betHome),
+                away_score: parseInt(betAway),
+                is_combo: false,
+                combo_total_goals: null,
+                updated_at: nowIso
+            };
+
+            const { error } = await (supabase.from("predictions") as any).upsert(payload, { onConflict: 'user_id,match_id' });
+
+            if (error) throw error;
+            
+            // Clean up local tracking state
+            setIsComboActive(false);
+            setBetTotalGoals("");
+            setInitialComboActive(false);
+            setPredictionUpdatedAt(new Date());
+            
+            if (onUpdate) onUpdate();
+        } catch (error: any) {
+            console.error("Error deactivating combo:", error);
+            alert("Erro ao remover ficha: " + (error.message || JSON.stringify(error)));
         } finally {
             setSaving(false);
         }
@@ -377,11 +440,12 @@ export function UnifiedMatchCard({
         <TooltipProvider delayDuration={0}>
             <Card
                 className={cn(
-                    "group relative overflow-hidden transition-all duration-300 border border-border dark:border-slate-800 bg-card dark:bg-slate-950/50 shadow-lg",
-                    canViewPredictions ? "hover:bg-muted/50 dark:hover:bg-slate-900/80 cursor-pointer" : "cursor-default",
-                    urgencyClass // Added urgency logic
+                    "group relative overflow-hidden transition-all duration-300 border bg-card shadow-lg",
+                    isFutureBlock ? "opacity-60 grayscale-[50%] cursor-not-allowed border-slate-800" : "border-border dark:border-slate-800 dark:bg-slate-950/50",
+                    !isFutureBlock && canViewPredictions ? "hover:bg-muted/50 dark:hover:bg-slate-900/80 cursor-pointer" : "",
+                    !isFutureBlock && urgencyClass
                 )}
-                onClick={handleToggleExpand}
+                onClick={isFutureBlock ? undefined : handleToggleExpand}
             >
                 <CardContent className="p-3 sm:p-6 relative min-h-[160px] flex flex-col justify-center">
                     {/* 1. TOP INFO BAR (Responsive) */}
@@ -395,9 +459,21 @@ export function UnifiedMatchCard({
                                     <Trophy className="h-5 w-5 text-blue-500" />
                                 )}
                             </div>
-                            <span className="hidden md:block text-[11px] font-bold text-muted-foreground bg-muted dark:bg-slate-800/40 px-2.5 py-1 rounded-md border border-border dark:border-slate-700/50 uppercase">
-                                {translateRoundName(match.round_name || match.round)}
-                            </span>
+                            <div className="hidden md:flex items-center gap-2">
+                                <span className="text-[11px] font-bold text-muted-foreground bg-muted dark:bg-slate-800/40 px-2.5 py-1 rounded-md border border-border dark:border-slate-700/50 uppercase">
+                                    {translateRoundName(match.round_name || match.round)}
+                                </span>
+                                {/* COMBO TOKENS COUNTER (Header Level) */}
+                                {comboEnabled && totalPhaseTokens > 0 && !isAdmin && showBetButton && (
+                                    <div className="flex items-center gap-1 text-[9px] sm:text-[10px] font-bold px-2 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-500 ml-auto sm:ml-0">
+                                        🌟 
+                                        <span className={availableComboTokens === 0 ? "opacity-50" : "text-amber-400 font-black"}>
+                                            {availableComboTokens}
+                                        </span>
+                                        <span className="opacity-40">/ {totalPhaseTokens}</span>
+                                    </div>
+                                )}
+                            </div>
                         </div>
 
                         {/* CENTER: Championship Name (Desktop Only) */}
@@ -431,6 +507,15 @@ export function UnifiedMatchCard({
                             <StatusBadgeComponent />
                         </div>
                     </div>
+                    
+                    {/* Future Block Overlay Banner */}
+                    {isFutureBlock && (
+                        <div className="absolute inset-0 z-30 flex items-center justify-center bg-background/40 backdrop-blur-[1px] pointer-events-none">
+                            <span className="bg-slate-900/90 text-slate-200 border border-slate-700 font-bold text-xs uppercase tracking-widest px-4 py-1.5 rounded-full drop-shadow-md">
+                                Fase Futura (Aguarde)
+                            </span>
+                        </div>
+                    )}
 
                     {/* 2. MOBILE ONLY: Round (Centered) */}
                     <div className="md:hidden flex justify-center mb-4">
@@ -519,7 +604,7 @@ export function UnifiedMatchCard({
                                                     justSaved ? "bg-green-600 hover:bg-green-700" : "bg-primary hover:bg-primary/90"
                                                 )}
                                                 onClick={handleSavePrediction}
-                                                disabled={saving || betHome === "" || betAway === ""}
+                                                disabled={saving || betHome === "" || betAway === "" || (isComboActive && betTotalGoals === "")}
                                             >
                                                 {saving ? (
                                                     <Loader2 className="h-3 w-3 animate-spin mr-1" />
@@ -530,6 +615,69 @@ export function UnifiedMatchCard({
                                                 )}
                                                 {justSaved ? "SALVO!" : "SALVAR"}
                                             </Button>
+                                            
+                                            {/* COMBO BUTTON */}
+                                            {comboEnabled && (
+                                                <Button
+                                                    size="sm"
+                                                    variant="outline"
+                                                    type="button"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+
+                                                        if (isComboActive) {
+                                                            // DEACTIVATE: instantly commit to DB so context reflects it
+                                                            handleDeactivateCombo(e);
+                                                        } else {
+                                                            // ACTIVATE: Locally enable it. Waits for main save button.
+                                                            if (availableComboTokens <= 0) {
+                                                                alert("Você não tem mais fichas douradas disponíveis para esta rodada/fase.");
+                                                                return;
+                                                            }
+                                                            setIsComboActive(true);
+                                                        }
+                                                    }}
+                                                    className={cn(
+                                                        "h-7 text-[10px] mt-1 font-bold px-3 py-0 rounded-full border transition-all truncate min-w-[100px]",
+                                                        isComboActive 
+                                                            ? "bg-amber-400/20 text-amber-500 border-amber-500 hover:bg-amber-400/30 shadow-[0_0_10px_rgba(245,158,11,0.2)]" 
+                                                            : "border-slate-700 bg-transparent text-slate-500 hover:text-slate-300 hover:border-slate-500"
+                                                    )}
+                                                >
+                                                    🌟 {isComboActive ? 'DESATIVAR FICHA' : 'USAR FICHA'}
+                                                </Button>
+                                            )}
+
+                                            {/* TOTAL GOALS COMBO INPUT */}
+                                            {comboEnabled && isComboActive && (
+                                                <div className="flex flex-col items-center gap-1 mt-1 animate-in fade-in slide-in-from-top-2 duration-300">
+                                                    <span className="text-[9px] font-bold text-amber-500 uppercase tracking-wider">
+                                                        Total de Gols na Partida
+                                                    </span>
+                                                    <div className="flex items-center gap-1">
+                                                        <Input
+                                                            type="number"
+                                                            min="0"
+                                                            value={betTotalGoals}
+                                                            onChange={(e) => setBetTotalGoals(e.target.value)}
+                                                            className="w-16 h-8 text-center text-sm font-bold bg-amber-500/10 border-amber-500/30 focus:border-amber-500 text-amber-50"
+                                                            placeholder="Ex: 3"
+                                                        />
+                                                        <Button 
+                                                            size="icon" 
+                                                            variant="ghost" 
+                                                            className={cn(
+                                                                "h-8 w-8 transition-colors",
+                                                                justSaved ? "text-green-500" : "text-amber-500 hover:bg-amber-500/20 hover:text-amber-400"
+                                                            )}
+                                                            onClick={handleSavePrediction}
+                                                            disabled={saving || betHome === "" || betAway === "" || betTotalGoals === ""}
+                                                        >
+                                                            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : justSaved ? <CheckCircle2 className="h-4 w-4" /> : <Save className="h-4 w-4" />}
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
                                         {(predictionCreatedAt || predictionUpdatedAt) && (
                                             <div className="flex items-center gap-1 mt-1 text-[9px] text-muted-foreground font-medium opacity-70">

@@ -9,6 +9,29 @@ export type Json =
 export interface Database {
     public: {
         Tables: {
+            championship_phase_rules: {
+                Row: {
+                    id: string
+                    championship_id: string
+                    phase: string
+                    combo_tokens: number
+                    created_at: string
+                }
+                Insert: {
+                    id?: string
+                    championship_id: string
+                    phase: string
+                    combo_tokens?: number
+                    created_at?: string
+                }
+                Update: {
+                    id?: string
+                    championship_id?: string
+                    phase?: string
+                    combo_tokens?: number
+                    created_at?: string
+                }
+            }
             profiles: {
                 Row: {
                     id: string
@@ -130,6 +153,7 @@ export interface Database {
                     match_id: string
                     home_score: number
                     away_score: number
+                    is_combo?: boolean | null
                     points: number
                     created_at: string
                 }
@@ -139,6 +163,7 @@ export interface Database {
                     match_id: string
                     home_score: number
                     away_score: number
+                    is_combo?: boolean | null
                     points?: number
                     created_at?: string
                     updated_at?: string
@@ -149,6 +174,7 @@ export interface Database {
                     match_id?: string
                     home_score?: number
                     away_score?: number
+                    is_combo?: boolean | null
                     points?: number
                     created_at?: string
                     updated_at?: string
