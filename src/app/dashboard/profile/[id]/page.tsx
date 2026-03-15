@@ -148,13 +148,15 @@ export default function PublicProfilePage() {
             filteredPreds = userPredictions.filter((p: any) => p.championship_id === selectedChampionship);
         }
 
-        let points = 0;
+        let pontos = 0;
         let buchas = 0;
         let situacao = 0;
         let erros = 0;
+        let combo = 0;
+        let bonus = 0;
 
         filteredPreds.forEach((p: any) => {
-            points += (p.points || 0);
+            pontos += (p.points || 0);
 
             const match = p.matches;
             if (match && match.score_home !== null && match.score_away !== null) {
@@ -166,20 +168,29 @@ export default function PublicProfilePage() {
                 const winP = ph > pa ? 1 : (ph < pa ? 2 : 0);
                 const winM = mh > ma ? 1 : (mh < ma ? 2 : 0);
 
-                if (ph === mh && pa === ma) {
+                const isExact = ph === mh && pa === ma;
+                const hitGoals = p.is_combo && p.combo_total_goals === (mh + ma);
+
+                if (isExact) {
                     buchas++;
-                } else if (winP === winM) {
-                    situacao++;
+                    if (hitGoals) combo++;
                 } else {
-                    erros++;
+                    if (winP === winM) situacao++;
+                    if (hitGoals) bonus++;
+                    if (winP !== winM && !hitGoals) erros++;
                 }
             }
         });
 
-        return { points, buchas, situacao, combo: 0, bonus: 0, gols: 0, erros };
+        return { points: pontos, buchas, situacao, combo, bonus, erros };
     };
 
     const filteredStats = getFilteredStats();
+
+    const champObj = championships.find(c => c.id === selectedChampionship);
+    const comboEnabledForChamp = selectedChampionship === 'all' 
+        ? championships.some(c => c.settings?.comboEnabled)
+        : !!champObj?.settings?.comboEnabled;
 
     if (loading) {
         return <div className="flex justify-center p-8"><Loader2 className="h-8 w-8 animate-spin" /></div>;
@@ -257,13 +268,12 @@ export default function PublicProfilePage() {
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
                         <StatCard title="Pontos" value={filteredStats.points} icon={<Gamepad2 className="h-4 w-4" />} color="bg-muted" text="text-foreground" description="Total de pontos no campeonato" />
                         <StatCard title="Buchas" value={filteredStats.buchas} icon={<Target className="h-4 w-4" />} color="bg-green-600" description="Placares cravados" link={`/dashboard/history?championship=${selectedChampionship}&user=${id}&type=bucha`} />
                         <StatCard title="Situação" value={filteredStats.situacao} icon={<CheckCircle className="h-4 w-4" />} color="bg-blue-600" description="Vencedor/Empate corretos" link={`/dashboard/history?championship=${selectedChampionship}&user=${id}&type=situacao`} />
-                        {filteredStats.combo > 0 && <StatCard title="Combo" value={filteredStats.combo} icon={<Gem className="h-4 w-4" />} color="bg-yellow-500" description="Bucha + Gols" />}
-                        {filteredStats.bonus > 0 && <StatCard title="Bônus" value={filteredStats.bonus} icon={<Trophy className="h-4 w-4" />} color="bg-slate-300" text="text-slate-900" description="Situação + Gols" />}
-                        {filteredStats.gols > 0 && <StatCard title="Gols" value={filteredStats.gols} icon={<Goal className="h-4 w-4" />} color="bg-purple-600" description="Acerto apenas nos gols" />}
+                        {comboEnabledForChamp && <StatCard title="Combo (Dourada)" value={filteredStats.combo} icon={<Gem className="h-4 w-4" />} color="bg-yellow-500" description="Bucha + Gols da Ficha" link={`/dashboard/history?championship=${selectedChampionship}&user=${id}&type=combo`} />}
+                        {comboEnabledForChamp && <StatCard title="Bônus (Prata)" value={filteredStats.bonus} icon={<Trophy className="h-4 w-4" />} color="bg-slate-300" text="text-slate-900" description="Acerto exato dos Gols da Ficha" link={`/dashboard/history?championship=${selectedChampionship}&user=${id}&type=bonus`} />}
                         <StatCard title="Erros" value={filteredStats.erros} icon={<XCircle className="h-4 w-4" />} color="bg-red-600" description="Palpites sem pontuação" link={`/dashboard/history?championship=${selectedChampionship}&user=${id}&type=erro`} />
                     </div>
                 </div>

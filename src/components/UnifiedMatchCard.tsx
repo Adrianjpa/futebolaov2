@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase";
 import { Card, CardContent } from "@/components/ui/card";
 import { format, isToday, isTomorrow, isYesterday, differenceInMinutes, differenceInHours, parseISO, isPast } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Calendar, ChevronDown, ChevronUp, CheckCircle2, Edit, Loader2, Trophy, Users, Clock, Save, UserX, AlertTriangle } from "lucide-react";
+import { Calendar, ChevronDown, ChevronUp, CheckCircle2, Edit, Loader2, Trophy, Users, Clock, Save, UserX, AlertTriangle, Star, History, Gem } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -106,11 +106,46 @@ export function UnifiedMatchCard({
     const [initialComboActive, setInitialComboActive] = useState<boolean>(false);
     const [betTotalGoals, setBetTotalGoals] = useState<string>("");
 
+    // --- USER RESULT COLOR (Live & Finished) ---
+    // Computes the border/background of the main card based on the logged-in user's prediction outcome.
+    const userResultClass = useMemo(() => {
+        if (!user || (!isLive && !isFinished)) return "";
+        if (betHome === "" || betAway === "") return "";
+        if (match.score_home === null || match.score_home === undefined) return "";
+        if (match.score_away === null || match.score_away === undefined) return "";
+
+        const ph = parseInt(betHome, 10);
+        const pa = parseInt(betAway, 10);
+        const mh = match.score_home as number;
+        const ma = match.score_away as number;
+
+        if (isNaN(ph) || isNaN(pa)) return "";
+
+        const winP = ph > pa ? 1 : (ph < pa ? 2 : 0);
+        const winM = mh > ma ? 1 : (mh < ma ? 2 : 0);
+        const isExact = ph === mh && pa === ma;
+        const comboHit = isComboActive && betTotalGoals !== "" && parseInt(betTotalGoals, 10) === (mh + ma);
+
+        if (isExact && comboHit)
+            return "border-yellow-500/60 shadow-[0_0_18px_-3px_rgba(234,179,8,0.35)] bg-yellow-950/20";
+        if (isExact)
+            return "border-emerald-500/50 shadow-[0_0_18px_-3px_rgba(16,185,129,0.25)] bg-emerald-950/20";
+        if (!isExact && comboHit)
+            return "border-slate-400/50 shadow-[0_0_18px_-3px_rgba(148,163,184,0.25)] bg-slate-700/10";
+        if (winP === winM)
+            return "border-blue-500/50 shadow-[0_0_18px_-3px_rgba(59,130,246,0.2)] bg-blue-950/20";
+        return "border-red-500/50 shadow-[0_0_18px_-3px_rgba(239,68,68,0.2)] bg-red-950/20";
+    }, [user, isLive, isFinished, betHome, betAway, isComboActive, betTotalGoals, match.score_home, match.score_away]);
+    // -------------------------------------------
+
     // Effect to load user's prediction into inputs
+    // Runs when showBetButton=true (betting mode) OR when the match is live/finished (to compute card color)
     useEffect(() => {
         const fetchUserPrediction = async () => {
-            if (!user || !showBetButton) return;
-            const { data, error } = await supabase
+            if (!user) return;
+            // Fetch if betting mode OR if game is live/finished (for card color display)
+            if (!showBetButton && !isLive && !isFinished) return;
+            const { data } = await supabase
                 .from("predictions")
                 .select("home_score, away_score, updated_at, created_at, is_combo, combo_total_goals")
                 .eq("match_id", match.id)
@@ -139,7 +174,7 @@ export function UnifiedMatchCard({
             }
         };
         fetchUserPrediction();
-    }, [user, match.id, showBetButton, supabase]);
+    }, [user, match.id, showBetButton, isLive, isFinished, supabase]);
 
     // --- HIGHLANDER LOGIC (Strict Priority) ---
     // Calculates the "Highlander" winners: Find the highest ranking team that was selected,
@@ -443,7 +478,7 @@ export function UnifiedMatchCard({
                     "group relative overflow-hidden transition-all duration-300 border bg-card shadow-lg",
                     isFutureBlock ? "opacity-60 grayscale-[50%] cursor-not-allowed border-slate-800" : "border-border dark:border-slate-800 dark:bg-slate-950/50",
                     !isFutureBlock && canViewPredictions ? "hover:bg-muted/50 dark:hover:bg-slate-900/80 cursor-pointer" : "",
-                    !isFutureBlock && urgencyClass
+                    !isFutureBlock && (userResultClass || urgencyClass)
                 )}
                 onClick={isFutureBlock ? undefined : handleToggleExpand}
             >
@@ -845,10 +880,11 @@ export function UnifiedMatchCard({
                                         const isZero = isComputed && points === 0;
                                         const isExact = isComputed && !isLive && (pred.home_score === match.score_home && pred.away_score === match.score_away);
 
-                                        // TODO: Implementar lógica de fichas/combo/bonus
-                                        const isGoalsOnly = false; // Roxo (Placeholder)
-                                        const isCombo = false; // Dourado (Placeholder)
-                                        const isBonus = false; // Prata (Placeholder)
+                                        const hitGoals = pred.is_combo && pred.combo_total_goals === ((match.score_home ?? 0) + (match.score_away ?? 0));
+                                        
+                                        const isCombo = isExact && hitGoals;
+                                        const isBonus = !isExact && hitGoals;
+                                        const usedToken = pred.is_combo;
 
                                         let bgClass = "";
                                         let badgeClass = "";
@@ -857,20 +893,17 @@ export function UnifiedMatchCard({
                                             bgClass = "bg-slate-900/40 border-slate-800/60 hover:bg-slate-900/60";
                                             badgeClass = "hidden"; // Esconde o badge de pontos para jogos futuros
                                         } else if (isCombo) {
-                                            bgClass = "bg-yellow-900/60 border-yellow-600/60 hover:bg-yellow-800/60";
-                                            badgeClass = "bg-yellow-500 text-black font-bold";
+                                            bgClass = "bg-yellow-900/40 border-yellow-600/40 hover:bg-yellow-800/40 shadow-[0_0_10px_rgba(234,179,8,0.1)]";
+                                            badgeClass = "bg-gradient-to-br from-yellow-300 to-yellow-600 text-black shadow-lg shadow-yellow-900/20 ring-1 ring-yellow-400/50 scale-105";
                                         } else if (isBonus) {
-                                            bgClass = "bg-slate-700/60 border-slate-500/60 hover:bg-slate-600/60";
-                                            badgeClass = "bg-slate-200 text-black font-bold";
+                                            bgClass = "bg-slate-700/60 border-slate-400/50 hover:bg-slate-600/60";
+                                            badgeClass = "bg-gradient-to-br from-slate-200 to-slate-400 text-black shadow-md ring-1 ring-slate-300/50";
                                         } else if (isZero) {
                                             bgClass = "bg-red-950/60 border-red-800/60 hover:bg-red-900/50";
                                             badgeClass = "bg-red-600 text-white font-bold";
                                         } else if (isExact) {
                                             bgClass = "bg-emerald-950/60 border-emerald-600/60 hover:bg-emerald-900/50 shadow-[0_0_15px_rgba(16,185,129,0.15)]";
-                                            badgeClass = "bg-emerald-500 text-white font-bold shadow-lg shadow-emerald-900/20 ring-1 ring-emerald-400/50 scale-110";
-                                        } else if (isGoalsOnly) {
-                                            bgClass = "bg-purple-900/50 border-purple-600/50 hover:bg-purple-800/50";
-                                            badgeClass = "bg-purple-500 text-white font-bold";
+                                            badgeClass = "bg-emerald-500 text-white shadow-lg shadow-emerald-900/20 ring-1 ring-emerald-400/50 scale-110";
                                         } else {
                                             bgClass = "bg-blue-950/50 border-blue-800/50 hover:bg-blue-900/50";
                                             badgeClass = "bg-blue-600 text-white font-bold";
@@ -1054,15 +1087,28 @@ export function UnifiedMatchCard({
                                                 </div>
 
                                                 {/* Center: Score */}
-                                                <div className="flex justify-center">
+                                                <div className="flex justify-center flex-col sm:flex-row items-center gap-1 sm:gap-3">
                                                     <div className="font-mono font-bold text-lg text-white tracking-widest bg-black/20 px-3 py-1 rounded-lg whitespace-nowrap">
                                                         {pred.home_score} - {pred.away_score}
                                                     </div>
                                                 </div>
 
                                                 {/* Right: Points Badge */}
-                                                <div className="flex justify-end">
-                                                    <div className={`h-7 w-7 rounded-full flex items-center justify-center text-xs font-bold shadow-sm shrink-0 ${badgeClass}`}>
+                                                <div className="flex justify-end items-center gap-2">
+                                                    {usedToken && (
+                                                        <Tooltip>
+                                                            <TooltipTrigger asChild>
+                                                                <div className="flex justify-center items-center gap-1 opacity-70 hover:opacity-100 transition-opacity bg-background/50 px-1.5 py-0.5 rounded cursor-help">
+                                                                    <Gem className="h-3 w-3 text-cyan-400" />
+                                                                    <span className="text-[11px] font-bold font-mono text-cyan-200">{pred.combo_total_goals}G</span>
+                                                                </div>
+                                                            </TooltipTrigger>
+                                                            <TooltipContent className="bg-slate-900 text-white border-slate-800">
+                                                                Ficha utilizada prevendo <span className="text-cyan-400 font-bold">{pred.combo_total_goals}</span> gols na partida.
+                                                            </TooltipContent>
+                                                        </Tooltip>
+                                                    )}
+                                                    <div className={`h-7 w-7 rounded-full flex items-center justify-center text-[13px] font-black shadow-sm shrink-0 transition-all ${badgeClass}`}>
                                                         {isZero ? "0" : `+${points}`}
                                                     </div>
                                                 </div>

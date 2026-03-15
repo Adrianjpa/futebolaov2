@@ -165,11 +165,17 @@ export default function HistoryClient() {
 
                     const isBucha = ph === mh && pa === ma;
                     const isSituacao = !isBucha && winP === winM;
-                    const isErro = winP !== winM;
+                    const isErro = winP !== winM && !(p.is_combo && p.combo_total_goals === mh + ma);
+
+                    const hitGoals = p.is_combo && p.combo_total_goals === (mh + ma);
+                    const isCombo = isBucha && hitGoals;
+                    const isBonus = !isBucha && hitGoals;
 
                     if (paramType === "bucha" && !isBucha) return null;
                     if (paramType === "situacao" && !isSituacao) return null;
                     if (paramType === "erro" && !isErro) return null;
+                    if (paramType === "combo" && !isCombo) return null;
+                    if (paramType === "bonus" && !isBonus) return null;
 
                     const champ = champMap.get(m.championship_id);
                     return {
@@ -274,9 +280,11 @@ export default function HistoryClient() {
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <h1 className="text-3xl font-bold tracking-tight">
                     {paramType === 'bucha' ? 'Minhas Buchas' :
-                        paramType === 'situacao' ? 'Minhas Situações' :
-                            paramType === 'erro' ? 'Meus Erros' :
-                                'Histórico de Partidas'}
+                     paramType === 'situacao' ? 'Minhas Situações' :
+                     paramType === 'erro' ? 'Meus Erros' :
+                     paramType === 'combo' ? 'Meus Combos (Dourada)' :
+                     paramType === 'bonus' ? 'Meus Bônus (Prata)' :
+                     'Histórico de Partidas'}
                 </h1>
 
                 {hasHistory && (
