@@ -506,40 +506,31 @@ export function UnifiedMatchCard({
             >
                 <CardContent className="p-3 sm:p-6 relative min-h-[160px] flex flex-col justify-center">
                     {/* 1. TOP INFO BAR (Responsive) */}
-                    <div className="flex items-center justify-between w-full mb-2 sm:mb-6 relative px-1 sm:px-2">
+                    <div className="flex items-center justify-between w-full mb-2 sm:mb-6 px-1 sm:px-2">
+                        
                         {/* LEFT: Trophy Icon/Championship Logo (Mobile) or Round (Desktop) */}
-                        <div className="flex-1 flex justify-start items-center">
-                            <div className="md:hidden flex items-center">
+                        <div className="flex flex-1 justify-start items-center overflow-hidden">
+                            <div className="md:hidden flex items-center shrink-0">
                                 {(match.championshipLogoUrl || match.championship_logo) ? (
                                     <img src={match.championshipLogoUrl || match.championship_logo} className="h-5 w-5 object-contain" alt="champ" />
                                 ) : (
                                     <Trophy className="h-5 w-5 text-blue-500" />
                                 )}
                             </div>
-                            <div className="hidden md:flex items-center gap-2">
-                                <span className="text-[11px] font-bold text-muted-foreground bg-muted dark:bg-slate-800/40 px-2.5 py-1 rounded-md border border-border dark:border-slate-700/50 uppercase">
+                            <div className="hidden md:flex items-center shrink-0">
+                                <span className="text-[11px] font-bold text-muted-foreground bg-muted dark:bg-slate-800/40 px-2.5 py-1 rounded-md border border-border dark:border-slate-700/50 uppercase whitespace-nowrap">
                                     {translateRoundName(match.round_name || match.round)}
                                 </span>
-                                {/* COMBO TOKENS COUNTER (Header Level) */}
-                                {comboEnabled && totalPhaseTokens > 0 && !isAdmin && showBetButton && (
-                                    <div className="flex items-center gap-1 text-[9px] sm:text-[10px] font-bold px-2 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-500 ml-auto sm:ml-0">
-                                        🌟 
-                                        <span className={availableComboTokens === 0 ? "opacity-50" : "text-amber-400 font-black"}>
-                                            {availableComboTokens}
-                                        </span>
-                                        <span className="opacity-40">/ {totalPhaseTokens}</span>
-                                    </div>
-                                )}
                             </div>
                         </div>
 
                         {/* CENTER: Championship Name (Desktop Only) */}
-                        <div className="hidden md:flex absolute left-1/2 -translate-x-1/2 flex flex-col items-center">
+                        <div className="hidden md:flex flex-[2] justify-center px-4 overflow-hidden">
                             <Popover>
                                 <PopoverTrigger asChild onClick={(e) => e.stopPropagation()}>
-                                    <button className="outline-none group/champ">
+                                    <button className="outline-none group/champ w-full truncate">
                                         <span className="text-[11px] font-bold text-blue-600 dark:text-blue-500 uppercase tracking-[0.25em] text-center whitespace-nowrap">
-                                            {match.championshipName || "PREMIER LEAGUE 25/26"}
+                                            {showChampionshipName ? match.championshipName || "CAMPEONATO" : ""}
                                         </span>
                                     </button>
                                 </PopoverTrigger>
@@ -549,8 +540,19 @@ export function UnifiedMatchCard({
                             </Popover>
                         </div>
 
-                        {/* RIGHT: Status Badge & Edit Button */}
-                        <div className="flex-1 flex items-center justify-end gap-2">
+                        {/* RIGHT: Combo Tokens, Status Badge & Edit Button */}
+                        <div className="flex-1 flex justify-end flex-wrap items-center gap-2">
+                            {/* COMBO TOKENS COUNTER (Visible on both Native layout and Mobile opposite to logo) */}
+                            {comboEnabled && totalPhaseTokens > 0 && !isAdmin && showBetButton && (
+                                <div className="flex items-center gap-1 text-[9px] sm:text-[10px] font-bold px-2 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-500 whitespace-nowrap shrink-0">
+                                    🌟 
+                                    <span className={availableComboTokens === 0 ? "opacity-50" : "text-amber-400 font-black"}>
+                                        {availableComboTokens}
+                                    </span>
+                                    <span className="opacity-40">/ {totalPhaseTokens}</span>
+                                </div>
+                            )}
+
                             {canEdit && !isEditing && (
                                 <Button
                                     size="icon"
@@ -574,11 +576,16 @@ export function UnifiedMatchCard({
                         </div>
                     )}
 
-                    {/* 2. MOBILE ONLY: Round (Centered) */}
-                    <div className="md:hidden flex justify-center mb-4">
+                    {/* 2. MOBILE ONLY: Round (Centered) + Desktop Fallback Name if not absolute */}
+                    <div className="md:hidden flex flex-col items-center justify-center mb-4 gap-1">
                         <span className="text-[11px] font-bold text-muted-foreground/80 dark:text-slate-400/80 uppercase">
                             {translateRoundName(match.round_name || match.round)}
                         </span>
+                        {showChampionshipName && (
+                             <span className="text-[10px] font-bold text-blue-600/70 dark:text-blue-500/70 uppercase tracking-widest text-center truncate px-4">
+                                {match.championshipName || "CAMPEONATO"}
+                             </span>
+                        )}
                     </div>
 
                     {/* 3. MAIN TEAMS AREA */}

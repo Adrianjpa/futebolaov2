@@ -24,7 +24,19 @@ const TEAM_ISO_MAP: Record<string, string> = {
     'Senegal': 'sn', 'Marrocos': 'ma', 'Irã': 'ir', 'Egito': 'eg',
     'Arábia Saudita': 'sa', 'Austrália': 'au', 'Islândia': 'is', 'Peru': 'pe',
     'Nigéria': 'ng', 'Costa Rica': 'cr', 'Sérvia': 'rs', 'Coréia do Sul': 'kr',
-    'Panamá': 'pa', 'Tunísia': 'tn', 'Turquia': 'tr', 'Áustria': 'at'
+    'Panamá': 'pa', 'Tunísia': 'tn', 'Turquia': 'tr', 'Áustria': 'at',
+    'Chile': 'cl', 'Paraguai': 'py'
+};
+
+const CATEGORY_MAP: Record<string, string> = {
+    "world_cup": "Copa do Mundo",
+    "euro": "Eurocopa",
+    "copa_america": "Copa América",
+    "brasileirao": "Brasileirão",
+    "libertadores": "Libertadores",
+    "champions_league": "Champions League",
+    "nacional": "Nacional",
+    "other": "Outros"
 };
 
 interface UserProfile {
@@ -389,7 +401,7 @@ export default function RankingPage() {
                                 <SelectContent>
                                     <SelectItem value="all">Todos os Agrupamentos</SelectItem>
                                     {categories.map((cat: any) => (
-                                        <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                                        <SelectItem key={cat} value={cat}>{CATEGORY_MAP[cat] || cat}</SelectItem>
                                     ))}
                                 </SelectContent>
                             </Select>

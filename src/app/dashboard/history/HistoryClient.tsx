@@ -80,17 +80,18 @@ export default function HistoryClient() {
             const champs = (allChamps || []) as Championship[];
             setChampionships(champs);
 
-            // 2. Fetch User Participation
+            // 2. Fetch Target User Participation
+            const targetUserId = paramUser || currentUser.id;
             const { data: participation } = await (supabase.from("championship_participants") as any)
                 .select("championship_id")
-                .eq("user_id", currentUser.id);
+                .eq("user_id", targetUserId);
 
             const participatedIds = (participation || []).map((p: any) => p.championship_id);
 
             // 3. User might have predictions elsewhere
             const { data: predChamps } = await (supabase.from("predictions") as any)
                 .select("matches(championship_id)")
-                .eq("user_id", currentUser.id);
+                .eq("user_id", targetUserId);
 
             const predictedIds = Array.from(new Set((predChamps || []).map((p: any) => p.matches?.championship_id).filter(Boolean)));
             const allUserChampIds = Array.from(new Set([...participatedIds, ...predictedIds]));
@@ -108,7 +109,7 @@ export default function HistoryClient() {
                 const champ = champs.find((c: Championship) => c.id === paramChamp);
                 if (champ?.category) setSelectedCategory(champ.category);
                 setSelectedChampionship(paramChamp);
-            } else if (isAdmin && champs.length > 0) {
+            } else if (isAdmin && !paramUser && champs.length > 0) {
                 // DEFAULT for Admin: Newest championship overall
                 setSelectedChampionship(champs[0].id);
                 setSelectedCategory(champs[0].category || "all");
@@ -122,7 +123,7 @@ export default function HistoryClient() {
             }
         };
         fetchInitialData();
-    }, [currentUser]);
+    }, [currentUser, paramUser]);
 
     const fetchMatches = async (page: number) => {
         setLoading(true);
@@ -134,6 +135,23 @@ export default function HistoryClient() {
             let formattedMatches: Match[] = [];
             let totalCount = 0;
 
+            // Determine valid championship IDs based on category and user participation
+            const targetChamps = (isAdmin && !paramUser ? championships : userChampionships)
+                .filter(c => selectedCategory === "all" || (c.category || "other") === selectedCategory);
+            const activeChampionshipIds = targetChamps.map(c => c.id);
+
+            // If a specific championship is chosen but the user is not a participant (and is not an admin viewing globally), return empty!
+            if (selectedChampionship !== "all" && !activeChampionshipIds.includes(selectedChampionship)) {
+                setMatches([]);
+                setTotalCount(0);
+                setIsLastPage(true);
+                setLoading(false);
+                return;
+            }
+
+            // Ensure we don't send an empty array to an 'in' filter which causes errors
+            const safeChampIds = activeChampionshipIds.length > 0 ? activeChampionshipIds : ['00000000-0000-0000-0000-000000000000'];
+
             // If we have a user AND a type filter, we MUST fetch all to filter correctly client-side
             if (paramUser && paramType) {
                 let query = (supabase.from("predictions") as any)
@@ -142,6 +160,8 @@ export default function HistoryClient() {
 
                 if (selectedChampionship !== "all") {
                     query = query.filter("matches.championship_id", "eq", selectedChampionship);
+                } else {
+                    query = query.in("matches.championship_id", safeChampIds);
                 }
 
                 query = query.order("date", { foreignTable: "matches", ascending: false });
@@ -197,14 +217,19 @@ export default function HistoryClient() {
                     query = query.order("date", { foreignTable: "matches", ascending: false });
                     if (selectedChampionship !== "all") {
                         query = query.filter("matches.championship_id", "eq", selectedChampionship);
+                    } else {
+                        query = query.in("matches.championship_id", safeChampIds);
                     }
                 } else {
+                    // Logged in user querying global matches (must be restricted to their valid participation!)
                     query = (supabase.from("matches") as any)
                         .select("*", { count: "exact" })
                         .eq("status", "finished")
                         .order("date", { ascending: false });
                     if (selectedChampionship !== "all") {
                         query = query.eq("championship_id", selectedChampionship);
+                    } else {
+                        query = query.in("championship_id", safeChampIds);
                     }
                 }
 
@@ -272,8 +297,8 @@ export default function HistoryClient() {
 
     const availableCategories = Array.from(new Set(championships.map((c: Championship) => c.category || "other"))).sort();
     const filteredChampionships = selectedCategory === "all"
-        ? (isAdmin ? championships : userChampionships)
-        : (isAdmin ? championships : userChampionships).filter((c: Championship) => (c.category || "other") === selectedCategory);
+        ? championships
+        : championships.filter((c: Championship) => (c.category || "other") === selectedCategory);
 
     return (
         <div className="space-y-6">
