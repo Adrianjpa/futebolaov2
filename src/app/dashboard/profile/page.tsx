@@ -142,9 +142,9 @@ export default function ProfilePage() {
                 }).length;
 
                 // 6. Calculate Disputed Championships
-                // Disputed = Linked championships that are FINISHED
+                // Disputed = Linked championships that are FINISHED or ARCHIVED
                 const championshipsDisputed = (allChamps || []).filter((c: any) => {
-                    const isFinished = c.status === 'finalizado' || c.status === 'finished';
+                    const isFinished = c.status === 'finalizado' || c.status === 'finished' || c.status === 'arquivado';
                     if (!isFinished) return false;
 
                     // Check Join Table

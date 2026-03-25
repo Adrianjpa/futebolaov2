@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect } from "react";
-import { Check, ChevronsUpDown, X, Settings, BookOpen, Shield, Users, Trophy, Image as ImageIcon, AlertCircle, Upload, Calendar as CalendarIcon, Save, Loader2, Plus, Award } from "lucide-react";
+import { Check, ChevronsUpDown, ChevronUp, ChevronDown, X, Settings, BookOpen, Shield, Users, Trophy, Image as ImageIcon, AlertCircle, Upload, Calendar as CalendarIcon, Save, Loader2, Plus, Award } from "lucide-react";
 import { createClient } from "@/lib/supabase";
 import * as z from "zod";
 import { useForm } from "react-hook-form";
@@ -69,6 +69,8 @@ const formSchema = z.object({
     ghostPlayer: z.boolean().default(false),
     selectionSlots: z.coerce.number().min(0).default(3).optional(),
     enableSelectionPriority: z.boolean().default(false),
+    enableSelectionTiebreaker: z.boolean().default(false),
+    tiebreakerCriteria: z.array(z.string()).default(['pontos', 'buchas', 'situacoes', 'erros', 'highlander']),
     // Scoring
     exactScorePoints: z.coerce.number().min(0).default(3),
     winnerPoints: z.coerce.number().min(0).default(1),
@@ -147,6 +149,8 @@ export function ChampionshipForm({ initialData, onSubmit, isSubmitting = false, 
             ghostPlayer: initialData?.ghostPlayer ?? false,
             selectionSlots: initialData?.selectionSlots ?? 3,
             enableSelectionPriority: initialData?.enableSelectionPriority ?? false,
+            enableSelectionTiebreaker: initialData?.enableSelectionTiebreaker ?? false,
+            tiebreakerCriteria: initialData?.tiebreakerCriteria || ['pontos', 'buchas', 'situacoes', 'erros', 'highlander'],
             exactScorePoints: initialData?.exactScorePoints ?? 3,
             winnerPoints: initialData?.winnerPoints ?? 1,
             comboEnabled: initialData?.comboEnabled ?? false,
@@ -867,6 +871,83 @@ export function ChampionshipForm({ initialData, onSubmit, isSubmitting = false, 
                                     checked={form.watch("enableSelectionPriority")}
                                     onCheckedChange={(checked) => form.setValue("enableSelectionPriority", checked)}
                                 />
+                            </div>
+
+                            {form.watch("enableSelectionPriority") && (
+                                <div className="flex items-center justify-between rounded-lg border border-purple-500/30 bg-purple-500/5 p-4 mt-2 ml-4">
+                                    <div className="space-y-0.5">
+                                        <Label className="text-base text-purple-600 dark:text-purple-400">Desempate Avançado (Morte Súbita)</Label>
+                                        <p className="text-xs text-muted-foreground">
+                                            Se houver empate na principal escolha, verifica as próximas seleções escolhidas na ordem para desempatar.
+                                        </p>
+                                    </div>
+                                    <Switch
+                                        checked={form.watch("enableSelectionTiebreaker")}
+                                        onCheckedChange={(checked) => form.setValue("enableSelectionTiebreaker", checked)}
+                                    />
+                                </div>
+                            )}
+
+                            <div className="rounded-lg border p-4 bg-background">
+                                <div className="flex items-center justify-between mb-4">
+                                    <div className="space-y-0.5">
+                                        <Label className="font-semibold text-base">Critérios de Desempate (Prioridade)</Label>
+                                        <p className="text-xs text-muted-foreground">Reordene usando as setas do lado direito.</p>
+                                    </div>
+                                </div>
+                                <ul className="space-y-2 text-sm text-foreground">
+                                    {form.watch("tiebreakerCriteria")?.map((criteria, index, arr) => {
+                                        let label = criteria;
+                                        if (criteria === 'pontos') label = 'Pontuação Geral';
+                                        if (criteria === 'buchas') label = 'Maior nº de Cravadas (Buchas)';
+                                        if (criteria === 'situacoes') label = 'Maior nº de Situações';
+                                        if (criteria === 'erros') label = 'Menor nº de Erros';
+                                        if (criteria === 'highlander') label = 'Melhor Posição na Escolha do Campeão';
+
+                                        return (
+                                            <li key={criteria} className="flex items-center justify-between border p-2 rounded bg-muted/20">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="font-bold text-muted-foreground w-4">{index + 1}.</span>
+                                                    <span className={criteria === 'highlander' ? 'font-medium text-purple-600 dark:text-purple-400' : ''}>{label}</span>
+                                                </div>
+                                                <div className="flex items-center space-x-1">
+                                                    <Button
+                                                        type="button"
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-6 w-6"
+                                                        disabled={index === 0}
+                                                        onClick={() => {
+                                                            const nArr = [...arr];
+                                                            const temp = nArr[index - 1];
+                                                            nArr[index - 1] = nArr[index];
+                                                            nArr[index] = temp;
+                                                            form.setValue("tiebreakerCriteria", nArr, { shouldDirty: true });
+                                                        }}
+                                                    >
+                                                        <ChevronUp className="h-4 w-4" />
+                                                    </Button>
+                                                    <Button
+                                                        type="button"
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-6 w-6"
+                                                        disabled={index === arr.length - 1}
+                                                        onClick={() => {
+                                                            const nArr = [...arr];
+                                                            const temp = nArr[index + 1];
+                                                            nArr[index + 1] = nArr[index];
+                                                            nArr[index] = temp;
+                                                            form.setValue("tiebreakerCriteria", nArr, { shouldDirty: true });
+                                                        }}
+                                                    >
+                                                        <ChevronDown className="h-4 w-4" />
+                                                    </Button>
+                                                </div>
+                                            </li>
+                                        );
+                                    })}
+                                </ul>
                             </div>
 
                             {form.watch("comboEnabled") && (

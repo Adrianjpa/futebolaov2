@@ -61,6 +61,7 @@ export default function RankingPage() {
     // Features for Flags
     const [officialRanking, setOfficialRanking] = useState<string[]>([]);
     const [enablePriority, setEnablePriority] = useState<boolean>(true);
+    const [enableTiebreaker, setEnableTiebreaker] = useState<boolean>(false);
     const [participantsData, setParticipantsData] = useState<Map<string, string[]>>(new Map());
 
     const isAdmin = profile?.funcao === "admin" || profile?.funcao === "moderator";
@@ -134,9 +135,6 @@ export default function RankingPage() {
                 .eq("championship_id", selectedChampionship);
 
             if (error) throw error;
-            setUsers(rankingData || []);
-
-            // 2. Fetch Championship Settings (for Rules)
             const { data: champ } = await supabase
                 .from("championships")
                 .select("settings")
@@ -144,8 +142,30 @@ export default function RankingPage() {
                 .single();
 
             const settings = (champ as any)?.settings || {};
+
+            let sortedData = rankingData || [];
+            const tiebreakers = settings.tiebreakerCriteria || ['pontos', 'buchas', 'situacoes', 'erros', 'highlander'];
+
+            sortedData.sort((a: any, b: any) => {
+                for (const criteria of tiebreakers) {
+                    if (criteria === 'pontos') {
+                        if (b.total_points !== a.total_points) return b.total_points - a.total_points;
+                    } else if (criteria === 'buchas') {
+                        if (b.exact_scores !== a.exact_scores) return (b.exact_scores || 0) - (a.exact_scores || 0);
+                    } else if (criteria === 'situacoes') {
+                        if (b.outcomes !== a.outcomes) return (b.outcomes || 0) - (a.outcomes || 0);
+                    } else if (criteria === 'erros') {
+                        if (b.errors !== a.errors) return (a.errors || 0) - (b.errors || 0); // Menos erros é melhor (crescente)
+                    }
+                }
+                return 0;
+            });
+
+            setUsers(sortedData);
+
             setOfficialRanking(settings.officialRanking || []);
             setEnablePriority(settings.enableSelectionPriority ?? true);
+            setEnableTiebreaker(settings.enableSelectionTiebreaker ?? false);
 
             // 3. Fetch Participants Selections (Try Relational Table first)
             const { data: parts, error: partsError } = await supabase
@@ -252,43 +272,58 @@ export default function RankingPage() {
         let winningTeam: string | null = null;
         let winningPriorityIdx = 999;
         let winnersSet = new Set<string>();
+        let matchedAdminTeams = new Set<string>();
 
         if (enablePriority) {
-            // Convert Map to Array for filtering
-            const allParticipantsList = Array.from(participantsData.entries()).map(([uid, selections]) => ({
+            let currentCandidates = Array.from(participantsData.entries()).map(([uid, selections]) => ({
                 userId: uid,
                 teamSelections: selections || []
             }));
 
-            // 1. Iterate Official Ranking (1st -> 2nd -> ...)
-            for (const adminTeam of officialRanking) {
+            // To support recursive tie-breakers
+            for (let i = 0; i < officialRanking.length; i++) {
+                const adminTeam = officialRanking[i];
                 if (!adminTeam) continue;
 
-                // Which users selected this team (in ANY slot)?
-                const usersWithTeam = allParticipantsList.filter(u => u.teamSelections.includes(adminTeam));
+                // Who of the current candidates selected this team?
+                const usersWithTeam = currentCandidates.filter(u => u.teamSelections.includes(adminTeam));
 
                 if (usersWithTeam.length > 0) {
-                    // FOUND THE TOP TEAM THAT HAS BETS.
-                    winningTeam = adminTeam;
+                    matchedAdminTeams.add(adminTeam);
+                    // Record the exact top overall team for visual styling if it's the 1st match
+                    if (!winningTeam) winningTeam = adminTeam;
 
-                    // 2. Find the BEST priority used for this team (Lowest Index = Best)
                     let bestPriority = 999;
                     usersWithTeam.forEach(u => {
                         const idx = u.teamSelections.indexOf(adminTeam);
                         if (idx !== -1 && idx < bestPriority) bestPriority = idx;
                     });
-                    winningPriorityIdx = bestPriority;
+                    
+                    if (winningPriorityIdx === 999) winningPriorityIdx = bestPriority;
 
-                    // 3. Mark only those users who attained this best priority as winners
-                    usersWithTeam.forEach(u => {
-                        if (u.teamSelections.indexOf(adminTeam) === bestPriority) {
-                            winnersSet.add(u.userId);
+                    // Filter candidates down to those who got this best priority
+                    const tiedCandidates = usersWithTeam.filter(u => u.teamSelections.indexOf(adminTeam) === bestPriority);
+
+                    if (!enableTiebreaker) {
+                        // Standard rule: just add them all and stop
+                        tiedCandidates.forEach(u => winnersSet.add(u.userId));
+                        break;
+                    } else {
+                        // Advanced rule: if only 1, they win. If > 1, shrink pool and continue loop
+                        if (tiedCandidates.length === 1) {
+                            winnersSet.add(tiedCandidates[0].userId);
+                            break;
+                        } else {
+                            currentCandidates = tiedCandidates;
+                            // continue loop to next adminTeam to break the tie
                         }
-                    });
-
-                    // STOP. We found the "Highlander" level. No need to check 2nd place or lower priorities.
-                    break;
+                    }
                 }
+            }
+
+            // Fallback if loop ended but tiedCandidates were stuck
+            if (enableTiebreaker && winnersSet.size === 0 && currentCandidates.length > 0) {
+                 currentCandidates.forEach(u => winnersSet.add(u.userId));
             }
         }
 
@@ -298,27 +333,26 @@ export default function RankingPage() {
             const isHit = teamRank !== -1;
 
             const isAbsoluteWinner = enablePriority
-                ? (winnersSet.has(userId) && team === winningTeam && idx === winningPriorityIdx)
+                ? (winnersSet.has(userId) && matchedAdminTeams.has(team))
                 : isHit;
 
             // Visual Logic:
-            // Absolute Winner: Full Opacity, Bounce, Golden Border, Glow
-            // Hit (Legacy/NoPriority): Green Border, Glow
-            // Others (if Priority is On): Dimmed, Grayscale
+            // Absolute Winner: Full Opacity
+            // Hit (Legacy/NoPriority): Full Opacity
+            // Others: Dimmed (Opacity 30%), Grayscale
             return (
                 <Tooltip key={`${userId}-${idx}`}>
                     <TooltipTrigger asChild>
-                        <div className={`relative group/flag transition-all duration-500
-                            ${isAbsoluteWinner ? "opacity-100 scale-125 z-10 drop-shadow-[0_0_8px_rgba(250,204,21,0.8)]" : "opacity-30 grayscale blur-[0.5px] scale-90"}
-                             ${!enablePriority && isHit ? "opacity-100 grayscale-0 blur-0 scale-100 drop-shadow-[0_0_8px_rgba(16,185,129,0.5)] border-emerald-500/50" : ""}
+                        <div className={`relative group/flag transition-all duration-300
+                            ${isAbsoluteWinner ? "opacity-100" : "opacity-30 grayscale"}
+                             ${!enablePriority && isHit ? "opacity-100 grayscale-0" : ""}
                         `}>
                             <img
                                 src={`https://flagcdn.com/w40/${iso}.png`}
                                 alt={team}
                                 className={cn(
-                                    "shadow-sm cursor-help border transition-all",
-                                    teamMode === 'selecoes' ? "h-5 w-5 rounded-full object-cover" : "h-3 w-4.5 rounded-[2px] object-cover",
-                                    isAbsoluteWinner && enablePriority ? `border-yellow-400 border-2` : (!enablePriority && isHit ? `border-emerald-400 border-2` : 'border-white/5')
+                                    "shadow-sm cursor-help transition-all",
+                                    teamMode === 'selecoes' ? "h-5 w-5 rounded-full object-cover" : "h-3 w-4.5 rounded-[2px] object-cover"
                                 )}
                             />
                         </div>

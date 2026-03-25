@@ -362,6 +362,7 @@ export default function HistoryClient() {
                         showBetButton={false}
                         showChampionshipName={selectedChampionship === 'all'}
                         teamMode={match.teamMode as any}
+                        targetUserId={paramUser || undefined}
                     />
                 ))}
 

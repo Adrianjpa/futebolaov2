@@ -39,6 +39,7 @@ interface UnifiedMatchCardProps {
     availableComboTokens?: number;
     totalPhaseTokens?: number;
     isFutureBlock?: boolean;
+    targetUserId?: string;
 }
 
 export function UnifiedMatchCard({
@@ -55,9 +56,11 @@ export function UnifiedMatchCard({
     comboEnabled = false,
     availableComboTokens = 0,
     totalPhaseTokens = 0,
-    isFutureBlock = false
+    isFutureBlock = false,
+    targetUserId
 }: UnifiedMatchCardProps) {
     const { user, profile } = useAuth();
+    const effectiveUserId = targetUserId || user?.id;
     const supabase = createClient();
     const matchDate = parseISO(match.date);
     const now = new Date();
@@ -93,6 +96,7 @@ export function UnifiedMatchCard({
     const [loadingPreds, setLoadingPreds] = useState(false);
     const [participantsData, setParticipantsData] = useState<any[]>([]); // New state for selections
     const [enablePriority, setEnablePriority] = useState<boolean>(true);
+    const [enableTiebreaker, setEnableTiebreaker] = useState<boolean>(false);
     const [officialRanking, setOfficialRanking] = useState<string[]>([]);
     const [showFinalizeDialog, setShowFinalizeDialog] = useState(false);
 
@@ -107,9 +111,9 @@ export function UnifiedMatchCard({
     const [betTotalGoals, setBetTotalGoals] = useState<string>("");
 
     // --- USER RESULT COLOR (Live & Finished) ---
-    // Computes the border/background of the main card based on the logged-in user's prediction outcome.
+    // Computes the border/background of the main card based on the target user's prediction outcome.
     const userResultClass = useMemo(() => {
-        if (!user || (!isLive && !isFinished)) return "";
+        if (!effectiveUserId || (!isLive && !isFinished)) return "";
         if (betHome === "" || betAway === "") return "";
         if (match.score_home === null || match.score_home === undefined) return "";
         if (match.score_away === null || match.score_away === undefined) return "";
@@ -127,29 +131,29 @@ export function UnifiedMatchCard({
         const comboHit = isComboActive && betTotalGoals !== "" && parseInt(betTotalGoals, 10) === (mh + ma);
 
         if (isExact && comboHit)
-            return "border-yellow-500/60 shadow-[0_0_18px_-3px_rgba(234,179,8,0.35)] bg-yellow-950/20";
+            return "bg-yellow-900/40 dark:bg-yellow-900/40 border-yellow-600/40 shadow-[0_0_10px_rgba(234,179,8,0.1)]";
         if (isExact)
-            return "border-emerald-500/50 shadow-[0_0_18px_-3px_rgba(16,185,129,0.25)] bg-emerald-950/20";
+            return "bg-emerald-950/60 dark:bg-emerald-950/60 border-emerald-600/60 shadow-[0_0_15px_rgba(16,185,129,0.15)]";
         if (!isExact && comboHit)
-            return "border-slate-400/50 shadow-[0_0_18px_-3px_rgba(148,163,184,0.25)] bg-slate-700/10";
+            return "bg-slate-700/60 dark:bg-slate-700/60 border-slate-400/50 shadow-[0_0_10px_rgba(148,163,184,0.1)]";
         if (winP === winM)
-            return "border-blue-500/50 shadow-[0_0_18px_-3px_rgba(59,130,246,0.2)] bg-blue-950/20";
-        return "border-red-500/50 shadow-[0_0_18px_-3px_rgba(239,68,68,0.2)] bg-red-950/20";
-    }, [user, isLive, isFinished, betHome, betAway, isComboActive, betTotalGoals, match.score_home, match.score_away]);
+            return "bg-blue-950/50 dark:bg-blue-950/50 border-blue-800/50 shadow-[0_0_10px_rgba(59,130,246,0.1)]";
+        return "bg-red-950/60 dark:bg-red-950/60 border-red-800/60 shadow-[0_0_10px_rgba(239,68,68,0.1)]";
+    }, [effectiveUserId, isLive, isFinished, betHome, betAway, isComboActive, betTotalGoals, match.score_home, match.score_away]);
     // -------------------------------------------
 
     // Effect to load user's prediction into inputs
     // Runs when showBetButton=true (betting mode) OR when the match is live/finished (to compute card color)
     useEffect(() => {
         const fetchUserPrediction = async () => {
-            if (!user) return;
+            if (!effectiveUserId) return;
             // Fetch if betting mode OR if game is live/finished (for card color display)
             if (!showBetButton && !isLive && !isFinished) return;
             const { data } = await supabase
                 .from("predictions")
                 .select("home_score, away_score, updated_at, created_at, is_combo, combo_total_goals")
                 .eq("match_id", match.id)
-                .eq("user_id", user.id)
+                .eq("user_id", effectiveUserId)
                 .maybeSingle();
 
             if (data) {
@@ -174,7 +178,7 @@ export function UnifiedMatchCard({
             }
         };
         fetchUserPrediction();
-    }, [user, match.id, showBetButton, isLive, isFinished, supabase]);
+    }, [effectiveUserId, match.id, showBetButton, isLive, isFinished, supabase]);
 
     // --- HIGHLANDER LOGIC (Strict Priority) ---
     // Calculates the "Highlander" winners: Find the highest ranking team that was selected,
@@ -188,40 +192,56 @@ export function UnifiedMatchCard({
         let winningPriorityIdx: number = 999;
         let winnersSet = new Set<string>();
 
+        let currentCandidates = participantsData;
+
         // 1. Iterate official ranking sequentially (1st -> 2nd -> ...)
-        for (const adminTeam of ranking) {
+        for (let i = 0; i < ranking.length; i++) {
+            const adminTeam = ranking[i];
             if (!adminTeam) continue;
 
-            // Find ALL users who selected this team (regardless of which slot)
-            const usersWithTeam = participantsData.filter(p => (p.teamSelections || []).includes(adminTeam));
+            // Find ALL candidates who selected this team (regardless of which slot)
+            const usersWithTeam = currentCandidates.filter(p => (p.teamSelections || []).includes(adminTeam));
 
             if (usersWithTeam.length > 0) {
-                // FOUND THE BEST TEAM WITH BETS.
-                // According to rules ("Espanha ta na posição 1... se ninguem... ve o 2 lugar"),
-                // we stop at the first team that has any bets.
-                winningTeam = adminTeam;
+                // Record the exact top overall team for visual styling if it's the 1st match
+                if (!winningTeam) winningTeam = adminTeam;
 
-                // 2. Find the BEST priority used (Lowest Index = Best Priority)
+                // 2. Find the BEST priority used (Lowest Index = Best)
                 let bestPriority = 999;
                 usersWithTeam.forEach(u => {
                     const idx = u.teamSelections.indexOf(adminTeam);
                     if (idx !== -1 && idx < bestPriority) bestPriority = idx;
                 });
-                winningPriorityIdx = bestPriority;
+                
+                if (winningPriorityIdx === 999) winningPriorityIdx = bestPriority;
 
-                // 3. Collect winners who matched this best priority
-                usersWithTeam.forEach(u => {
-                    if (u.teamSelections.indexOf(adminTeam) === bestPriority) {
-                        winnersSet.add(u.userId);
+                // 3. Filter candidates down to those who got this best priority
+                const tiedCandidates = usersWithTeam.filter(u => u.teamSelections.indexOf(adminTeam) === bestPriority);
+
+                if (!enableTiebreaker) {
+                    // Standard rule: just add them all and stop
+                    tiedCandidates.forEach(u => winnersSet.add(u.userId));
+                    break;
+                } else {
+                    // Advanced rule: if only 1, they win. If > 1, shrink pool and continue loop
+                    if (tiedCandidates.length === 1) {
+                        winnersSet.add(tiedCandidates[0].userId);
+                        break;
+                    } else {
+                        currentCandidates = tiedCandidates;
+                        // continue loop to next adminTeam to break the tie
                     }
-                });
-
-                // STOP. Winners defined.
-                break;
+                }
             }
         }
+
+        // Fallback if loop ended but tiedCandidates were stuck
+        if (enableTiebreaker && winnersSet.size === 0 && currentCandidates.length > 0) {
+             currentCandidates.forEach(u => winnersSet.add(u.userId));
+        }
+
         return { winningTeam, winningPriorityIdx, winnersSet };
-    }, [officialRanking, participantsData]);
+    }, [officialRanking, participantsData, enableTiebreaker]);
 
     const handleSaveScore = async (e: React.MouseEvent) => {
         e.stopPropagation();
@@ -405,6 +425,7 @@ export function UnifiedMatchCard({
                         setOfficialRanking(ranking);
                         // Force boolean conversion and default to TRUE for Euro legacy
                         setEnablePriority(settings.enableSelectionPriority !== false);
+                        setEnableTiebreaker(settings.enableSelectionTiebreaker || false);
 
                         // 3. Fetch Participants Selections with Fallback
                         let finalParticipants: any[] = [];
@@ -475,10 +496,11 @@ export function UnifiedMatchCard({
         <TooltipProvider delayDuration={0}>
             <Card
                 className={cn(
-                    "group relative overflow-hidden transition-all duration-300 border bg-card shadow-lg",
-                    isFutureBlock ? "opacity-60 grayscale-[50%] cursor-not-allowed border-slate-800" : "border-border dark:border-slate-800 dark:bg-slate-950/50",
-                    !isFutureBlock && canViewPredictions ? "hover:bg-muted/50 dark:hover:bg-slate-900/80 cursor-pointer" : "",
-                    !isFutureBlock && (userResultClass || urgencyClass)
+                    "group relative overflow-hidden transition-all duration-300 border shadow-lg",
+                    isFutureBlock ? "opacity-60 grayscale-[50%] cursor-not-allowed border-slate-800 bg-card dark:bg-slate-950/50" : (userResultClass ? userResultClass : "border-border bg-card dark:border-slate-800 dark:bg-slate-950/50"),
+                    !isFutureBlock && canViewPredictions && !userResultClass ? "hover:bg-muted/50 dark:hover:bg-slate-900/80 cursor-pointer" : "",
+                    !isFutureBlock && canViewPredictions && userResultClass ? "cursor-pointer" : "",
+                    !isFutureBlock && !userResultClass && urgencyClass ? urgencyClass : ""
                 )}
                 onClick={isFutureBlock ? undefined : handleToggleExpand}
             >
@@ -933,156 +955,7 @@ export function UnifiedMatchCard({
                                                         >
                                                             {userProfile?.nickname || userProfile?.nome || "User"}
                                                         </Link>
-                                                        {(() => {
-                                                            const p = participantsData.find(pd =>
-                                                                pd.userId === pred.user_id ||
-                                                                (userProfile?.nickname && pd.nickname === userProfile.nickname) ||
-                                                                (userProfile?.nome && pd.nickname === userProfile.nome)
-                                                            );
-                                                            if (p?.teamSelections?.length > 0) {
-                                                                return (
-                                                                    <div className="flex items-center min-h-[14px]" onClick={(e) => e.stopPropagation()}>
-                                                                        {/* MOBILE: TROPHY (Using Popover for better touch support) */}
-                                                                        <div className="md:hidden">
-                                                                            <Popover>
-                                                                                <PopoverTrigger asChild>
-                                                                                    <Button
-                                                                                        variant="ghost"
-                                                                                        size="icon"
-                                                                                        className="h-5 w-5 p-0 hover:bg-transparent"
-                                                                                        onClick={(e) => e.stopPropagation()}
-                                                                                    >
-                                                                                        <Trophy className="h-3.5 w-3.5 text-yellow-500" />
-                                                                                    </Button>
-                                                                                </PopoverTrigger>
-                                                                                <PopoverContent
-                                                                                    className="bg-slate-900 border-slate-700 p-3 shadow-xl w-48"
-                                                                                    onClick={(e) => e.stopPropagation()}
-                                                                                >
-                                                                                    <div className="space-y-1.5">
-                                                                                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest border-b border-border/50 pb-1 mb-2">Seleções Favoritas</p>
-                                                                                        {(() => {
-                                                                                            const isRankingReady = officialRanking.some(r => r && r !== "");
-                                                                                            if (!isRankingReady) {
-                                                                                                return p.teamSelections.map((team: string, idx: number) => (
-                                                                                                    <div key={idx} className="flex items-center gap-2">
-                                                                                                        <span className="text-[10px] font-mono text-muted-foreground w-4">{idx + 1}º</span>
-                                                                                                        <span className="text-xs font-bold text-slate-100">{team}</span>
-                                                                                                    </div>
-                                                                                                ));
-                                                                                            }
-
-                                                                                            return p.teamSelections.map((team: string, idx: number) => {
-                                                                                                const teamRank = officialRanking.indexOf(team);
-                                                                                                const isHit = teamRank !== -1;
-
-                                                                                                // USE CENTRALIZED HIGHLANDER STATS
-                                                                                                const isAbsoluteWinner = enablePriority
-                                                                                                    ? (highlanderStats?.winnersSet.has(p.userId) && team === highlanderStats.winningTeam && idx === highlanderStats.winningPriorityIdx)
-                                                                                                    : isHit;
-
-                                                                                                let opacityClass = "opacity-40 grayscale";
-                                                                                                let textClass = "text-muted-foreground";
-                                                                                                let statusBadge = null;
-
-                                                                                                if (isAbsoluteWinner) {
-                                                                                                    opacityClass = "opacity-100 grayscale-0";
-                                                                                                    textClass = enablePriority ? "text-yellow-400 font-black drop-shadow-[0_0_8px_rgba(250,204,21,0.5)]" : "text-emerald-400 font-bold";
-                                                                                                    statusBadge = enablePriority ? (
-                                                                                                        <span className="text-[8px] px-1.5 py-0.5 bg-yellow-500/20 text-yellow-500 border border-yellow-500/30 rounded ml-auto flex items-center gap-1 animate-pulse">
-                                                                                                            <Trophy className="h-2 w-2" /> LÍDER
-                                                                                                        </span>
-                                                                                                    ) : (
-                                                                                                        <span className="text-[8px] px-1.5 py-0.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded ml-auto">ACERTOU</span>
-                                                                                                    );
-                                                                                                } else if (!enablePriority && isHit) {
-                                                                                                    opacityClass = "opacity-100 grayscale-0";
-                                                                                                    textClass = "text-emerald-400 font-bold";
-                                                                                                    statusBadge = <span className="text-[8px] px-1.5 py-0.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded ml-auto">ACERTOU</span>;
-                                                                                                }
-
-                                                                                                return (
-                                                                                                    <div key={idx} className={`flex items-center gap-2 transition-all duration-300 ${opacityClass}`}>
-                                                                                                        <span className="text-[10px] font-mono text-muted-foreground w-4">{idx + 1}º</span>
-                                                                                                        <span className={`text-xs ${textClass}`}>{team}</span>
-                                                                                                        {statusBadge}
-                                                                                                    </div>
-                                                                                                );
-                                                                                            });
-                                                                                        })()}
-                                                                                    </div>
-                                                                                </PopoverContent>
-                                                                            </Popover>
-                                                                        </div>
-
-                                                                        {/* DESKTOP: FLAGS SIDE BY SIDE */}
-                                                                        <div className="hidden md:flex items-center gap-1">
-                                                                            {(() => {
-                                                                                const isRankingReady = officialRanking.some(r => r && r !== "");
-                                                                                if (!isRankingReady) {
-                                                                                    return p.teamSelections.map((team: string, idx: number) => {
-                                                                                        const iso = TEAM_ISO_MAP[team] || 'xx';
-                                                                                        return (
-                                                                                            <Tooltip key={idx}>
-                                                                                                <TooltipTrigger asChild>
-                                                                                                    <div className="relative group/flag transition-all duration-300">
-                                                                                                        <img src={`https://flagcdn.com/w40/${iso}.png`} className="h-3 w-4.5 object-cover rounded-[2px] border border-white/5" />
-                                                                                                    </div>
-                                                                                                </TooltipTrigger>
-                                                                                                <TooltipContent className="text-[10px] uppercase font-bold">{idx + 1}º {team}</TooltipContent>
-                                                                                            </Tooltip>
-                                                                                        );
-                                                                                    });
-                                                                                }
-
-                                                                                return p.teamSelections.map((team: string, idx: number) => {
-                                                                                    const iso = TEAM_ISO_MAP[team] || 'xx';
-                                                                                    const teamRank = officialRanking.indexOf(team);
-                                                                                    const isHit = teamRank !== -1;
-
-                                                                                    // USE CENTRALIZED HIGHLANDER STATS
-                                                                                    const isAbsoluteWinner = enablePriority
-                                                                                        ? (highlanderStats?.winnersSet.has(p.userId) && team === highlanderStats.winningTeam && idx === highlanderStats.winningPriorityIdx)
-                                                                                        : isHit; // Fallback to simple hit if priority off
-
-                                                                                    // Simple hit check for visual fallback
-                                                                                    const isSimpleHit = !enablePriority && isHit;
-
-                                                                                    return (
-                                                                                        <Tooltip key={idx}>
-                                                                                            <TooltipTrigger asChild>
-                                                                                                <div className={`relative group/flag transition-all duration-500
-                                                                                                    ${isAbsoluteWinner ? "opacity-100 scale-125 z-10 drop-shadow-[0_0_12px_rgba(250,204,21,0.8)]" : "opacity-20 grayscale blur-[0.5px] scale-90"}
-                                                                                                    ${isSimpleHit ? "opacity-100 grayscale-0 blur-0 scale-100 drop-shadow-[0_0_8px_rgba(16,185,129,0.5)] border-emerald-500/50" : ""}
-                                                                                                `}>
-                                                                                                    <img
-                                                                                                        src={`https://flagcdn.com/w40/${iso}.png`}
-                                                                                                        alt={team}
-                                                                                                        className={`h-3 w-4.5 object-cover rounded-[2px] shadow-sm cursor-help border transition-all ${isAbsoluteWinner ? `border-yellow-400 border-2` : (isSimpleHit ? `border-emerald-400 border-2` : 'border-white/5')}`}
-                                                                                                    />
-                                                                                                    {isAbsoluteWinner && (
-                                                                                                        <div className="absolute -top-1.5 -right-1.5 h-3 w-3 bg-yellow-400 rounded-full border-2 border-slate-950 animate-bounce shadow-[0_0_8px_rgba(250,204,21,1)] flex items-center justify-center">
-                                                                                                            <div className="h-1 w-1 bg-slate-950 rounded-full" />
-                                                                                                        </div>
-                                                                                                    )}
-                                                                                                </div>
-                                                                                            </TooltipTrigger>
-                                                                                            <TooltipContent side="bottom" className={`text-[10px] font-bold px-2 py-1 ${!isAbsoluteWinner && !isSimpleHit ? "opacity-70" : ""}`}>
-                                                                                                {idx + 1}º {team}
-                                                                                                {isAbsoluteWinner && " (LÍDER ABSOLUTO! 🏆)"}
-                                                                                                {isSimpleHit && " (Acertou! ✅)"}
-                                                                                                {!isAbsoluteWinner && !isSimpleHit && enablePriority && isHit && " (Superado pela Hierarquia ❌)"}
-                                                                                            </TooltipContent>
-                                                                                        </Tooltip>
-                                                                                    );
-                                                                                });
-                                                                            })()}
-                                                                        </div>
-                                                                    </div>
-                                                                );
-                                                            }
-                                                            return <div className="h-[14px]" />; // Placeholder to keep height consistent
-                                                        })()}
+                                                        <div className="h-[14px]" />
                                                     </div>
                                                 </div>
 
