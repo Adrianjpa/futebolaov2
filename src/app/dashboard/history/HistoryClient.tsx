@@ -155,7 +155,7 @@ export default function HistoryClient() {
             // If we have a user AND a type filter, we MUST fetch all to filter correctly client-side
             if (paramUser && paramType) {
                 let query = (supabase.from("predictions") as any)
-                    .select("*, matches(*)")
+                    .select("*, matches!inner(*)")
                     .eq("user_id", paramUser);
 
                 if (selectedChampionship !== "all") {
@@ -212,7 +212,7 @@ export default function HistoryClient() {
                 let query;
                 if (paramUser) {
                     query = (supabase.from("predictions") as any)
-                        .select("*, matches(*)", { count: "exact" })
+                        .select("*, matches!inner(*)", { count: "exact" })
                         .eq("user_id", paramUser);
                     query = query.order("date", { foreignTable: "matches", ascending: false });
                     if (selectedChampionship !== "all") {
@@ -262,10 +262,10 @@ export default function HistoryClient() {
     };
 
     useEffect(() => {
-        if (championships.length > 0) {
+        if (championships.length > 0 && hasHistory !== null) {
             fetchMatches(1);
         }
-    }, [selectedChampionship, championships, paramUser, paramType]);
+    }, [selectedChampionship, championships, paramUser, paramType, selectedCategory, userChampionships, hasHistory]);
 
     const handleNextPage = () => {
         if (!isLastPage) fetchMatches(currentPage + 1);
