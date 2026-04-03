@@ -109,7 +109,7 @@ export default function LandingClient() {
             </div>
           </div>
           <CardDescription className="text-base">
-            O sistema de bolão oficial da galera
+            O BOLÃO OFICIAL DOS AMIGOS
           </CardDescription>
         </CardHeader>
 
@@ -267,7 +267,7 @@ export default function LandingClient() {
           </Tabs>
         </CardContent>
         <CardFooter className="flex justify-center text-xs text-muted-foreground pb-6">
-          © 2024 FuteBolão
+          © 2026 Futebolão
         </CardFooter>
       </Card>
     </div>
