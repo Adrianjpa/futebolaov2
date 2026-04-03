@@ -1,0 +1,141 @@
+export const euro2021_data = {
+    championshipName: "Eurocopa",
+    year: 2021,
+    teamMode: "selecoes",
+    category: "euro",
+    iconUrl: "https://flagcdn.com/w40/eu.png",
+    legacyUsers: [
+        {
+            legacy_user_name: "Ranyclayton",
+            user_id: null,
+            points: 47,
+            exact_scores: 10,
+            outcomes: 17,
+            errors: 24,
+            rank: 1,
+            champion_pick: null,
+            team_picks: ["fr", "gb-eng", "nl"],
+            achievements: ["high_score", "bucha_master"]
+        },
+        {
+            legacy_user_name: "Alan",
+            user_id: null,
+            points: 45,
+            exact_scores: 8,
+            outcomes: 21,
+            errors: 22,
+            rank: 2,
+            champion_pick: "it",
+            team_picks: ["fr", "it", "be"],
+            achievements: ["champion_picked"]
+        },
+        {
+            legacy_user_name: "Elisson",
+            user_id: null,
+            points: 39,
+            exact_scores: 5,
+            outcomes: 24,
+            errors: 22,
+            rank: 3,
+            champion_pick: null,
+            team_picks: ["fr", "pt", "nl"],
+            achievements: []
+        },
+        {
+            legacy_user_name: "Ricardo",
+            user_id: null,
+            points: 35,
+            exact_scores: 5,
+            outcomes: 20,
+            errors: 26,
+            rank: 4,
+            champion_pick: null,
+            team_picks: ["fr", "be", "de"],
+            achievements: []
+        },
+        {
+            legacy_user_name: "Marcelo",
+            user_id: null,
+            points: 35,
+            exact_scores: 5,
+            outcomes: 20,
+            errors: 26,
+            rank: 4,
+            champion_pick: null,
+            team_picks: ["fr", "be", "de"],
+            achievements: []
+        },
+        {
+            legacy_user_name: "Wellington",
+            user_id: null,
+            points: 35,
+            exact_scores: 4,
+            outcomes: 23,
+            errors: 24,
+            rank: 6,
+            champion_pick: "it",
+            team_picks: ["es", "fr", "it"],
+            achievements: ["champion_picked"]
+        },
+        {
+            legacy_user_name: "Jullius",
+            user_id: null,
+            points: 34,
+            exact_scores: 4,
+            outcomes: 22,
+            errors: 25,
+            rank: 7,
+            champion_pick: "it",
+            team_picks: ["fr", "be", "it"],
+            achievements: ["champion_picked"]
+        },
+        {
+            legacy_user_name: "Leandro",
+            user_id: null,
+            points: 33,
+            exact_scores: 4,
+            outcomes: 21,
+            errors: 26,
+            rank: 8,
+            champion_pick: null,
+            team_picks: ["de", "es", "hr"],
+            achievements: []
+        },
+        {
+            legacy_user_name: "Clodoaldo",
+            user_id: null,
+            points: 33,
+            exact_scores: 3,
+            outcomes: 24,
+            errors: 24,
+            rank: 9,
+            champion_pick: null,
+            team_picks: ["es", "fr", "de"],
+            achievements: []
+        },
+        {
+            legacy_user_name: "Caio",
+            user_id: null,
+            points: 33,
+            exact_scores: 3,
+            outcomes: 24,
+            errors: 24,
+            rank: 9,
+            champion_pick: "gb-eng",
+            team_picks: ["fr", "gb-eng", "pt"],
+            achievements: []
+        },
+        {
+            legacy_user_name: "Daniel",
+            user_id: null,
+            points: 32,
+            exact_scores: 4,
+            outcomes: 20,
+            errors: 27,
+            rank: 11,
+            champion_pick: "it",
+            team_picks: ["it", "gb-eng", "dk"],
+            achievements: ["high_lander_master", "champion_picked"]
+        }
+    ]
+};

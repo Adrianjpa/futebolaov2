@@ -170,7 +170,9 @@ export default function RankingPage() {
                         if (b.errors !== a.errors) return (a.errors || 0) - (b.errors || 0); // Menos erros é melhor (crescente)
                     }
                 }
-                return 0;
+                const nameA = a.nickname || a.nome || "";
+                const nameB = b.nickname || b.nome || "";
+                return nameA.localeCompare(nameB);
             });
 
             setUsers(sortedData);

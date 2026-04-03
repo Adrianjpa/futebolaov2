@@ -11,6 +11,11 @@ export const getFlagUrl = (country: string) => {
   // Normalization map to handle common variations
   const normalizedCountry = country?.trim();
 
+  // If it's already an ISO code (2 chars or starts with gb-)
+  if (/^([a-z]{2}|gb-[a-z]{3,4})$/i.test(normalizedCountry)) {
+      return `https://flagcdn.com/w40/${normalizedCountry.toLowerCase()}.png`;
+  }
+
   const countryMap: { [key: string]: string } = {
     "Espanha": "es", "Spain": "es",
     "Alemanha": "de", "Germany": "de",
@@ -29,11 +34,21 @@ export const getFlagUrl = (country: string) => {
     "Suécia": "se", "Sweden": "se",
     "Ucrânia": "ua", "Ukraine": "ua",
     "Polônia": "pl", "Poland": "pl",
-    "Irlanda": "ie", "Ireland": "ie"
+    "Irlanda": "ie", "Ireland": "ie",
+    "Suíça": "ch", "Switzerland": "ch",
+    "Bélgica": "be", "Belgium": "be",
+    "Áustria": "at", "Austria": "at",
+    "Turquia": "tr", "Turkey": "tr", "Túrquia": "tr",
+    "País de Gales": "gb-wls", "Wales": "gb-wls",
+    "Finlândia": "fi", "Finland": "fi",
+    "Macedônia do Norte": "mk", "North Macedonia": "mk", "Macedônia": "mk",
+    "Escócia": "gb-sct", "Scotland": "gb-sct",
+    "Eslováquia": "sk", "Slovakia": "sk", "Eslovênia": "sk",
+    "Hungria": "hu", "Hungary": "hu"
   };
 
   const code = countryMap[normalizedCountry];
-  return code ? `https://flagcdn.com/w40/${code}.png` : "";
+  return code ? `https://flagcdn.com/w40/${code}.png` : null;
 };
 
 const LEGACY_TOURNAMENT_YEARS: Record<string, string> = {

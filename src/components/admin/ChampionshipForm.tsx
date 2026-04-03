@@ -46,7 +46,7 @@ function TeamSelectorItems({ supabase, selectedTeamIds = [] }: { supabase: any, 
             {availableTeams.map((t) => (
                 <SelectItem key={t.id} value={t.id}>
                     <div className="flex items-center gap-2">
-                        {t.shield_url && <img src={t.shield_url} className="h-4 w-4 object-contain" />}
+                        {(t.shield_url || t.crest_url) && <img src={t.shield_url || t.crest_url} className="h-4 w-4 object-contain" />}
                         <span>{t.name}</span>
                     </div>
                 </SelectItem>
@@ -186,7 +186,7 @@ export function ChampionshipForm({ initialData, onSubmit, isSubmitting = false, 
             teams: (initialData?.teams || []).map((t: any) => ({
                 id: t.id,
                 name: t.name,
-                shieldUrl: t.shieldUrl || t.shield_url || null
+                shieldUrl: t.shieldUrl || t.shield_url || t.crest_url || null
             })),
             apiScoreType: initialData?.apiScoreType || "fullTime",
         } as any,
@@ -441,7 +441,7 @@ export function ChampionshipForm({ initialData, onSubmit, isSubmitting = false, 
     const mapDbTeamToUi = (t: any) => ({
         id: t.id,
         name: t.name,
-        shieldUrl: t.shield_url || t.shieldUrl
+        shieldUrl: t.shield_url || t.shieldUrl || t.crest_url || null
     });
 
     const handleQuickTeamAdd = async (overwrite: boolean = false, forceUseExisting: boolean = false) => {
@@ -1075,7 +1075,7 @@ export function ChampionshipForm({ initialData, onSubmit, isSubmitting = false, 
                                                 const teamData = data as any;
                                                 const current = (form.getValues("teams") as any[]) || [];
                                                 if (!current.some(t => t.id === teamData.id)) {
-                                                    form.setValue("teams", [...current, { id: teamData.id, name: teamData.name, shieldUrl: teamData.shield_url }] as any);
+                                                    form.setValue("teams", [...current, { id: teamData.id, name: teamData.name, shieldUrl: teamData.shield_url || teamData.crest_url }] as any);
                                                 }
                                             }
                                         };
