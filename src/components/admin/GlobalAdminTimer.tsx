@@ -60,8 +60,11 @@ export function GlobalAdminTimer() {
         };
 
         fetchData();
-        const poller = setInterval(fetchData, 60000); // Re-sync every minute
-        return () => clearInterval(poller);
+        const poller = setInterval(fetchData, 60000); // Re-sync visual info every minute
+        
+        return () => {
+            clearInterval(poller);
+        };
     }, [isAdmin, supabase]);
 
     // 2. Countdown Logic

@@ -70,8 +70,8 @@ export function UnifiedMatchCard({
     const isFinished = finished ?? (match.status === 'finished');
 
     // --- URGENCY LOGIC (New) ---
-    const isUrgent = !hasPrediction && !isFinished && !isLive && minutesToStart > 0 && minutesToStart <= 120; // 2 hours
-    const isCritical = !hasPrediction && !isFinished && !isLive && minutesToStart > 0 && minutesToStart <= 30; // 30 mins
+    const isUrgent = !isAdmin && !hasPrediction && !isFinished && !isLive && minutesToStart > 0 && minutesToStart <= 120; // 2 hours
+    const isCritical = !isAdmin && !hasPrediction && !isFinished && !isLive && minutesToStart > 0 && minutesToStart <= 30; // 30 mins
 
     const urgencyClass = isCritical
         ? "border-red-500/50 shadow-[0_0_15px_-3px_rgba(239,68,68,0.3)] animate-pulse bg-red-500/5"
