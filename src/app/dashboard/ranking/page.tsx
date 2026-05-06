@@ -70,7 +70,6 @@ export default function RankingPage() {
     const [selectedChampionship, setSelectedChampionship] = useState<string>(initialChampionshipId);
     const [sortBy, setSortBy] = useState<'total_points' | 'exact_scores' | 'outcomes'>('total_points');
 
-    // Features for Flags
     const [officialRanking, setOfficialRanking] = useState<string[]>([]);
     const [enablePriority, setEnablePriority] = useState<boolean>(true);
     const [enableTiebreaker, setEnableTiebreaker] = useState<boolean>(false);
@@ -84,10 +83,22 @@ export default function RankingPage() {
 
             // 1. Fetch ALL championships
             const { data: champs } = await (supabase.from("championships") as any)
-                .select("*")
-                .order("created_at", { ascending: false });
+                .select("*");
 
-            const allChamps = champs || [];
+            let allChamps = champs || [];
+
+            // Sort logic: Open championships first, then by start date descending (newest first)
+            allChamps.sort((a: any, b: any) => {
+                const aOpen = a.status === 'open';
+                const bOpen = b.status === 'open';
+                if (aOpen && !bOpen) return -1;
+                if (!aOpen && bOpen) return 1;
+                
+                const dateA = a.settings?.startDate ? new Date(a.settings.startDate).getTime() : new Date(a.created_at).getTime();
+                const dateB = b.settings?.startDate ? new Date(b.settings.startDate).getTime() : new Date(b.created_at).getTime();
+                return dateB - dateA;
+            });
+
             setChampionships(allChamps);
 
             // 2. Determine Participation History
@@ -346,14 +357,14 @@ export default function RankingPage() {
             const teamRank = officialRanking.indexOf(team);
             const isHit = teamRank !== -1;
 
-            const isAbsoluteWinner = enablePriority
-                ? (winnersSet.has(userId) && matchedAdminTeams.has(team))
-                : isHit;
-
             // Visual Logic:
             // Absolute Winner: Full Opacity
             // Hit (Legacy/NoPriority): Full Opacity
             // Others: Dimmed (Opacity 30%), Grayscale
+            const isAbsoluteWinner = enablePriority
+                ? (winnersSet.has(userId) && team === winningTeam)
+                : isHit;
+
             return (
                 <Tooltip key={`${userId}-${idx}`}>
                     <TooltipTrigger asChild>

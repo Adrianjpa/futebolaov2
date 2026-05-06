@@ -9,7 +9,6 @@ type Match = Database['public']['Tables']['matches']['Row'];
 export async function syncMatchesFromExternalApi(force: boolean = false) {
     try {
         console.log("Starting match synchronization service...");
-        const logs: string[] = [];
 
         // 1. Fetch Championships (Only ACTIVE AUTO/HYBRID ones)
         const { data: champs, error: champsError } = await (supabaseAdmin
@@ -94,9 +93,6 @@ export async function syncMatchesFromExternalApi(force: boolean = false) {
         let updatesCount = 0;
         const updatedMatchNames: string[] = [];
 
-        // Pre-create a map of championship settings for quick access
-        const champSettingsMap = new Map(championships.map(c => [c.id, c.settings as any]));
-
         for (const localMatch of matchesWithApiId) {
             const apiMatch = apiMatchesMap.get(localMatch.external_id) as any;
 
@@ -155,6 +151,15 @@ export async function syncMatchesFromExternalApi(force: boolean = false) {
                         shouldUpdate = localMatch.status !== newStatus || localHomeScore !== apiHomeScore || localAwayScore !== apiAwayScore;
                     }
                 }
+                
+                const apiHomeName = apiMatch.homeTeam?.name;
+                const apiAwayName = apiMatch.awayTeam?.name;
+                const isTeamNameChanged = (apiHomeName && apiHomeName !== localMatch.home_team) || 
+                                          (apiAwayName && apiAwayName !== localMatch.away_team);
+
+                if (isTeamNameChanged) {
+                    shouldUpdate = true;
+                }
 
                 if (shouldUpdate) {
                     console.log(`[Sync] Updating ${localMatch.home_team}x${localMatch.away_team} (${scoreType}): ${localHomeScore}x${localAwayScore} [${localMatch.status}] -> ${apiHomeScore}x${apiAwayScore} [${newStatus}]`);
@@ -166,6 +171,8 @@ export async function syncMatchesFromExternalApi(force: boolean = false) {
                             score_away: apiAwayScore,
                             status: newStatus,
                             date: apiDate,
+                            home_team: apiHomeName || localMatch.home_team,
+                            away_team: apiAwayName || localMatch.away_team,
                             home_team_crest: apiMatch.homeTeam?.crest || localMatch.home_team_crest,
                             away_team_crest: apiMatch.awayTeam?.crest || localMatch.away_team_crest
                         })

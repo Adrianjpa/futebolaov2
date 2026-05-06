@@ -107,8 +107,9 @@ const formSchema = z.object({
     participants: z.array(z.object({
         userId: z.string(),
         displayName: z.string(),
-        photoUrl: z.string().nullable().optional(),
         email: z.string().nullable().optional(),
+        photoUrl: z.string().nullable().optional(),
+        selections: z.array(z.string()).optional(),
     })).default([]),
     // API Integration
     creationType: z.enum(["manual", "hybrid", "auto"]),
@@ -177,7 +178,8 @@ export function ChampionshipForm({ initialData, onSubmit, isSubmitting = false, 
                 userId: p.userId || p.user_id,
                 displayName: p.displayName || p.display_name,
                 photoUrl: p.photoUrl || p.photo_url || null,
-                email: p.email || null
+                email: p.email || null,
+                selections: p.selections || p.teamSelections || p.team_selections || []
             })),
             creationType: initialData?.creationType || "manual",
             apiCode: initialData?.apiCode || "",

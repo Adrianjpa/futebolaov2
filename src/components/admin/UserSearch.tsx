@@ -28,7 +28,6 @@ export function UserSearch({ onSelect, disabled }: UserSearchProps) {
                 const { data } = await (supabase
                     .from("profiles") as any)
                     .select("*")
-                    .not("email", "ilike", "%.local")
                     .limit(20);
 
                 setFoundUsers(data || []);
@@ -56,7 +55,7 @@ export function UserSearch({ onSelect, disabled }: UserSearchProps) {
     const performSearch = async (term: string) => {
         setLoading(true);
         try {
-            let query = (supabase.from("profiles") as any).select("*").not("email", "ilike", "%.local");
+            let query = (supabase.from("profiles") as any).select("*");
 
             if (term.length > 0) {
                 query = query.or(`nome.ilike.%${term}%,nickname.ilike.%${term}%,email.ilike.%${term}%`);

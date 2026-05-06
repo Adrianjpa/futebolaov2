@@ -88,14 +88,21 @@ export async function POST(request: Request) {
                     if (apiMatch.status === 'IN_PLAY' || apiMatch.status === 'PAUSED') newStatus = 'live';
                     if (apiMatch.status === 'FINISHED') newStatus = 'finished';
 
-                    if (isDateChanged || localMatch.status !== newStatus) {
+                    const apiHomeName = apiMatch.homeTeam?.name;
+                    const apiAwayName = apiMatch.awayTeam?.name;
+                    const isHomeTeamChanged = apiHomeName && apiHomeName !== localMatch.home_team;
+                    const isAwayTeamChanged = apiAwayName && apiAwayName !== localMatch.away_team;
+
+                    if (isDateChanged || localMatch.status !== newStatus || isHomeTeamChanged || isAwayTeamChanged) {
                         const { error: updateError } = await (supabaseAdmin
                             .from("matches") as any)
                             .update({
                                 date: apiDate.toISOString(),
                                 status: newStatus,
-                                home_team_crest: apiMatch.homeTeam?.crest,
-                                away_team_crest: apiMatch.awayTeam?.crest
+                                home_team: apiHomeName || localMatch.home_team,
+                                away_team: apiAwayName || localMatch.away_team,
+                                home_team_crest: apiMatch.homeTeam?.crest || localMatch.home_team_crest,
+                                away_team_crest: apiMatch.awayTeam?.crest || localMatch.away_team_crest
                             })
                             .eq("id", localMatch.id);
 

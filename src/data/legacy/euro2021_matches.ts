@@ -68,7 +68,6 @@ const generateSyntheticBets = (matches: any[], stats: any) => {
         const m = matches[matchIndices[i]];
         const isHomeWin = m.homeScore > m.awayScore;
         const isTie = m.homeScore === m.awayScore;
-        const isAwayWin = m.homeScore < m.awayScore;
 
         if (buchasLeft > 0) {
             bets.push({ matchIndex: matchIndices[i], home: m.homeScore, away: m.awayScore });

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { supabaseAdmin } from "@/lib/supabase-server";
+import { supabaseAdmin, createServerSupabaseClient } from "@/lib/supabase-server";
 import { euro2021_data } from "@/data/legacy/euro2021_data";
 import { euro2021Matches, euro2021Bets } from "@/data/legacy/euro2021_matches";
 
@@ -18,6 +18,23 @@ const getApproximateDate = (round: string, index: number) => {
 
 export async function POST(request: Request) {
     try {
+        const supabase = await createServerSupabaseClient();
+        const { data: { session } } = await supabase.auth.getSession();
+
+        if (!session) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+
+        const { data: profile } = await (supabaseAdmin
+            .from("profiles")
+            .select("funcao")
+            .eq("id", session.user.id)
+            .single() as any);
+
+        if (profile?.funcao !== 'admin') {
+            return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+        }
+
         const champId = "e2021000-0000-0000-0000-000000000000";
         const logs = [];
 

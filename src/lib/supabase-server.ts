@@ -1,5 +1,5 @@
 import { createServerClient } from '@supabase/ssr'
-import { createClient as createSupabaseClient, SupabaseClient } from '@supabase/supabase-js'
+import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
 import { Database } from '@/types/database.types'
 
@@ -21,14 +21,14 @@ export const createServerSupabaseClient = async () => {
                 set(name: string, value: string, options: any) {
                     try {
                         cookieStore.set({ name, value, ...options })
-                    } catch (error) {
+                    } catch (_) {
                         // Handle potential server-side setting limits
                     }
                 },
                 remove(name: string, options: any) {
                     try {
                         cookieStore.set({ name, value: '', ...options })
-                    } catch (error) {
+                    } catch (_) {
                         // Handle potential server-side setting limits
                     }
                 },
