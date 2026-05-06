@@ -64,6 +64,7 @@ export default function RankingPage() {
 
     const [users, setUsers] = useState<UserProfile[]>([]);
     const [loading, setLoading] = useState(true);
+    const [isSwitching, setIsSwitching] = useState(false);
     const [championships, setChampionships] = useState<any[]>([]);
     const [hasHistory, setHasHistory] = useState<boolean | null>(null);
     const [categoryFilter, setCategoryFilter] = useState<string>("all");
@@ -148,9 +149,10 @@ export default function RankingPage() {
     const fetchRankingAndSettings = async () => {
         if (!selectedChampionship || selectedChampionship === "all") {
             setLoading(false);
+            setIsSwitching(false);
             return;
         }
-        setLoading(true);
+        setIsSwitching(true);
         try {
             // 1. Fetch Ranking
             const { data: rankingData, error } = await (supabase
@@ -219,11 +221,11 @@ export default function RankingPage() {
                 });
             }
             setParticipantsData(pMap);
-
         } catch (error) {
-            console.error("Error fetching ranking:", error);
+            console.error("Failed to fetch ranking:", error);
         } finally {
             setLoading(false);
+            setIsSwitching(false);
         }
     };
 
@@ -435,7 +437,7 @@ export default function RankingPage() {
                     )}
                 </div>
 
-                <Card>
+                <Card className={`bg-slate-900 border-slate-800 ${isSwitching ? 'opacity-50 pointer-events-none' : ''} transition-opacity duration-200`}>
                     {!loading && (hasHistory || isAdmin) && (
                         <CardHeader className="border-b bg-muted/5 p-0">
                             <div className="flex items-center text-xs font-bold text-muted-foreground px-4 py-3 gap-2 uppercase tracking-wider">
@@ -552,7 +554,7 @@ export default function RankingPage() {
                 </Card>
 
                 {/* Legacy Spreadsheet Link */}
-                {legacyUrl && (
+                {legacyUrl && (isAdmin || users.some(u => u.user_id === currentUser?.id)) && (
                     <div className="flex justify-center mt-6">
                         <a href={legacyUrl} target="_blank" rel="noopener noreferrer">
                             <Button variant="outline" className="gap-2 border-slate-700 bg-slate-900 hover:bg-slate-800 text-slate-300">
