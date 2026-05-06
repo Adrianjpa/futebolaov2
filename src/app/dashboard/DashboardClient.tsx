@@ -276,7 +276,10 @@ export default function DashboardClient() {
             
             await fetchMatches(); // This will update userAcceptedRules
             setShowRulesModal(false);
-            toast.success("Regras aceitas com sucesso! Boa sorte no campeonato.");
+            toast.success("Regras aceitas com sucesso!", {
+                description: "Você pode reler este regulamento a qualquer momento clicando no botão de 'Informação' na aba de Próximos Jogos.",
+                duration: 8000
+            });
         } catch (error) {
             console.error("Error accepting rules:", error);
             toast.error("Ocorreu um erro ao aceitar as regras.");
@@ -349,7 +352,7 @@ export default function DashboardClient() {
                         const isLocked = !isAdmin && hasRules && !hasAccepted;
 
                         const CardContentWrapper = ({ children }: any) => (
-                            <Card className={`border-primary/30 transition-all ${isLocked ? 'bg-slate-900/80 border-dashed hover:border-primary/50 cursor-pointer' : 'bg-gradient-to-r from-primary/20 to-primary/5 hover:shadow-lg cursor-pointer group'}`}>
+                            <Card className={`border-primary/30 transition-all ${isLocked ? 'bg-slate-900/80 border-dashed hover:border-primary/50 cursor-pointer' : 'bg-gradient-to-r from-primary/20 to-primary/5'}`}>
                                 <CardContent className="flex flex-col sm:flex-row items-center justify-between p-6 gap-6 text-center sm:text-left">
                                     {children}
                                 </CardContent>
@@ -359,7 +362,7 @@ export default function DashboardClient() {
                         const innerContent = (
                             <>
                                 <div className="flex items-center gap-4">
-                                    <div className={`h-14 w-14 rounded-2xl flex items-center justify-center border shadow-inner transition-transform overflow-hidden p-2 ${isLocked ? 'bg-slate-800 border-slate-700' : 'bg-primary/10 border-primary/20 group-hover:scale-110'}`}>
+                                    <div className={`h-14 w-14 rounded-2xl flex items-center justify-center border shadow-inner transition-transform overflow-hidden p-2 ${isLocked ? 'bg-slate-800 border-slate-700' : 'bg-primary/10 border-primary/20'}`}>
                                         {(upcomingChampionship.settings as any)?.iconUrl || (upcomingChampionship as any).icon_url ? (
                                             <img
                                                 src={(upcomingChampionship.settings as any)?.iconUrl || (upcomingChampionship as any).icon_url}
@@ -428,11 +431,8 @@ export default function DashboardClient() {
                             );
                         }
 
-                        return (
-                            <Link href={`/dashboard/matches?championship=${upcomingChampionship.id}`}>
-                                <CardContentWrapper>{innerContent}</CardContentWrapper>
-                            </Link>
-                        );
+                        // Just a static banner for the countdown
+                        return <CardContentWrapper>{innerContent}</CardContentWrapper>;
                     })()}
                 </div>
             )}
