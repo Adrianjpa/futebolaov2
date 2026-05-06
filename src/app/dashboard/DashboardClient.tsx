@@ -277,7 +277,7 @@ export default function DashboardClient() {
             await fetchMatches(); // This will update userAcceptedRules
             setShowRulesModal(false);
             toast.success("Regras aceitas com sucesso!", {
-                description: "Você pode reler este regulamento a qualquer momento clicando no botão de 'Informação' na aba de Próximos Jogos.",
+                description: "Você pode reler este regulamento a qualquer momento clicando no botão de 'Informação' na aba PARTIDAS.",
                 duration: 8000
             });
         } catch (error) {
