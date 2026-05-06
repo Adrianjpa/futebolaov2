@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { createClient } from "@/lib/supabase";
-import { Crown, Medal, Trophy, Siren, Loader2 } from "lucide-react";
+import { Crown, Medal, Trophy, Siren, Loader2, Info, ExternalLink } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSearchParams } from "next/navigation";
@@ -74,6 +74,7 @@ export default function RankingPage() {
     const [enablePriority, setEnablePriority] = useState<boolean>(true);
     const [enableTiebreaker, setEnableTiebreaker] = useState<boolean>(false);
     const [participantsData, setParticipantsData] = useState<Map<string, string[]>>(new Map());
+    const [legacyUrl, setLegacyUrl] = useState<string>("");
 
     const isAdmin = profile?.funcao === "admin" || profile?.funcao === "moderator";
 
@@ -191,6 +192,7 @@ export default function RankingPage() {
             setOfficialRanking(settings.officialRanking || []);
             setEnablePriority(settings.enableSelectionPriority ?? true);
             setEnableTiebreaker(settings.enableSelectionTiebreaker ?? false);
+            setLegacyUrl(settings.legacySpreadsheetUrl || "");
 
             // 3. Fetch Participants Selections (Try Relational Table first)
             const { data: parts, error: partsError } = await supabase
@@ -548,6 +550,18 @@ export default function RankingPage() {
                         )}
                     </CardContent>
                 </Card>
+
+                {/* Legacy Spreadsheet Link */}
+                {legacyUrl && (
+                    <div className="flex justify-center mt-6">
+                        <a href={legacyUrl} target="_blank" rel="noopener noreferrer">
+                            <Button variant="outline" className="gap-2 border-slate-700 bg-slate-900 hover:bg-slate-800 text-slate-300">
+                                <span className="font-semibold uppercase text-xs">Planilha Original de Resultados</span>
+                                <ExternalLink className="h-4 w-4 text-primary" />
+                            </Button>
+                        </a>
+                    </div>
+                )}
             </div>
         </TooltipProvider>
     );

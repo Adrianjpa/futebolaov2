@@ -114,6 +114,7 @@ const formSchema = z.object({
     // API Integration
     creationType: z.enum(["manual", "hybrid", "auto"]),
     apiCode: z.string().optional(),
+    legacySpreadsheetUrl: z.string().url().optional().or(z.literal('')),
     status: z.enum(["agendado", "ativo", "finalizado", "arquivado"]).default("agendado"),
     officialRanking: z.array(z.string()).default(["", "", "", "", ""]),
     teams: z.array(z.object({
@@ -183,6 +184,7 @@ export function ChampionshipForm({ initialData, onSubmit, isSubmitting = false, 
             })),
             creationType: initialData?.creationType || "manual",
             apiCode: initialData?.apiCode || "",
+            legacySpreadsheetUrl: initialData?.legacySpreadsheetUrl || "",
             status: initialData?.status || "agendado",
             officialRanking: initialData?.officialRanking || ["", "", "", "", ""],
             teams: (initialData?.teams || []).map((t: any) => ({
@@ -608,6 +610,12 @@ export function ChampionshipForm({ initialData, onSubmit, isSubmitting = false, 
                                     </Button>
                                 </div>
                                 {form.formState.errors.iconUrl && <p className="text-sm text-destructive">{form.formState.errors.iconUrl.message}</p>}
+                            </div>
+
+                            <div className="grid gap-2">
+                                <Label htmlFor="legacySpreadsheetUrl">Link da Planilha Antiga (Opcional)</Label>
+                                <Input id="legacySpreadsheetUrl" {...form.register("legacySpreadsheetUrl")} placeholder="https://docs.google.com/spreadsheets/..." />
+                                {form.formState.errors.legacySpreadsheetUrl && <p className="text-sm text-destructive">{form.formState.errors.legacySpreadsheetUrl.message}</p>}
                             </div>
 
                             <div className="grid gap-2">
