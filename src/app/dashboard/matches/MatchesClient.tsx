@@ -109,6 +109,8 @@ export default function MatchesClient() {
     const [phaseRules, setPhaseRules] = useState<Record<string, number>>({});
     const [comboUsage, setComboUsage] = useState<Record<string, number>>({});
 
+    const [showRulesModal, setShowRulesModal] = useState(false);
+
     const fetchUsers = async () => {
         const { data } = await (supabase.from("public_profiles") as any).select("*");
         setUsers(data || []);
@@ -302,6 +304,22 @@ export default function MatchesClient() {
                             Use suas 🌟 Fichas Douradas nas partidas para ganhar pontos bônus.
                         </p>
                     )}
+                    {selectedChampionship !== "all" && (() => {
+                        const currentChamp = activeChamps.find((c: any) => c.id === selectedChampionship);
+                        if (currentChamp?.settings?.rulesText) {
+                            return (
+                                <Button 
+                                    variant="link" 
+                                    className="p-0 h-auto text-xs justify-start text-primary"
+                                    onClick={() => setShowRulesModal(true)}
+                                >
+                                    <Info className="h-3 w-3 mr-1" />
+                                    Ler Regulamento do Campeonato
+                                </Button>
+                            );
+                        }
+                        return null;
+                    })()}
                 </div>
 
                 <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
@@ -653,6 +671,45 @@ export default function MatchesClient() {
                     </div>
                 </div>
             )}
+
+            {/* Rules Modal */}
+            <Dialog open={showRulesModal} onOpenChange={setShowRulesModal}>
+                <DialogContent className="max-w-xl max-h-[85vh] overflow-hidden flex flex-col bg-slate-950 border-slate-800">
+                    <DialogHeader>
+                        <div className="flex items-center justify-center mb-4 mt-2">
+                            {(() => {
+                                const currentChamp = activeChamps.find((c: any) => c.id === selectedChampionship);
+                                const iconUrl = (currentChamp?.settings as any)?.iconUrl || (currentChamp as any)?.icon_url;
+                                return iconUrl ? (
+                                    <img src={iconUrl} alt="Logo" className="h-16 w-16 object-contain" />
+                                ) : (
+                                    <TrophyIcon className="h-12 w-12 text-primary" />
+                                );
+                            })()}
+                        </div>
+                        <DialogTitle className="text-2xl font-black text-center uppercase tracking-tight text-foreground">
+                            Regulamento Oficial
+                        </DialogTitle>
+                        <DialogDescription className="text-center text-muted-foreground font-medium">
+                            {activeChamps.find((c: any) => c.id === selectedChampionship)?.name}
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="flex-1 overflow-y-auto pr-2 my-4 space-y-4">
+                        <div className="bg-slate-900 border border-slate-800 rounded-lg p-5">
+                            <div className="prose prose-sm dark:prose-invert max-w-none whitespace-pre-wrap">
+                                {activeChamps.find((c: any) => c.id === selectedChampionship)?.settings?.rulesText}
+                            </div>
+                        </div>
+                    </div>
+
+                    <DialogFooter>
+                        <Button className="w-full font-bold uppercase" onClick={() => setShowRulesModal(false)}>
+                            Fechar Regulamento
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

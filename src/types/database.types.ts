@@ -67,6 +67,29 @@ export interface Database {
                     created_at?: string
                 }
             }
+            championship_participants: {
+                Row: {
+                    user_id: string
+                    championship_id: string
+                    team_selections: string[] | null
+                    has_accepted_rules: boolean | null
+                    created_at: string
+                }
+                Insert: {
+                    user_id: string
+                    championship_id: string
+                    team_selections?: string[] | null
+                    has_accepted_rules?: boolean | null
+                    created_at?: string
+                }
+                Update: {
+                    user_id?: string
+                    championship_id?: string
+                    team_selections?: string[] | null
+                    has_accepted_rules?: boolean | null
+                    created_at?: string
+                }
+            }
             championships: {
                 Row: {
                     id: string

@@ -14,6 +14,7 @@ import { UnifiedMatchCard } from "@/components/UnifiedMatchCard";
 import { Countdown } from "@/components/ui/countdown";
 import { LeaderConfetti } from "@/components/effects/LeaderConfetti";
 import { toast } from "sonner";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 import { useMatches } from "@/contexts/MatchesContext";
 
@@ -25,6 +26,7 @@ export default function DashboardClient() {
         championshipsMap,
         userPredictions,
         userParticipation,
+        userAcceptedRules,
         globalPhaseRules,
         globalComboUsage,
         loading: matchesLoading,
@@ -39,6 +41,10 @@ export default function DashboardClient() {
     const [leadersMap, setLeadersMap] = useState<Record<string, any>>({});
     const [announcement, setAnnouncement] = useState<string>("");
     const [currentTime, setCurrentTime] = useState(new Date());
+
+    const [showRulesModal, setShowRulesModal] = useState(false);
+    const [selectedRulesChamp, setSelectedRulesChamp] = useState<any>(null);
+    const [acceptingRules, setAcceptingRules] = useState(false);
 
     const supabase = createClient();
     const isAdmin = profile?.funcao === "admin" || profile?.funcao === "moderator";
@@ -256,6 +262,29 @@ export default function DashboardClient() {
         // Using string dependency instead of array object to prevent "size changed" errors
     }, [nextMatchesIds, userPredictions, matchesLoading, isAdmin]);
 
+    const handleAcceptRules = async () => {
+        if (!selectedRulesChamp || !user) return;
+        setAcceptingRules(true);
+        try {
+            const { error } = await (supabase
+                .from('championship_participants') as any)
+                .update({ has_accepted_rules: true })
+                .eq('user_id', user.id)
+                .eq('championship_id', selectedRulesChamp.id);
+            
+            if (error) throw error;
+            
+            await fetchMatches(); // This will update userAcceptedRules
+            setShowRulesModal(false);
+            toast.success("Regras aceitas com sucesso! Boa sorte no campeonato.");
+        } catch (error) {
+            console.error("Error accepting rules:", error);
+            toast.error("Ocorreu um erro ao aceitar as regras.");
+        } finally {
+            setAcceptingRules(false);
+        }
+    };
+
     const upcomingChampionship = upcomingChampionships[0];
 
     const activeChampsCount = allChampionships.filter(c => c.status === 'ativo' || c.status === 'agendado').length;
@@ -314,65 +343,97 @@ export default function DashboardClient() {
                         </div>
                     ) : null}
 
-                    {upcomingChampionship && (
-                        <Link href={`/dashboard/matches?championship=${upcomingChampionship.id}`}>
-                            <Card className="bg-gradient-to-r from-primary/20 to-primary/5 border-primary/30 hover:shadow-lg transition-all cursor-pointer group">
+                    {upcomingChampionship && (() => {
+                        const hasRules = !!(upcomingChampionship.settings as any)?.rulesText;
+                        const hasAccepted = userAcceptedRules.has(upcomingChampionship.id);
+                        const isLocked = !isAdmin && hasRules && !hasAccepted;
+
+                        const CardContentWrapper = ({ children }: any) => (
+                            <Card className={`border-primary/30 transition-all ${isLocked ? 'bg-slate-900/80 border-dashed hover:border-primary/50 cursor-pointer' : 'bg-gradient-to-r from-primary/20 to-primary/5 hover:shadow-lg cursor-pointer group'}`}>
                                 <CardContent className="flex flex-col sm:flex-row items-center justify-between p-6 gap-6 text-center sm:text-left">
-                                    <div className="flex items-center gap-4">
-                                        <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20 shadow-inner group-hover:scale-110 transition-transform overflow-hidden p-2">
-                                            {(upcomingChampionship.settings as any)?.iconUrl || (upcomingChampionship as any).icon_url ? (
-                                                <img
-                                                    src={(upcomingChampionship.settings as any)?.iconUrl || (upcomingChampionship as any).icon_url}
-                                                    alt={upcomingChampionship.name}
-                                                    className="h-full w-full object-contain"
-                                                />
-                                            ) : (
-                                                <Trophy className="h-8 w-8 text-primary" />
-                                            )}
-                                        </div>
-                                        <div className="text-left">
-                                            <h3 className="text-lg font-black uppercase tracking-tight text-foreground">
-                                                {upcomingChampionship.earliestMatchDate
+                                    {children}
+                                </CardContent>
+                            </Card>
+                        );
+
+                        const innerContent = (
+                            <>
+                                <div className="flex items-center gap-4">
+                                    <div className={`h-14 w-14 rounded-2xl flex items-center justify-center border shadow-inner transition-transform overflow-hidden p-2 ${isLocked ? 'bg-slate-800 border-slate-700' : 'bg-primary/10 border-primary/20 group-hover:scale-110'}`}>
+                                        {(upcomingChampionship.settings as any)?.iconUrl || (upcomingChampionship as any).icon_url ? (
+                                            <img
+                                                src={(upcomingChampionship.settings as any)?.iconUrl || (upcomingChampionship as any).icon_url}
+                                                alt={upcomingChampionship.name}
+                                                className={`h-full w-full object-contain ${isLocked ? 'grayscale opacity-50' : ''}`}
+                                            />
+                                        ) : (
+                                            <Trophy className={`h-8 w-8 ${isLocked ? 'text-slate-500' : 'text-primary'}`} />
+                                        )}
+                                    </div>
+                                    <div className="text-left">
+                                        <h3 className={`text-lg font-black uppercase tracking-tight ${isLocked ? 'text-slate-300' : 'text-foreground'}`}>
+                                            {isLocked 
+                                                ? "Ação Necessária"
+                                                : upcomingChampionship.earliestMatchDate
                                                     ? (differenceInDays(upcomingChampionship.earliestMatchDate, currentTime) <= 7
                                                         ? "Prepare-se para o lançamento!"
                                                         : "Em Breve!")
                                                     : "Campeonato em Breve!"
-                                                }
-                                            </h3>
-                                            <p className="text-sm text-muted-foreground font-medium">
-                                                {upcomingChampionship.earliestMatchDate
+                                            }
+                                        </h3>
+                                        <p className="text-sm text-muted-foreground font-medium">
+                                            {isLocked
+                                                ? <>Você foi convocado para <span className="text-primary font-bold">{upcomingChampionship.name}</span>. Leia o regulamento.</>
+                                                : upcomingChampionship.earliestMatchDate
                                                     ? (differenceInDays(upcomingChampionship.earliestMatchDate, currentTime) <= 7
                                                         ? <>O campeonato <span className="text-primary font-bold">{upcomingChampionship.name}</span> vai começar em:</>
                                                         : <>Lançamento do torneio <span className="text-primary font-bold">{upcomingChampionship.name}</span> em {formatDate(upcomingChampionship.earliestMatchDate, "PP", { locale: ptBR })}</>)
                                                     : <>O campeonato <span className="text-primary font-bold">{upcomingChampionship.name}</span> está sendo preparado.</>
-                                                }
-                                            </p>
-                                        </div>
+                                            }
+                                        </p>
                                     </div>
-                                    <div className="flex flex-col items-center sm:items-end gap-1">
-                                        {upcomingChampionship.earliestMatchDate ? (
-                                            differenceInDays(upcomingChampionship.earliestMatchDate, currentTime) <= 7 ? (
-                                                <>
-                                                    <Countdown targetDate={upcomingChampionship.earliestMatchDate} />
-                                                    <div className="flex items-center gap-1 text-[10px] uppercase font-black text-muted-foreground/60 tracking-widest mt-1">
-                                                        <span>Dias</span> • <span>Horas</span> • <span>Minutos</span>
-                                                    </div>
-                                                </>
-                                            ) : (
-                                                <div className="bg-primary/5 text-muted-foreground px-4 py-2 rounded-lg font-bold text-xs uppercase tracking-widest border border-dashed border-primary/10">
-                                                    Inscrições Abertas
+                                </div>
+                                <div className="flex flex-col items-center sm:items-end gap-1">
+                                    {isLocked ? (
+                                        <Button variant="default" className="font-bold uppercase tracking-wider text-xs shadow-lg animate-pulse">
+                                            Ler Regulamento
+                                        </Button>
+                                    ) : upcomingChampionship.earliestMatchDate ? (
+                                        differenceInDays(upcomingChampionship.earliestMatchDate, currentTime) <= 7 ? (
+                                            <>
+                                                <Countdown targetDate={upcomingChampionship.earliestMatchDate} />
+                                                <div className="flex items-center gap-1 text-[10px] uppercase font-black text-muted-foreground/60 tracking-widest mt-1">
+                                                    <span>Dias</span> • <span>Horas</span> • <span>Minutos</span>
                                                 </div>
-                                            )
+                                            </>
                                         ) : (
-                                            <div className="bg-primary/10 text-primary px-4 py-2 rounded-lg font-bold text-xs uppercase tracking-widest border border-primary/20 animate-pulse">
-                                                Aguardando Tabela
+                                            <div className="bg-primary/5 text-muted-foreground px-4 py-2 rounded-lg font-bold text-xs uppercase tracking-widest border border-dashed border-primary/10">
+                                                Inscrições Abertas
                                             </div>
-                                        )}
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        </Link>
-                    )}
+                                        )
+                                    ) : (
+                                        <div className="bg-primary/10 text-primary px-4 py-2 rounded-lg font-bold text-xs uppercase tracking-widest border border-primary/20 animate-pulse">
+                                            Aguardando Tabela
+                                        </div>
+                                    )}
+                                </div>
+                            </>
+                        );
+
+                        if (isLocked) {
+                            return (
+                                <div onClick={() => { setSelectedRulesChamp(upcomingChampionship); setShowRulesModal(true); }}>
+                                    <CardContentWrapper>{innerContent}</CardContentWrapper>
+                                </div>
+                            );
+                        }
+
+                        return (
+                            <Link href={`/dashboard/matches?championship=${upcomingChampionship.id}`}>
+                                <CardContentWrapper>{innerContent}</CardContentWrapper>
+                            </Link>
+                        );
+                    })()}
                 </div>
             )}
 
@@ -602,6 +663,60 @@ export default function DashboardClient() {
                     </div>
                 </div>
             )}
+
+            {/* Rules Modal */}
+            <Dialog open={showRulesModal} onOpenChange={setShowRulesModal}>
+                <DialogContent className="max-w-xl max-h-[85vh] overflow-hidden flex flex-col bg-slate-950 border-slate-800">
+                    <DialogHeader>
+                        <div className="flex items-center justify-center mb-4 mt-2">
+                            {(selectedRulesChamp?.settings as any)?.iconUrl || selectedRulesChamp?.icon_url ? (
+                                <img
+                                    src={(selectedRulesChamp.settings as any)?.iconUrl || selectedRulesChamp.icon_url}
+                                    alt="Logo"
+                                    className="h-16 w-16 object-contain"
+                                />
+                            ) : (
+                                <Trophy className="h-12 w-12 text-primary" />
+                            )}
+                        </div>
+                        <DialogTitle className="text-2xl font-black text-center uppercase tracking-tight text-foreground">
+                            Regulamento Oficial
+                        </DialogTitle>
+                        <DialogDescription className="text-center text-muted-foreground font-medium">
+                            {selectedRulesChamp?.name}
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="flex-1 overflow-y-auto pr-2 my-4 space-y-4">
+                        <div className="bg-slate-900 border border-slate-800 rounded-lg p-5">
+                            <div className="prose prose-sm dark:prose-invert max-w-none whitespace-pre-wrap">
+                                {(selectedRulesChamp?.settings as any)?.rulesText || "Nenhum regulamento fornecido."}
+                            </div>
+                        </div>
+                    </div>
+
+                    <DialogFooter className="flex-col sm:flex-col gap-2 mt-2">
+                        {userAcceptedRules.has(selectedRulesChamp?.id) ? (
+                            <Button className="w-full" variant="outline" onClick={() => setShowRulesModal(false)}>
+                                Fechar
+                            </Button>
+                        ) : (
+                            <>
+                                <p className="text-[10px] text-muted-foreground text-center mb-2">
+                                    Ao clicar em aceitar, você concorda com todas as regras estabelecidas acima e se compromete a segui-las durante todo o torneio.
+                                </p>
+                                <Button 
+                                    className="w-full font-bold uppercase tracking-wider h-12" 
+                                    onClick={handleAcceptRules}
+                                    disabled={acceptingRules}
+                                >
+                                    {acceptingRules ? <Loader2 className="h-5 w-5 animate-spin" /> : "Eu Li e Aceito as Regras"}
+                                </Button>
+                            </>
+                        )}
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

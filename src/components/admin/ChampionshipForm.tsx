@@ -82,6 +82,7 @@ const formSchema = z.object({
         phase: z.string(),
         combo_tokens: z.number().min(0)
     })).default([]),
+    rulesText: z.string().optional(),
     // Banner
     bannerEnabled: z.boolean().default(false),
     bannerConfig: z.object({
@@ -160,6 +161,7 @@ export function ChampionshipForm({ initialData, onSubmit, isSubmitting = false, 
             comboPoints: initialData?.comboPoints ?? 5,
             defaultComboTokens: initialData?.defaultComboTokens ?? 1,
             phaseRules: initialData?.phaseRules || [],
+            rulesText: initialData?.rulesText || "",
             bannerEnabled: initialData?.bannerEnabled ?? false,
             bannerConfig: initialData?.bannerConfig || {
                 active: false,
@@ -845,6 +847,19 @@ export function ChampionshipForm({ initialData, onSubmit, isSubmitting = false, 
                             <CardTitle>Regras do Campeonato</CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-4">
+                            <div className="grid gap-2">
+                                <Label htmlFor="rulesText">Regulamento do Campeonato (Opcional)</Label>
+                                <p className="text-xs text-muted-foreground">
+                                    Se preenchido, os participantes serão obrigados a ler e aceitar este regulamento antes de dar palpites.
+                                </p>
+                                <textarea
+                                    id="rulesText"
+                                    className="flex min-h-[150px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                    placeholder="Ex: 1. O acerto exato vale 3 pontos... 2. O prêmio será..."
+                                    {...form.register("rulesText")}
+                                />
+                            </div>
+
                             <div className="flex items-center justify-between rounded-lg border p-4">
                                 <div className="space-y-0.5">
                                     <Label className="text-base">Jogador Fantasma</Label>

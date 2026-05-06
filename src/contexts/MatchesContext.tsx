@@ -11,6 +11,7 @@ interface MatchesContextType {
     userPredictions: Set<string>;
     userCombos: Set<string>;
     userParticipation: Set<string>;
+    userAcceptedRules: Set<string>;
     globalPhaseRules: Record<string, Record<string, number>>;
     globalComboUsage: Record<string, Record<string, number>>;
     loading: boolean;
@@ -29,6 +30,7 @@ export function MatchesProvider({ children }: { children: ReactNode }) {
     const [userPredictions, setUserPredictions] = useState<Set<string>>(new Set());
     const [userCombos, setUserCombos] = useState<Set<string>>(new Set());
     const [userParticipation, setUserParticipation] = useState<Set<string>>(new Set());
+    const [userAcceptedRules, setUserAcceptedRules] = useState<Set<string>>(new Set());
     const [globalPhaseRules, setGlobalPhaseRules] = useState<Record<string, Record<string, number>>>({});
     const [globalComboUsage, setGlobalComboUsage] = useState<Record<string, Record<string, number>>>({});
     const [loading, setLoading] = useState(true);
@@ -58,9 +60,17 @@ export function MatchesProvider({ children }: { children: ReactNode }) {
             // 3. Fetch User Participation
             const { data: parts } = await (supabase
                 .from("championship_participants") as any)
-                .select("championship_id")
+                .select("championship_id, has_accepted_rules")
                 .eq("user_id", user.id);
-            const partSet = new Set((parts as any[])?.map(p => p.championship_id));
+            const partSet = new Set<string>();
+            const rulesSet = new Set<string>();
+            
+            parts?.forEach((p: any) => {
+                partSet.add(p.championship_id);
+                if (p.has_accepted_rules) {
+                    rulesSet.add(p.championship_id);
+                }
+            });
 
             // Also check participants in championship settings
             champs?.forEach((c: any) => {
@@ -71,6 +81,7 @@ export function MatchesProvider({ children }: { children: ReactNode }) {
             });
 
             setUserParticipation(partSet);
+            setUserAcceptedRules(rulesSet);
 
             // 4. Fetch Global Phase Rules
             const { data: allRules } = await (supabase.from('championship_phase_rules') as any).select('championship_id, phase, combo_tokens');
@@ -164,6 +175,7 @@ export function MatchesProvider({ children }: { children: ReactNode }) {
             userPredictions,
             userCombos,
             userParticipation,
+            userAcceptedRules,
             globalPhaseRules,
             globalComboUsage,
             loading: isInitialLoad, // Only show heavy loader on first app load
