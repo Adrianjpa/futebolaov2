@@ -10,15 +10,12 @@ export function GlobalAdminTimer() {
     const [updateIntervalMinutes, setUpdateIntervalMinutes] = useState(3);
     const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
     const [isVisible, setIsVisible] = useState(false);
+    const [isSyncing, setIsSyncing] = useState(false);
 
     const supabase = createClient();
-    const isAdmin = profile?.funcao === "admin" || profile?.funcao === "moderator";
 
     // 1. Fetch Settings & Initial State
-    useEffect(() => {
-        if (!isAdmin) return;
-
-        const fetchData = async () => {
+    const fetchSettingsData = async () => {
             try {
                 // Get Interval from Settings
                 const { data: settingsData, error: settingsError } = await (supabase
@@ -59,17 +56,33 @@ export function GlobalAdminTimer() {
             }
         };
 
-        fetchData();
-        const poller = setInterval(fetchData, 60000); // Re-sync visual info every minute
+
+    useEffect(() => {
+        fetchSettingsData();
+        const poller = setInterval(fetchSettingsData, 60000); // Re-sync visual info every minute
         
         return () => {
             clearInterval(poller);
         };
-    }, [isAdmin, supabase]);
+    }, [supabase]);
+
+    const triggerSync = async () => {
+        if (isSyncing) return;
+        setIsSyncing(true);
+        try {
+            await fetch("/api/public/trigger-sync", { method: "POST" });
+            // After sync, refetch settings to reset the timer
+            await fetchSettingsData();
+        } catch (e) {
+            console.error("Failed to trigger sync:", e);
+        } finally {
+            setIsSyncing(false);
+        }
+    };
 
     // 2. Countdown Logic
     useEffect(() => {
-        if (!isAdmin || !lastUpdate) return;
+        if (!lastUpdate || isSyncing) return;
 
         const tick = () => {
             const now = new Date().getTime();
@@ -78,8 +91,10 @@ export function GlobalAdminTimer() {
 
             // Calculate next expected update time
             let next = last + intervalMs;
-            while (next < now) {
-                next += intervalMs;
+            // If data is stale (next < now), trigger sync immediately
+            if (now > last + intervalMs) {
+                triggerSync();
+                return;
             }
 
             const remainingMs = Math.max(0, next - now);
@@ -92,22 +107,36 @@ export function GlobalAdminTimer() {
             const filledPct = ((totalSec - remainingSec) / totalSec) * 100;
 
             setProgress(Math.min(100, Math.max(0, filledPct)));
+
+            // If filled reaches 100, trigger sync
+            if (filledPct >= 100) {
+                triggerSync();
+            }
         };
 
         const timer = setInterval(tick, 1000);
         tick();
 
         return () => clearInterval(timer);
-    }, [isAdmin, lastUpdate, updateIntervalMinutes]);
+    }, [lastUpdate, updateIntervalMinutes, isSyncing]);
 
-    if (!isVisible || !isAdmin) return null;
+    if (!isVisible) return null;
 
     return (
-        <div className="w-full h-1.5 bg-yellow-500/5 relative overflow-hidden shrink-0 border-b border-yellow-500/10">
-            <div
-                className="h-full bg-yellow-500 transition-all duration-1000 ease-linear shadow-[0_0_8px_rgba(234,179,8,0.6)]"
-                style={{ width: `${progress}%` }}
-            />
+        <div className="w-full relative shrink-0">
+            {isSyncing && (
+                <div className="absolute inset-0 z-10 flex items-center justify-center bg-yellow-500/20 backdrop-blur-[1px]">
+                    <span className="text-[10px] font-bold text-yellow-500 uppercase tracking-widest animate-pulse drop-shadow-md">
+                        Sincronizando Partidas...
+                    </span>
+                </div>
+            )}
+            <div className="w-full h-1.5 bg-yellow-500/5 relative overflow-hidden border-b border-yellow-500/10">
+                <div
+                    className="h-full bg-yellow-500 transition-all duration-1000 ease-linear shadow-[0_0_8px_rgba(234,179,8,0.6)]"
+                    style={{ width: `${isSyncing ? 100 : progress}%` }}
+                />
+            </div>
         </div>
     );
 }
