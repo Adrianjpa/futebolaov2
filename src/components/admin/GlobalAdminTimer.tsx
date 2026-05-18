@@ -12,7 +12,6 @@ export function GlobalAdminTimer() {
     const [isVisible, setIsVisible] = useState(false);
     const [isSyncing, setIsSyncing] = useState(false);
 
-    const { profile } = useAuth();
     const isAdmin = profile?.funcao === "admin" || profile?.funcao === "moderator";
 
     const supabase = createClient();
