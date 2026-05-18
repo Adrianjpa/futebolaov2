@@ -12,6 +12,9 @@ export function GlobalAdminTimer() {
     const [isVisible, setIsVisible] = useState(false);
     const [isSyncing, setIsSyncing] = useState(false);
 
+    const { profile } = useAuth();
+    const isAdmin = profile?.funcao === "admin" || profile?.funcao === "moderator";
+
     const supabase = createClient();
 
     // 1. Fetch Settings & Initial State
@@ -120,7 +123,7 @@ export function GlobalAdminTimer() {
         return () => clearInterval(timer);
     }, [lastUpdate, updateIntervalMinutes, isSyncing]);
 
-    if (!isVisible) return null;
+    if (!isVisible || !isAdmin) return null;
 
     return (
         <div className="w-full relative shrink-0">

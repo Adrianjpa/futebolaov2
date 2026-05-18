@@ -156,8 +156,10 @@ export async function syncMatchesFromExternalApi(force: boolean = false) {
                 const apiAwayName = apiMatch.awayTeam?.name;
                 const isTeamNameChanged = (apiHomeName && apiHomeName !== localMatch.home_team) || 
                                           (apiAwayName && apiAwayName !== localMatch.away_team);
+                
+                const isDateChanged = new Date(apiDate).getTime() !== new Date(localMatch.date).getTime();
 
-                if (isTeamNameChanged) {
+                if (isTeamNameChanged || isDateChanged) {
                     shouldUpdate = true;
                 }
 
