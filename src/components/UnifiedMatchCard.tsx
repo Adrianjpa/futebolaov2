@@ -590,7 +590,7 @@ export function UnifiedMatchCard({
 
                     {/* 3. MAIN TEAMS AREA */}
                     <div className="relative flex flex-col items-center">
-                        <div className={`flex items-center justify-center w-full max-w-5xl mb-4 ${isLive || isFinished ? 'gap-4 sm:gap-12' : 'gap-12 sm:gap-24'}`}>
+                        <div className="flex items-center justify-center w-full max-w-5xl mb-4 gap-4 sm:gap-12">
                             {/* Home Team */}
                             <div className="flex items-center gap-2 flex-1 justify-end min-w-0">
                                 <span className="hidden md:block font-bold text-base lg:text-[19px] text-foreground dark:text-slate-100 truncate text-right">
