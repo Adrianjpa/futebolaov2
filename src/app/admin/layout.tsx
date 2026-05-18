@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useUnreadMessages } from "@/contexts/UnreadMessagesContext";
 import { Badge } from "@/components/ui/badge";
@@ -34,9 +34,32 @@ export default function AdminLayout({
     const { profile } = useAuth();
     const pathname = usePathname();
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+    const [pendingUsers, setPendingUsers] = useState(0);
     const { unreadCount } = useUnreadMessages();
 
     const supabase = createClient();
+
+    useEffect(() => {
+        const fetchPending = async () => {
+            const { count } = await (supabase
+                .from('public_profiles') as any)
+                .select('*', { count: 'exact', head: true })
+                .eq('status', 'pendente');
+            setPendingUsers(count || 0);
+        };
+
+        fetchPending();
+
+        const channel = supabase.channel('public_profiles_changes_admin')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'public_profiles' }, () => {
+                fetchPending();
+            })
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [supabase]);
 
     const handleSignOut = async () => {
         await supabase.auth.signOut();
@@ -99,6 +122,11 @@ export default function AdminLayout({
                                     >
                                         <Icon className="mr-2 h-4 w-4 shrink-0" />
                                         <span className="truncate">{item.label}</span>
+                                        {item.href === "/admin/users" && pendingUsers > 0 && (
+                                            <Badge variant="destructive" className="ml-auto h-5 w-auto min-w-[20px] px-1 rounded-full flex items-center justify-center text-[10px] animate-pulse">
+                                                {pendingUsers}
+                                            </Badge>
+                                        )}
                                         {item.href === "/admin/messaging" && unreadCount > 0 && (
                                             <Badge variant="destructive" className="ml-auto h-5 w-auto min-w-[20px] px-1 rounded-full flex items-center justify-center text-[10px]">
                                                 {unreadCount}

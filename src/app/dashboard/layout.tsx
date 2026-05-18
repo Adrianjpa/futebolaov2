@@ -21,8 +21,9 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { createClient } from "@/lib/supabase";
 import { UserNav } from "@/components/dashboard/UserNav";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { GlobalAdminTimer } from "@/components/admin/GlobalAdminTimer";
@@ -38,7 +39,34 @@ export default function DashboardLayout({
     const { profile } = useAuth();
     const pathname = usePathname();
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+    const [pendingUsers, setPendingUsers] = useState(0);
     const isAdmin = profile?.funcao === "admin" || profile?.funcao === "moderator";
+
+    const supabase = createClient();
+
+    useEffect(() => {
+        if (!isAdmin) return;
+
+        const fetchPending = async () => {
+            const { count } = await (supabase
+                .from('public_profiles') as any)
+                .select('*', { count: 'exact', head: true })
+                .eq('status', 'pendente');
+            setPendingUsers(count || 0);
+        };
+
+        fetchPending();
+
+        const channel = supabase.channel('public_profiles_changes_dashboard')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'public_profiles' }, () => {
+                fetchPending();
+            })
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [isAdmin, supabase]);
 
     // Main Navigation (Everyone)
     const mainNavItems = [
@@ -137,10 +165,17 @@ export default function DashboardLayout({
                                             <Link key={item.href} href={item.href} onClick={() => setIsSidebarOpen(false)}>
                                                 <Button
                                                     variant={isActive ? "secondary" : "ghost"}
-                                                    className={`w-full justify-start transition-all duration-300 rounded-xl mb-1 ${isActive ? "bg-red-500/10 text-red-700 font-medium" : "hover:bg-red-500/5 hover:text-red-600 text-muted-foreground"}`}
+                                                    className={`w-full justify-between transition-all duration-300 rounded-xl mb-1 ${isActive ? "bg-red-500/10 text-red-700 font-medium" : "hover:bg-red-500/5 hover:text-red-600 text-muted-foreground"}`}
                                                 >
-                                                    <Icon className="mr-2 h-4 w-4" />
-                                                    {item.label}
+                                                    <div className="flex items-center min-w-0">
+                                                        <Icon className="mr-2 h-4 w-4 shrink-0" />
+                                                        <span className="truncate">{item.label}</span>
+                                                    </div>
+                                                    {item.href === "/admin/users" && pendingUsers > 0 && (
+                                                        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white shrink-0 ml-2 animate-pulse">
+                                                            {pendingUsers}
+                                                        </span>
+                                                    )}
                                                 </Button>
                                             </Link>
                                         );
