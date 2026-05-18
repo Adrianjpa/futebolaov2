@@ -576,7 +576,7 @@ export default function DashboardClient() {
                                 )}
                                 {filteredRecent.length > 0 && (
                                     <Link href="/dashboard/history" className="w-full">
-                                        <Button variant="ghost" size="sm" className="w-full text-xs gap-2">
+                                        <Button variant="outline" size="sm" className="w-full text-xs gap-2">
                                             Ver histórico completo <ArrowRight className="h-3 w-3" />
                                         </Button>
                                     </Link>
