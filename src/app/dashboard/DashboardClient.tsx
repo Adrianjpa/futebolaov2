@@ -172,6 +172,10 @@ export default function DashboardClient() {
             // Filter by participation if not admin
             if (!isAdmin && !userParticipation.has(match.championship_id)) return;
 
+            // Do not show matches of scheduled (agendado) championships to regular users
+            const champ = championshipsMap[match.championship_id];
+            if (!isAdmin && champ?.status === 'agendado') return;
+
             const matchDate = parseISO(match.date);
             if (match.status === 'live' || (match.status === 'scheduled' && isPast(matchDate))) {
                 live.push(match);

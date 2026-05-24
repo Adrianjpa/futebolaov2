@@ -127,9 +127,10 @@ export default function MatchesClient() {
     }, []);
 
     const activeChamps = useMemo(() => {
-        return allChamps.filter((c: any) =>
-            (c.status === 'ativo' || c.status === 'agendado') && (isAdmin || userParticipation.has(c.id))
-        );
+        return allChamps.filter((c: any) => {
+            if (isAdmin) return c.status === 'ativo' || c.status === 'agendado';
+            return c.status === 'ativo' && userParticipation.has(c.id);
+        });
     }, [allChamps, isAdmin, userParticipation]);
 
     // Set default championship
