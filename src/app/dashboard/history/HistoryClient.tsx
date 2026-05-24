@@ -118,18 +118,19 @@ export default function HistoryClient() {
             } else if (isAdmin && !paramUser && champs.length > 0) {
                 // DEFAULT for Admin: Newest championship overall
                 setSelectedChampionship(champs[0].id);
-                setSelectedCategory(champs[0].category || "all");
+                setSelectedCategory("all");
             } else if (hasAnyHistory && userHistoryChamps.length > 0) {
                 // DEFAULT: Newest championship user participated in
                 const newest = userHistoryChamps[0];
                 setSelectedChampionship(newest.id);
-                setSelectedCategory(newest.category || "all");
+                setSelectedCategory("all");
             } else {
                 setSelectedChampionship("all");
+                setSelectedCategory("all");
             }
         };
         fetchInitialData();
-    }, [currentUser, paramUser]);
+    }, [currentUser?.id, paramUser]);
 
     const fetchMatches = async (page: number) => {
         setLoading(true);
