@@ -431,7 +431,16 @@ export default function DashboardClient() {
                             );
                         }
 
-                        // Just a static banner for the countdown
+                        if (hasRules && hasAccepted && !isAdmin) {
+                            return (
+                                <div className="bg-primary/5 border border-primary/10 text-primary-foreground p-3 rounded-xl flex items-center justify-center gap-2 shadow-sm animate-in fade-in duration-500">
+                                    <Info className="h-4 w-4 text-primary opacity-70 shrink-0" />
+                                    <p className="text-xs text-foreground/80 font-medium text-center">Você aceitou o regulamento do campeonato. Pode ler novamente no <span className="font-bold text-primary uppercase">Menu Partidas</span>.</p>
+                                </div>
+                            );
+                        }
+
+                        // Just a static banner for the countdown if no rules were required
                         return <CardContentWrapper>{innerContent}</CardContentWrapper>;
                     })()}
                 </div>
