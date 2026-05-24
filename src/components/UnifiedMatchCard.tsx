@@ -880,26 +880,28 @@ export function UnifiedMatchCard({
 
                                             if (missing.length > 0) {
                                                 return (
-                                                    <Tooltip>
-                                                        <TooltipTrigger asChild>
-                                                            <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-500 cursor-help">
-                                                                <UserX className="h-3 w-3" />
-                                                                <span className="text-[10px] font-bold">{predictedCount}/{total} palpites</span>
-                                                            </div>
-                                                        </TooltipTrigger>
-                                                        <TooltipContent className="bg-slate-900 border-slate-800 text-white max-w-[200px]">
-                                                            <div className="space-y-1">
-                                                                <p className="text-[10px] font-bold text-muted-foreground uppercase border-b border-white/10 pb-1 mb-1">Faltam Palpitar ({missing.length}):</p>
-                                                                <div className="flex flex-wrap gap-1">
-                                                                    {missing.map((p, i) => (
-                                                                        <span key={i} className="text-[10px] bg-white/10 px-1.5 py-0.5 rounded text-slate-200">
-                                                                            {p.nickname || "User" + p.userId.slice(0, 4)}
-                                                                        </span>
-                                                                    ))}
+                                                    <div onClick={(e) => e.stopPropagation()}>
+                                                        <Tooltip>
+                                                            <TooltipTrigger asChild>
+                                                                <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-500 cursor-help">
+                                                                    <UserX className="h-3 w-3" />
+                                                                    <span className="text-[10px] font-bold">{predictedCount}/{total} palpites</span>
                                                                 </div>
-                                                            </div>
-                                                        </TooltipContent>
-                                                    </Tooltip>
+                                                            </TooltipTrigger>
+                                                            <TooltipContent className="bg-slate-900 border-slate-800 text-white max-w-[200px]">
+                                                                <div className="space-y-1">
+                                                                    <p className="text-[10px] font-bold text-muted-foreground uppercase border-b border-white/10 pb-1 mb-1">Faltam Palpitar ({missing.length}):</p>
+                                                                    <div className="flex flex-wrap gap-1">
+                                                                        {missing.map((p, i) => (
+                                                                            <span key={i} className="text-[10px] bg-white/10 px-1.5 py-0.5 rounded text-slate-200">
+                                                                                {p.nickname || "User" + p.userId.slice(0, 4)}
+                                                                            </span>
+                                                                        ))}
+                                                                    </div>
+                                                                </div>
+                                                            </TooltipContent>
+                                                        </Tooltip>
+                                                    </div>
                                                 );
                                             } else {
                                                 return (
