@@ -74,10 +74,17 @@ export default function HistoryClient() {
 
             // 1. Fetch ALL championships
             const { data: allChamps } = await (supabase.from("championships") as any)
-                .select("*")
-                .order("created_at", { ascending: false });
+                .select("*");
 
-            const champs = (allChamps || []) as Championship[];
+            let champs = (allChamps || []) as Championship[];
+            
+            // Sort by start_date (actual event date) DESC, fallback to created_at
+            champs.sort((a, b) => {
+                const dateA = new Date((a as any).settings?.startDate || (a as any).created_at || 0).getTime();
+                const dateB = new Date((b as any).settings?.startDate || (b as any).created_at || 0).getTime();
+                return dateB - dateA;
+            });
+            
             setChampionships(champs);
 
             // 2. Fetch Target User Participation
