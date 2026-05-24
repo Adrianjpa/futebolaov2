@@ -279,7 +279,7 @@ export default function PublicProfilePage() {
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                        <StatCard title="Pontos" value={filteredStats.points} icon={<Gamepad2 className="h-4 w-4" />} color="bg-muted" text="text-foreground" description="Total de pontos no campeonato" />
+                        <StatCard title="Pontos" value={filteredStats.points} icon={<Gamepad2 className="h-4 w-4" />} color="bg-muted" text="text-foreground" description="Total de pontos no campeonato" link={`/dashboard/ranking?championship=${selectedChampionship}`} />
                         <StatCard title="Buchas" value={filteredStats.buchas} icon={<Target className="h-4 w-4" />} color="bg-green-600" description="Placares cravados" link={`/dashboard/history?championship=${selectedChampionship}&user=${id}&type=bucha`} />
                         <StatCard title="Situação" value={filteredStats.situacao} icon={<CheckCircle className="h-4 w-4" />} color="bg-blue-600" description="Vencedor/Empate corretos" link={`/dashboard/history?championship=${selectedChampionship}&user=${id}&type=situacao`} />
                         {comboEnabledForChamp && <StatCard title="Combo (Dourada)" value={filteredStats.combo} icon={<Gem className="h-4 w-4" />} color="bg-yellow-500" description="Bucha + Gols da Ficha" link={`/dashboard/history?championship=${selectedChampionship}&user=${id}&type=combo`} />}
