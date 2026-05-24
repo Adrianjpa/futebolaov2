@@ -74,9 +74,9 @@ export function UnifiedMatchCard({
     const isCritical = !isAdmin && !hasPrediction && !isFinished && !isLive && minutesToStart > 0 && minutesToStart <= 30; // 30 mins
 
     const urgencyClass = isCritical
-        ? "border-red-500/50 shadow-[0_0_15px_-3px_rgba(239,68,68,0.3)] animate-pulse bg-red-500/5"
+        ? "border-red-500/50 shadow-sm shadow-red-500/20 animate-pulse bg-red-500/5"
         : isUrgent
-            ? "border-yellow-500/50 shadow-[0_0_15px_-3px_rgba(234,179,8,0.3)] bg-yellow-500/5"
+            ? "border-yellow-500/50 shadow-sm shadow-yellow-500/20 bg-yellow-500/5"
             : "";
     // ---------------------------
 
@@ -594,8 +594,8 @@ export function UnifiedMatchCard({
                     </div>
                     
                     {isFutureBlock && (
-                        <div className="absolute inset-0 z-30 flex items-center justify-center bg-background/80 dark:bg-background/40 dark:backdrop-blur-[1px] pointer-events-none">
-                            <span className="bg-slate-900/90 text-slate-200 border border-slate-700 font-bold text-xs uppercase tracking-widest px-4 py-1.5 rounded-full drop-shadow-md">
+                        <div className="absolute inset-0 z-30 flex items-center justify-center bg-background/80 dark:bg-background/40 pointer-events-none">
+                            <span className="bg-slate-900/90 text-slate-200 border border-slate-700 font-bold text-xs uppercase tracking-widest px-4 py-1.5 rounded-full">
                                 Fase Futura (Aguarde)
                             </span>
                         </div>
@@ -727,7 +727,7 @@ export function UnifiedMatchCard({
                                                     className={cn(
                                                         "h-7 text-[10px] mt-1 font-bold px-3 py-0 rounded-full border transition-all truncate min-w-[100px]",
                                                         isComboActive 
-                                                            ? "bg-amber-400/20 text-amber-500 border-amber-500 hover:bg-amber-400/30 shadow-[0_0_10px_rgba(245,158,11,0.2)]" 
+                                                            ? "bg-amber-400/20 text-amber-500 border-amber-500 hover:bg-amber-400/30" 
                                                             : "border-slate-700 bg-transparent text-slate-500 hover:text-slate-300 hover:border-slate-500"
                                                     )}
                                                 >
@@ -790,7 +790,7 @@ export function UnifiedMatchCard({
                                 ) : (
                                     <div className="flex flex-col items-center">
                                         {isLive || isFinished ? (
-                                            <div className="bg-white dark:bg-black/80 px-5 py-2 sm:px-8 sm:py-3 rounded-2xl md:rounded-full border border-slate-200 dark:border-slate-800 flex items-center gap-4 sm:gap-8 min-w-[100px] sm:min-w-[140px] justify-center shadow-2xl dark:backdrop-blur-sm">
+                                            <div className="bg-white dark:bg-black/80 px-5 py-2 sm:px-8 sm:py-3 rounded-2xl md:rounded-full border border-slate-200 dark:border-slate-800 flex items-center gap-4 sm:gap-8 min-w-[100px] sm:min-w-[140px] justify-center shadow-md">
                                                 <span className="text-3xl sm:text-4xl font-bold text-slate-900 dark:text-white font-mono break-keep">{match.score_home ?? 0}</span>
                                                 <span className="text-slate-400 dark:text-slate-600 font-bold text-xl">-</span>
                                                 <span className="text-3xl sm:text-4xl font-bold text-slate-900 dark:text-white font-mono break-keep">{match.score_away ?? 0}</span>

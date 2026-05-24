@@ -437,7 +437,7 @@ export default function DashboardClient() {
             {/* Live Matches Section */}
             {(liveMatches.length > 0 || isAdmin) && (
                 liveMatches.length > 0 ? (
-                    <Card className="border-red-200 dark:border-red-900/50 bg-red-50/10 dark:bg-red-950/20 shadow-sm transition-all duration-300">
+                    <Card className="border-red-200 dark:border-red-900/50 bg-red-50/10 dark:bg-red-950/20">
                         <CardHeader className="pb-3 border-b border-red-100 dark:border-red-900/30">
                             <div className="flex items-center justify-between">
                                 <CardTitle className="flex items-center text-red-600 dark:text-red-500 text-xl font-black">
@@ -584,7 +584,7 @@ export default function DashboardClient() {
 
                     {/* Sidebar (Right) */}
                     <div className="lg:col-span-3 space-y-6">
-                        <Card className="overflow-hidden border-border dark:border-border/50 shadow-sm">
+                        <Card className="overflow-hidden border-border dark:border-border/50">
                             <CardHeader className="bg-muted/10 pb-4 border-b">
                                 <CardTitle className="flex items-center text-lg">
                                     <Trophy className="mr-2 h-5 w-5 text-yellow-500" />
@@ -602,8 +602,8 @@ export default function DashboardClient() {
                                         if (!leader) return null;
 
                                         return (
-                                            <div key={champ.id} className="relative p-4 rounded-xl bg-accent/20 border hover:border-primary/50 transition-all group overflow-hidden">
-                                                <div className="absolute top-0 right-0 w-24 h-24 bg-primary/5 rounded-full -mr-8 -mt-8 blur-2xl group-hover:bg-primary/10 transition-colors" />
+                                            <div key={champ.id} className="relative p-4 rounded-xl bg-accent/20 border hover:border-primary/50 group overflow-hidden">
+                                                <div className="absolute top-0 right-0 w-24 h-24 bg-primary/5 rounded-full -mr-8 -mt-8 group-hover:bg-primary/10 transition-colors" />
 
                                                 <div className="flex flex-col gap-4 relative">
                                                     <div className="flex items-center justify-between">
@@ -614,13 +614,13 @@ export default function DashboardClient() {
 
                                                     <div className="flex items-center gap-4">
                                                         <div className="relative">
-                                                            <Avatar className="h-16 w-16 border-2 border-yellow-500 shadow-lg ring-4 ring-yellow-500/20">
+                                                            <Avatar className="h-16 w-16 border-2 border-yellow-500 ring-4 ring-yellow-500/20">
                                                                 <AvatarImage src={leader?.foto_perfil} />
                                                                 <AvatarFallback className="bg-yellow-500 text-white font-bold">
                                                                     {(leader?.nickname || leader?.nome || "?").substring(0, 2).toUpperCase()}
                                                                 </AvatarFallback>
                                                             </Avatar>
-                                                            <div className="absolute -bottom-1 -right-1 bg-yellow-500 text-white text-[10px] font-black w-6 h-6 flex items-center justify-center rounded-full shadow-lg border-2 border-background">
+                                                            <div className="absolute -bottom-1 -right-1 bg-yellow-500 text-white text-[10px] font-black w-6 h-6 flex items-center justify-center rounded-full border-2 border-background">
                                                                 1º
                                                             </div>
                                                         </div>
