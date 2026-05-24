@@ -465,25 +465,25 @@ export function UnifiedMatchCard({
         setExpanded(!expanded);
     };
 
-    const StatusBadgeComponent = () => {
-        if (isLive) return (
+    const StatusBadgeComponent = ({ type = "all" }: { type?: "status" | "urgency" | "all" }) => {
+        if ((type === "all" || type === "status") && isLive) return (
             <span className="text-[10px] sm:text-[11px] font-bold text-red-500 bg-red-500/10 px-2 py-1 sm:px-3 sm:py-1.5 rounded-lg border border-red-500/20 animate-pulse tracking-wider">
                 AO VIVO
             </span>
         );
-        if (isFinished) return (
+        if ((type === "all" || type === "status") && isFinished) return (
             <span className="text-[10px] sm:text-[11px] font-bold text-slate-500 dark:text-slate-400 bg-muted dark:bg-slate-800/80 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg border border-border dark:border-slate-700 uppercase tracking-wider">
                 FINAL
             </span>
         );
 
         // Urgency Badges
-        if (isCritical) return (
+        if ((type === "all" || type === "urgency") && isCritical) return (
             <span className="flex items-center gap-1 text-[10px] sm:text-[11px] font-bold text-red-500 bg-red-500/10 px-2 py-1 sm:px-3 sm:py-1.5 rounded-lg border border-red-500/20 animate-pulse tracking-wider">
                 <AlertTriangle className="h-3 w-3" /> ÚLTIMA CHANCE
             </span>
         );
-        if (isUrgent) return (
+        if ((type === "all" || type === "urgency") && isUrgent) return (
             <span className="flex items-center gap-1 text-[10px] sm:text-[11px] font-bold text-yellow-500 bg-yellow-500/10 px-2 py-1 sm:px-3 sm:py-1.5 rounded-lg border border-yellow-500/20 tracking-wider">
                 <Clock className="h-3 w-3" /> NÃO ESQUEÇA
             </span>
@@ -563,7 +563,12 @@ export function UnifiedMatchCard({
                                     <Edit className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                                 </Button>
                             )}
-                            <StatusBadgeComponent />
+                            <div className="hidden md:block">
+                                <StatusBadgeComponent type="all" />
+                            </div>
+                            <div className="md:hidden">
+                                <StatusBadgeComponent type="status" />
+                            </div>
                         </div>
                     </div>
                     
@@ -811,34 +816,39 @@ export function UnifiedMatchCard({
                         </div>
 
                         {/* Date / Time / Admin Actions */}
-                        <div className="flex items-center justify-center gap-2 text-muted-foreground font-semibold mb-2 h-7 sm:h-8">
-                            {isLive ? (
-                                isAdmin && !isEditing && (
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        className="h-7 text-[10px] font-bold border-red-600/30 text-red-600 dark:text-red-500 hover:bg-red-500/10 hover:text-red-700 dark:hover:text-red-400 transition-all px-4 rounded-full shadow-sm"
-                                        onClick={(e) => { e.stopPropagation(); setShowFinalizeDialog(true); }}
-                                    >
-                                        FINALIZAR PARTIDA
-                                    </Button>
-                                )
-                            ) : showCountdown ? (
-                                <div className="flex items-center gap-1.5 bg-red-500/5 dark:bg-red-500/10 px-3 py-1 rounded-full border border-red-500/10 animate-pulse">
-                                    <Clock className="h-3.5 w-3.5 text-red-500" />
-                                    <span className="text-[11px] sm:text-[13px] text-red-600 dark:text-red-500 font-bold uppercase tracking-wider">
-                                        {minutesToStart > 0 && "Começa em "}
-                                        <Countdown targetDate={matchDate} onZero={handleAutoLive} />
-                                    </span>
-                                </div>
-                            ) : (
-                                <>
-                                    <Calendar className="h-3.5 w-3.5 text-muted-foreground/60" />
-                                    <span className="text-[11px] sm:text-[13px] font-bold">
-                                        {formatMatchDate(match.date, match.championship_id)}
-                                    </span>
-                                </>
-                            )}
+                        <div className="flex flex-col items-center justify-center gap-2 mb-2">
+                            <div className="flex items-center justify-center gap-2 text-muted-foreground font-semibold h-7 sm:h-8">
+                                {isLive ? (
+                                    isAdmin && !isEditing && (
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            className="h-7 text-[10px] font-bold border-red-600/30 text-red-600 dark:text-red-500 hover:bg-red-500/10 hover:text-red-700 dark:hover:text-red-400 transition-all px-4 rounded-full shadow-sm"
+                                            onClick={(e) => { e.stopPropagation(); setShowFinalizeDialog(true); }}
+                                        >
+                                            FINALIZAR PARTIDA
+                                        </Button>
+                                    )
+                                ) : showCountdown ? (
+                                    <div className="flex items-center gap-1.5 bg-red-500/5 dark:bg-red-500/10 px-3 py-1 rounded-full border border-red-500/10 animate-pulse">
+                                        <Clock className="h-3.5 w-3.5 text-red-500" />
+                                        <span className="text-[11px] sm:text-[13px] text-red-600 dark:text-red-500 font-bold uppercase tracking-wider">
+                                            {minutesToStart > 0 && "Começa em "}
+                                            <Countdown targetDate={matchDate} onZero={handleAutoLive} />
+                                        </span>
+                                    </div>
+                                ) : (
+                                    <>
+                                        <Calendar className="h-3.5 w-3.5 text-muted-foreground/60" />
+                                        <span className="text-[11px] sm:text-[13px] font-bold">
+                                            {formatMatchDate(match.date, match.championship_id)}
+                                        </span>
+                                    </>
+                                )}
+                            </div>
+                            <div className="md:hidden">
+                                <StatusBadgeComponent type="urgency" />
+                            </div>
                         </div>
 
                         {/* Footer indicator */}
