@@ -467,24 +467,24 @@ export function UnifiedMatchCard({
 
     const StatusBadgeComponent = ({ type = "all" }: { type?: "status" | "urgency" | "all" }) => {
         if ((type === "all" || type === "status") && isLive) return (
-            <span className="text-[10px] sm:text-[11px] font-bold text-red-500 bg-red-500/10 px-2 py-1 sm:px-3 sm:py-1.5 rounded-lg border border-red-500/20 animate-pulse tracking-wider">
+            <span className="inline-flex items-center justify-center h-6 sm:h-7 text-[10px] sm:text-[11px] font-bold text-red-500 bg-red-500/10 px-2 sm:px-3 rounded-lg border border-red-500/20 animate-pulse tracking-wider shrink-0">
                 AO VIVO
             </span>
         );
         if ((type === "all" || type === "status") && isFinished) return (
-            <span className="text-[10px] sm:text-[11px] font-bold text-slate-500 dark:text-slate-400 bg-muted dark:bg-slate-800/80 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg border border-border dark:border-slate-700 uppercase tracking-wider">
+            <span className="inline-flex items-center justify-center h-6 sm:h-7 text-[10px] sm:text-[11px] font-bold text-slate-500 dark:text-slate-400 bg-muted dark:bg-slate-800/80 px-2.5 sm:px-3 rounded-lg border border-border dark:border-slate-700 uppercase tracking-wider shrink-0">
                 FINAL
             </span>
         );
 
         // Urgency Badges
         if ((type === "all" || type === "urgency") && isCritical) return (
-            <span className="flex items-center gap-1 text-[10px] sm:text-[11px] font-bold text-red-500 bg-red-500/10 px-2 py-1 sm:px-3 sm:py-1.5 rounded-lg border border-red-500/20 animate-pulse tracking-wider">
+            <span className="inline-flex items-center justify-center h-6 sm:h-7 gap-1 text-[10px] sm:text-[11px] font-bold text-red-500 bg-red-500/10 px-2 sm:px-3 rounded-lg border border-red-500/20 animate-pulse tracking-wider shrink-0">
                 <AlertTriangle className="h-3 w-3" /> ÚLTIMA CHANCE
             </span>
         );
         if ((type === "all" || type === "urgency") && isUrgent) return (
-            <span className="flex items-center gap-1 text-[10px] sm:text-[11px] font-bold text-yellow-500 bg-yellow-500/10 px-2 py-1 sm:px-3 sm:py-1.5 rounded-lg border border-yellow-500/20 tracking-wider">
+            <span className="inline-flex items-center justify-center h-6 sm:h-7 gap-1 text-[10px] sm:text-[11px] font-bold text-yellow-500 bg-yellow-500/10 px-2 sm:px-3 rounded-lg border border-yellow-500/20 tracking-wider shrink-0">
                 <Clock className="h-3 w-3" /> NÃO ESQUEÇA
             </span>
         );
@@ -544,7 +544,7 @@ export function UnifiedMatchCard({
                         <div className="flex-1 flex justify-end flex-wrap items-center gap-2">
                             {/* COMBO TOKENS COUNTER (Visible on both Native layout and Mobile opposite to logo) */}
                             {comboEnabled && totalPhaseTokens > 0 && !isAdmin && showBetButton && (
-                                <div className="flex items-center gap-1 text-[9px] sm:text-[10px] font-bold px-2 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-500 whitespace-nowrap shrink-0">
+                                <div className="inline-flex items-center justify-center h-6 sm:h-7 gap-1 text-[9px] sm:text-[10px] font-bold px-2 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-500 whitespace-nowrap shrink-0">
                                     🌟 
                                     <span className={availableComboTokens === 0 ? "opacity-50" : "text-amber-400 font-black"}>
                                         {availableComboTokens}
@@ -563,10 +563,10 @@ export function UnifiedMatchCard({
                                     <Edit className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                                 </Button>
                             )}
-                            <div className="hidden md:block">
+                            <div className="hidden md:flex items-center">
                                 <StatusBadgeComponent type="all" />
                             </div>
-                            <div className="md:hidden">
+                            <div className="flex md:hidden items-center">
                                 <StatusBadgeComponent type="status" />
                             </div>
                         </div>
