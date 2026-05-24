@@ -112,8 +112,14 @@ export default function MatchesClient() {
     const [showRulesModal, setShowRulesModal] = useState(false);
 
     const fetchUsers = async () => {
-        const { data } = await (supabase.from("public_profiles") as any).select("*");
-        setUsers(data || []);
+        const res = await fetch('/api/users/public');
+        if (res.ok) {
+            const json = await res.json();
+            setUsers(json.data || []);
+        } else {
+            const { data } = await (supabase.from("public_profiles") as any).select("*");
+            setUsers(data || []);
+        }
     };
 
     useEffect(() => {

@@ -62,9 +62,15 @@ export default function DashboardClient() {
                     setAnnouncement(settingsData.data.announcement);
                 }
 
-                // Fetch All Users (public_profiles)
-                const { data: usersData } = await (supabase.from("public_profiles").select("*") as any);
-                setAllUsers(usersData || []);
+                // Fetch All Users (public_profiles) via API to bypass RLS
+                const res = await fetch('/api/users/public');
+                if (res.ok) {
+                    const json = await res.json();
+                    setAllUsers(json.data || []);
+                } else {
+                    const { data: usersData } = await (supabase.from("public_profiles").select("*") as any);
+                    setAllUsers(usersData || []);
+                }
 
                 // Fetch Leaders for Active Championships
                 // We use 'ranking_by_championship' view which splits points by championship

@@ -98,8 +98,14 @@ export default function HistoryClient() {
 
             const userHistoryChamps = champs.filter(c => allUserChampIds.includes(c.id));
             setUserChampionships(userHistoryChamps);
-            const { data: profiles } = await (supabase.from("public_profiles") as any).select("*");
-            setUsers(profiles || []);
+            const res = await fetch('/api/users/public');
+            if (res.ok) {
+                const json = await res.json();
+                setUsers(json.data || []);
+            } else {
+                const { data: profiles } = await (supabase.from("public_profiles") as any).select("*");
+                setUsers(profiles || []);
+            }
 
             const hasAnyHistory = userHistoryChamps.length > 0 || isAdmin;
             setHasHistory(hasAnyHistory);
