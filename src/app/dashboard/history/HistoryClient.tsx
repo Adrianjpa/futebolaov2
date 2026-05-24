@@ -290,11 +290,13 @@ export default function HistoryClient() {
         if (currentPage > 1) fetchMatches(currentPage - 1);
     };
 
+    const targetChampionships = (isAdmin && !paramUser) ? championships : userChampionships;
+
     const handleCategoryChange = (val: string) => {
         setSelectedCategory(val);
         if (val !== "all") {
-            // championships is already sorted by newest event date first
-            const inCat = championships.filter(c => (c.category || "other") === val);
+            // targetChampionships is already sorted by newest event date first
+            const inCat = targetChampionships.filter(c => (c.category || "other") === val);
 
             if (inCat.length > 0) {
                 setSelectedChampionship(inCat[0].id);
@@ -309,10 +311,10 @@ export default function HistoryClient() {
     const isFiltered = !!paramUser || !!paramType;
     const showPagination = (currentPage > 1 || !isLastPage) && matches.length > 0;
 
-    const availableCategories = Array.from(new Set(championships.map((c: Championship) => c.category || "other"))).sort();
+    const availableCategories = Array.from(new Set(targetChampionships.map((c: Championship) => c.category || "other"))).sort();
     const filteredChampionships = selectedCategory === "all"
-        ? championships
-        : championships.filter((c: Championship) => (c.category || "other") === selectedCategory);
+        ? targetChampionships
+        : targetChampionships.filter((c: Championship) => (c.category || "other") === selectedCategory);
 
     return (
         <div className="space-y-6">
