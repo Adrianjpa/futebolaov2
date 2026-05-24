@@ -131,14 +131,14 @@ export function UnifiedMatchCard({
         const comboHit = isComboActive && betTotalGoals !== "" && parseInt(betTotalGoals, 10) === (mh + ma);
 
         if (isExact && comboHit)
-            return "bg-yellow-500 text-white dark:bg-yellow-900/40 border-yellow-600 dark:border-yellow-600/40 shadow-[0_0_10px_rgba(234,179,8,0.1)] dark:text-foreground";
+            return "bg-yellow-500 text-white dark:bg-yellow-900/40 border-yellow-600 dark:border-yellow-600/40 shadow-md dark:text-foreground";
         if (isExact)
-            return "bg-emerald-600 text-white dark:bg-emerald-950/60 border-emerald-700 dark:border-emerald-600/60 shadow-[0_0_15px_rgba(16,185,129,0.15)] dark:text-foreground";
+            return "bg-emerald-600 text-white dark:bg-emerald-950/60 border-emerald-700 dark:border-emerald-600/60 shadow-md dark:text-foreground";
         if (!isExact && comboHit)
-            return "bg-slate-500 text-white dark:bg-slate-700/60 border-slate-600 dark:border-slate-400/50 shadow-[0_0_10px_rgba(148,163,184,0.1)] dark:text-foreground";
+            return "bg-slate-500 text-white dark:bg-slate-700/60 border-slate-600 dark:border-slate-400/50 shadow-md dark:text-foreground";
         if (winP === winM)
-            return "bg-blue-600 text-white dark:bg-blue-950/50 border-blue-700 dark:border-blue-800/50 shadow-[0_0_10px_rgba(59,130,246,0.1)] dark:text-foreground";
-        return "bg-red-600 text-white dark:bg-red-950/60 border-red-700 dark:border-red-800/60 shadow-[0_0_10px_rgba(239,68,68,0.1)] dark:text-foreground";
+            return "bg-blue-600 text-white dark:bg-blue-950/50 border-blue-700 dark:border-blue-800/50 shadow-md dark:text-foreground";
+        return "bg-red-600 text-white dark:bg-red-950/60 border-red-700 dark:border-red-800/60 shadow-md dark:text-foreground";
     }, [effectiveUserId, isLive, isFinished, betHome, betAway, isComboActive, betTotalGoals, match.score_home, match.score_away]);
     // -------------------------------------------
     const isColored = !!userResultClass;
@@ -976,24 +976,24 @@ export function UnifiedMatchCard({
                                             bgClass = "bg-slate-100 border-slate-200 hover:bg-slate-200 dark:bg-slate-900/40 dark:border-slate-800/60 dark:hover:bg-slate-900/60 text-foreground";
                                             badgeClass = "hidden"; // Esconde o badge de pontos para jogos futuros
                                         } else if (isCombo) {
-                                            bgClass = "bg-yellow-500 border-yellow-600 text-white hover:bg-yellow-600 dark:bg-yellow-900/40 dark:border-yellow-600/40 dark:hover:bg-yellow-800/40 shadow-[0_0_10px_rgba(234,179,8,0.1)] dark:text-foreground";
-                                            badgeClass = "bg-gradient-to-br from-yellow-300 to-yellow-600 text-black shadow-lg shadow-yellow-900/20 ring-2 ring-white/60 dark:ring-yellow-400/50 scale-105";
+                                            bgClass = "bg-yellow-500 border-yellow-600 text-white hover:bg-yellow-600 dark:bg-yellow-900/40 dark:border-yellow-600/40 dark:hover:bg-yellow-800/40 shadow-sm dark:text-foreground";
+                                            badgeClass = "bg-gradient-to-br from-yellow-300 to-yellow-600 text-black shadow-sm ring-2 ring-white/60 dark:ring-yellow-400/50 scale-105";
                                         } else if (isExactDynamic) {
-                                            bgClass = "bg-emerald-600 border-emerald-700 text-white hover:bg-emerald-700 dark:bg-emerald-950/60 dark:border-emerald-600/60 dark:hover:bg-emerald-900/50 shadow-[0_0_15px_rgba(16,185,129,0.15)] dark:text-foreground";
-                                            badgeClass = "bg-emerald-500 text-white shadow-lg shadow-emerald-900/20 ring-2 ring-white/60 dark:ring-emerald-400/50 scale-110";
+                                            bgClass = "bg-emerald-600 border-emerald-700 text-white hover:bg-emerald-700 dark:bg-emerald-950/60 dark:border-emerald-600/60 dark:hover:bg-emerald-900/50 shadow-sm dark:text-foreground";
+                                            badgeClass = "bg-emerald-500 text-white shadow-sm ring-2 ring-white/60 dark:ring-emerald-400/50 scale-110";
                                         } else if (isWinnerDynamic) {
                                             bgClass = "bg-blue-600 border-blue-700 text-white hover:bg-blue-700 dark:bg-blue-950/50 dark:border-blue-800/50 dark:hover:bg-blue-900/50 dark:text-foreground";
-                                            badgeClass = "bg-blue-600 text-white font-bold ring-2 ring-white/60 dark:ring-transparent shadow-md";
+                                            badgeClass = "bg-blue-600 text-white font-bold ring-2 ring-white/60 dark:ring-transparent shadow-sm";
                                         } else if (isBonus) {
                                             bgClass = "bg-slate-500 border-slate-600 text-white hover:bg-slate-600 dark:bg-slate-700/60 dark:border-slate-400/50 dark:hover:bg-slate-600/60 dark:text-foreground";
-                                            badgeClass = "bg-gradient-to-br from-slate-200 to-slate-400 text-black shadow-md ring-2 ring-white/60 dark:ring-slate-300/50";
+                                            badgeClass = "bg-gradient-to-br from-slate-200 to-slate-400 text-black shadow-sm ring-2 ring-white/60 dark:ring-slate-300/50";
                                         } else {
                                             bgClass = "bg-red-600 border-red-700 text-white hover:bg-red-700 dark:bg-red-950/60 dark:border-red-800/60 dark:hover:bg-red-900/50 dark:text-foreground";
-                                            badgeClass = "bg-red-600 text-white font-bold ring-2 ring-white/60 dark:ring-transparent shadow-md";
+                                            badgeClass = "bg-red-600 text-white font-bold ring-2 ring-white/60 dark:ring-transparent shadow-sm";
                                         }
 
                                         return (
-                                            <div key={pred.id} className={`grid grid-cols-[1fr_auto_1fr] sm:grid-cols-3 items-center gap-2 p-3 rounded-xl border transition-all duration-300 ${bgClass}`}>
+                                            <div key={pred.id} className={`grid grid-cols-[1fr_auto_1fr] sm:grid-cols-3 items-center gap-2 p-3 rounded-xl border transition-colors duration-200 ${bgClass}`}>
                                                 {/* Left: Avatar + Name */}
                                                 <div className="flex items-center gap-3 min-w-0 overflow-hidden text-left">
                                                     <Avatar
