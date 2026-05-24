@@ -37,6 +37,7 @@ export default function DashboardClient() {
     const [nextMatches, setNextMatches] = useState<any[]>([]);
     const [recentMatches, setRecentMatches] = useState<any[]>([]);
     const [allUsers, setAllUsers] = useState<any[]>([]);
+    const [localAcceptedRules, setLocalAcceptedRules] = useState<Set<string>>(new Set());
     // const [topUsers, setTopUsers] = useState<any[]>([]); // Deprecated for global simple list
     const [leadersMap, setLeadersMap] = useState<Record<string, any>>({});
     const [announcement, setAnnouncement] = useState<string>("");
@@ -268,13 +269,16 @@ export default function DashboardClient() {
         try {
             const { error } = await (supabase
                 .from('championship_participants') as any)
-                .update({ has_accepted_rules: true })
-                .eq('user_id', user.id)
-                .eq('championship_id', selectedRulesChamp.id);
+                .upsert({ 
+                    user_id: user.id, 
+                    championship_id: selectedRulesChamp.id,
+                    has_accepted_rules: true 
+                }, { onConflict: 'user_id, championship_id' });
             
             if (error) throw error;
             
-            await fetchMatches(); // This will update userAcceptedRules
+            await fetchMatches(); 
+            setLocalAcceptedRules(prev => new Set([...prev, selectedRulesChamp.id]));
             setShowRulesModal(false);
             toast.success("Regras aceitas com sucesso!", {
                 description: "Você pode reler este regulamento a qualquer momento clicando no botão de 'Informação' na aba PARTIDAS.",
@@ -348,7 +352,7 @@ export default function DashboardClient() {
 
                     {upcomingChampionship && (() => {
                         const hasRules = !!(upcomingChampionship.settings as any)?.rulesText;
-                        const hasAccepted = userAcceptedRules.has(upcomingChampionship.id);
+                        const hasAccepted = userAcceptedRules.has(upcomingChampionship.id) || localAcceptedRules.has(upcomingChampionship.id);
                         const isLocked = !isAdmin && hasRules && !hasAccepted;
 
                         const CardContentWrapper = ({ children }: any) => (
@@ -431,11 +435,7 @@ export default function DashboardClient() {
                             );
                         }
 
-                        if (hasRules && hasAccepted && !isAdmin) {
-                            return null;
-                        }
-
-                        // Just a static banner for the countdown if no rules were required
+                        // Render countdown banner for users who have accepted rules (or no rules required)
                         return <CardContentWrapper>{innerContent}</CardContentWrapper>;
                     })()}
                 </div>
