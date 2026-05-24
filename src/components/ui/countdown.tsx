@@ -38,13 +38,14 @@ export function Countdown({ targetDate, onZero }: CountdownProps) {
 
     if (timeLeft <= 0) return <span className="text-red-600 dark:text-red-500 font-bold text-[10px] animate-pulse">AGUARDANDO</span>;
 
-    const hours = Math.floor(timeLeft / 3600);
+    const days = Math.floor(timeLeft / 86400);
+    const hours = Math.floor((timeLeft % 86400) / 3600);
     const minutes = Math.floor((timeLeft % 3600) / 60);
     const seconds = timeLeft % 60;
 
     return (
         <span className="font-mono font-bold text-red-600 animate-pulse">
-            {String(hours).padStart(2, '0')}:{String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}
+            {days > 0 ? `${String(days).padStart(2, '0')}:` : ''}{String(hours).padStart(2, '0')}:{String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}
         </span>
     );
 }

@@ -403,10 +403,10 @@ export default function DashboardClient() {
                                         </Button>
                                     ) : upcomingChampionship.earliestMatchDate ? (
                                         <>
-                                            <Countdown targetDate={upcomingChampionship.earliestMatchDate} />
-                                            <div className="flex items-center gap-1 text-[10px] uppercase font-black text-muted-foreground/60 tracking-widest mt-1">
-                                                <span>Dias</span> • <span>Horas</span> • <span>Minutos</span>
-                                            </div>
+                                                <Countdown targetDate={upcomingChampionship.earliestMatchDate} />
+                                                <div className="flex items-center gap-1 text-[10px] uppercase font-black text-muted-foreground/60 tracking-widest mt-1">
+                                                    <span>Dias</span> • <span>Horas</span> • <span>Minutos</span> • <span>Segs</span>
+                                                </div>
                                         </>
                                     ) : (
                                         <div className="bg-primary/10 text-primary px-4 py-2 rounded-lg font-bold text-xs uppercase tracking-widest border border-primary/20 animate-pulse">
