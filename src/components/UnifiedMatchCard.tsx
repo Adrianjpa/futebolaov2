@@ -141,6 +141,7 @@ export function UnifiedMatchCard({
         return "bg-red-600 text-white dark:bg-red-950/60 border-red-700 dark:border-red-800/60 shadow-[0_0_10px_rgba(239,68,68,0.1)] dark:text-foreground";
     }, [effectiveUserId, isLive, isFinished, betHome, betAway, isComboActive, betTotalGoals, match.score_home, match.score_away]);
     // -------------------------------------------
+    const isColored = !!userResultClass;
 
     // Effect to load user's prediction into inputs
     // Runs when showBetButton=true (betting mode) OR when the match is live/finished (to compute card color)
@@ -467,7 +468,9 @@ export function UnifiedMatchCard({
 
     const StatusBadgeComponent = ({ type = "all", className = "" }: { type?: "status" | "urgency" | "all", className?: string }) => {
         if ((type === "all" || type === "status") && isLive) return (
-            <span className={cn("inline-flex items-center justify-center h-6 sm:h-7 text-[10px] sm:text-[11px] font-bold text-red-500 bg-red-500/10 px-2 sm:px-3 rounded-lg border border-red-500/20 animate-pulse tracking-wider shrink-0 leading-none", className)}>
+            <span className={cn("inline-flex items-center justify-center h-6 sm:h-7 text-[10px] sm:text-[11px] font-bold px-2 sm:px-3 rounded-lg border animate-pulse tracking-wider shrink-0 leading-none", 
+                isColored ? "text-current bg-foreground/10 border-foreground/20" : "text-red-500 bg-red-500/10 border-red-500/20",
+                className)}>
                 AO VIVO
             </span>
         );
@@ -518,7 +521,10 @@ export function UnifiedMatchCard({
                                 )}
                             </div>
                             <div className="hidden md:flex items-center shrink-0">
-                                <span className="text-[11px] font-bold text-muted-foreground bg-muted dark:bg-slate-800/40 px-2.5 py-1 rounded-md border border-border dark:border-slate-700/50 uppercase whitespace-nowrap">
+                                <span className={cn(
+                                    "text-[11px] font-bold px-2.5 py-1 rounded-md border uppercase whitespace-nowrap",
+                                    isColored ? "text-current opacity-90 bg-foreground/10 border-foreground/20 dark:bg-slate-800/40 dark:border-slate-700/50" : "text-muted-foreground bg-muted dark:bg-slate-800/40 border-border dark:border-slate-700/50"
+                                )}>
                                     {translateRoundName(match.round_name || match.round)}
                                 </span>
                             </div>
@@ -529,7 +535,10 @@ export function UnifiedMatchCard({
                             <Popover>
                                 <PopoverTrigger asChild onClick={(e) => e.stopPropagation()}>
                                     <button className="outline-none group/champ w-full truncate">
-                                        <span className="text-[11px] font-bold text-blue-600 dark:text-blue-500 uppercase tracking-[0.25em] text-center whitespace-nowrap">
+                                        <span className={cn(
+                                            "text-[11px] font-bold uppercase tracking-[0.25em] text-center whitespace-nowrap",
+                                            isColored ? "text-current opacity-90" : "text-blue-600 dark:text-blue-500"
+                                        )}>
                                             {showChampionshipName ? match.championshipName || "CAMPEONATO" : ""}
                                         </span>
                                     </button>
@@ -544,9 +553,12 @@ export function UnifiedMatchCard({
                         <div className="flex-1 flex justify-end flex-wrap items-center gap-2">
                             {/* COMBO TOKENS COUNTER (Visible on both Native layout and Mobile opposite to logo) */}
                             {comboEnabled && totalPhaseTokens > 0 && !isAdmin && showBetButton && (
-                                <div className="inline-flex items-center justify-center h-6 sm:h-7 gap-1 text-[9px] sm:text-[10px] font-bold px-2 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-500 whitespace-nowrap shrink-0 leading-none">
+                                <div className={cn(
+                                    "inline-flex items-center justify-center h-6 sm:h-7 gap-1 text-[9px] sm:text-[10px] font-bold px-2 rounded-full border whitespace-nowrap shrink-0 leading-none",
+                                    isColored ? "bg-foreground/10 border-foreground/20 text-current" : "bg-amber-500/10 border-amber-500/20 text-amber-500"
+                                )}>
                                     🌟 
-                                    <span className={availableComboTokens === 0 ? "opacity-50" : "text-amber-400 font-black"}>
+                                    <span className={availableComboTokens === 0 ? "opacity-50" : (isColored ? "font-black" : "text-amber-400 font-black")}>
                                         {availableComboTokens}
                                     </span>
                                     <span className="opacity-40">/ {totalPhaseTokens}</span>
@@ -864,7 +876,7 @@ export function UnifiedMatchCard({
 
                             {/* Header Section */}
                             <div className="flex items-center justify-between mb-4">
-                                <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Palpites da Galera</h4>
+                                <h4 className={cn("text-xs font-bold uppercase tracking-wider", isColored ? "text-current opacity-80" : "text-muted-foreground")}>Palpites da Galera</h4>
                                 <div className="flex items-center gap-2">
                                     {(() => {
                                         if (isAdmin && participantsData.length > 0) {
@@ -878,7 +890,10 @@ export function UnifiedMatchCard({
                                                     <div onClick={(e) => e.stopPropagation()}>
                                                         <Popover>
                                                             <PopoverTrigger asChild>
-                                                                <button className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-500 cursor-help outline-none">
+                                                                <button className={cn(
+                                                                    "flex items-center gap-1.5 px-2 py-0.5 rounded-full cursor-help outline-none border",
+                                                                    isColored ? "bg-foreground/10 border-foreground/20 text-current" : "bg-amber-500/10 border-amber-500/20 text-amber-500"
+                                                                )}>
                                                                     <UserX className="h-3 w-3" />
                                                                     <span className="text-[10px] font-bold">{predictedCount}/{total} palpites</span>
                                                                 </button>
@@ -900,7 +915,10 @@ export function UnifiedMatchCard({
                                                 );
                                             } else {
                                                 return (
-                                                    <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-[10px] font-bold text-emerald-600 dark:text-emerald-500 border border-emerald-500/20">
+                                                    <span className={cn(
+                                                        "px-2 py-0.5 rounded-full text-[10px] font-bold border",
+                                                        isColored ? "bg-foreground/10 text-current border-foreground/20" : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-500 border-emerald-500/20"
+                                                    )}>
                                                         {predictedCount}/{total} palpites
                                                     </span>
                                                 );
@@ -909,7 +927,10 @@ export function UnifiedMatchCard({
 
                                         // Fallback for non-admin or no participantsData
                                         return (
-                                            <span className="px-2 py-0.5 rounded-full bg-muted dark:bg-slate-800 text-[10px] font-bold text-muted-foreground border border-border">
+                                            <span className={cn(
+                                                "px-2 py-0.5 rounded-full text-[10px] font-bold border",
+                                                isColored ? "bg-foreground/10 text-current border-foreground/20" : "bg-muted dark:bg-slate-800 text-muted-foreground border-border"
+                                            )}>
                                                 {predictions.length} palpites
                                             </span>
                                         );
@@ -945,19 +966,19 @@ export function UnifiedMatchCard({
                                             badgeClass = "hidden"; // Esconde o badge de pontos para jogos futuros
                                         } else if (isCombo) {
                                             bgClass = "bg-yellow-500 border-yellow-600 text-white hover:bg-yellow-600 dark:bg-yellow-900/40 dark:border-yellow-600/40 dark:hover:bg-yellow-800/40 shadow-[0_0_10px_rgba(234,179,8,0.1)] dark:text-foreground";
-                                            badgeClass = "bg-gradient-to-br from-yellow-300 to-yellow-600 text-black shadow-lg shadow-yellow-900/20 ring-1 ring-yellow-400/50 scale-105";
+                                            badgeClass = "bg-gradient-to-br from-yellow-300 to-yellow-600 text-black shadow-lg shadow-yellow-900/20 ring-2 ring-white/60 dark:ring-yellow-400/50 scale-105";
                                         } else if (isExactDynamic) {
                                             bgClass = "bg-emerald-600 border-emerald-700 text-white hover:bg-emerald-700 dark:bg-emerald-950/60 dark:border-emerald-600/60 dark:hover:bg-emerald-900/50 shadow-[0_0_15px_rgba(16,185,129,0.15)] dark:text-foreground";
-                                            badgeClass = "bg-emerald-500 text-white shadow-lg shadow-emerald-900/20 ring-1 ring-emerald-400/50 scale-110";
+                                            badgeClass = "bg-emerald-500 text-white shadow-lg shadow-emerald-900/20 ring-2 ring-white/60 dark:ring-emerald-400/50 scale-110";
                                         } else if (isWinnerDynamic) {
                                             bgClass = "bg-blue-600 border-blue-700 text-white hover:bg-blue-700 dark:bg-blue-950/50 dark:border-blue-800/50 dark:hover:bg-blue-900/50 dark:text-foreground";
-                                            badgeClass = "bg-blue-600 text-white font-bold";
+                                            badgeClass = "bg-blue-600 text-white font-bold ring-2 ring-white/60 dark:ring-transparent shadow-md";
                                         } else if (isBonus) {
                                             bgClass = "bg-slate-500 border-slate-600 text-white hover:bg-slate-600 dark:bg-slate-700/60 dark:border-slate-400/50 dark:hover:bg-slate-600/60 dark:text-foreground";
-                                            badgeClass = "bg-gradient-to-br from-slate-200 to-slate-400 text-black shadow-md ring-1 ring-slate-300/50";
+                                            badgeClass = "bg-gradient-to-br from-slate-200 to-slate-400 text-black shadow-md ring-2 ring-white/60 dark:ring-slate-300/50";
                                         } else {
                                             bgClass = "bg-red-600 border-red-700 text-white hover:bg-red-700 dark:bg-red-950/60 dark:border-red-800/60 dark:hover:bg-red-900/50 dark:text-foreground";
-                                            badgeClass = "bg-red-600 text-white font-bold";
+                                            badgeClass = "bg-red-600 text-white font-bold ring-2 ring-white/60 dark:ring-transparent shadow-md";
                                         }
 
                                         return (
