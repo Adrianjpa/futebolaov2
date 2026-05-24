@@ -514,11 +514,20 @@ export function UnifiedMatchCard({
                         {/* LEFT: Trophy Icon/Championship Logo (Mobile) or Round (Desktop) */}
                         <div className="flex flex-1 justify-start items-center overflow-hidden">
                             <div className="md:hidden flex items-center shrink-0">
-                                {(match.championshipLogoUrl || match.championship_logo) ? (
-                                    <img src={match.championshipLogoUrl || match.championship_logo} className="h-5 w-5 object-contain" alt="champ" />
-                                ) : (
-                                    <Trophy className="h-5 w-5 text-blue-500" />
-                                )}
+                                <Popover>
+                                    <PopoverTrigger asChild onClick={(e) => e.stopPropagation()}>
+                                        <button className="outline-none flex items-center justify-center">
+                                            {(match.championshipLogoUrl || match.championship_logo) ? (
+                                                <img src={match.championshipLogoUrl || match.championship_logo} className="h-5 w-5 object-contain" alt="champ" />
+                                            ) : (
+                                                <Trophy className={cn("h-5 w-5", isColored ? "text-current" : "text-blue-500")} />
+                                            )}
+                                        </button>
+                                    </PopoverTrigger>
+                                    <PopoverContent side="bottom" className="w-auto p-2 bg-popover border-border dark:bg-slate-900 dark:border-slate-800 text-popover-foreground dark:text-white text-xs font-bold pointer-events-none">
+                                        {match.championshipName || "Campeonato"}
+                                    </PopoverContent>
+                                </Popover>
                             </div>
                             <div className="hidden md:flex items-center shrink-0">
                                 <span className={cn(
@@ -588,16 +597,14 @@ export function UnifiedMatchCard({
                         </div>
                     )}
 
-                    {/* 2. MOBILE ONLY: Round (Centered) + Desktop Fallback Name if not absolute */}
+                    {/* 2. MOBILE ONLY: Round (Centered) */}
                     <div className="md:hidden flex flex-col items-center justify-center mb-4 gap-1">
-                        <span className="text-[11px] font-bold text-muted-foreground/80 dark:text-slate-400/80 uppercase">
+                        <span className={cn(
+                            "text-[11px] font-bold uppercase",
+                            isColored ? "text-current opacity-80" : "text-muted-foreground/80 dark:text-slate-400/80"
+                        )}>
                             {translateRoundName(match.round_name || match.round)}
                         </span>
-                        {showChampionshipName && (
-                             <span className="text-[10px] font-bold text-blue-600/70 dark:text-blue-500/70 uppercase tracking-widest text-center truncate px-4">
-                                {match.championshipName || "CAMPEONATO"}
-                             </span>
-                        )}
                     </div>
 
                     {/* 3. MAIN TEAMS AREA */}
