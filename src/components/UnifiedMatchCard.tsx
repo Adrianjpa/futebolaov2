@@ -475,7 +475,11 @@ export function UnifiedMatchCard({
             </span>
         );
         if ((type === "all" || type === "status") && isFinished) return (
-            <span className={cn("inline-flex items-center justify-center h-6 sm:h-7 text-[10px] sm:text-[11px] font-bold text-slate-500 dark:text-slate-400 bg-muted dark:bg-slate-800/80 px-2.5 sm:px-3 rounded-lg border border-border dark:border-slate-700 uppercase tracking-wider shrink-0 leading-none", className)}>
+            <span className={cn(
+                "inline-flex items-center justify-center h-6 sm:h-7 text-[10px] sm:text-[11px] font-bold px-2.5 sm:px-3 rounded-lg border uppercase tracking-wider shrink-0 leading-none", 
+                isColored ? "text-current bg-foreground/10 border-foreground/20" : "text-slate-500 dark:text-slate-400 bg-muted dark:bg-slate-800/80 border-border dark:border-slate-700",
+                className
+            )}>
                 FINAL
             </span>
         );
@@ -831,7 +835,7 @@ export function UnifiedMatchCard({
 
                         {/* Date / Time / Admin Actions */}
                         <div className="flex flex-col items-center justify-center gap-2 mb-2">
-                            <div className="flex items-center justify-center gap-2 text-muted-foreground font-semibold h-7 sm:h-8">
+                            <div className={cn("flex items-center justify-center gap-2 font-semibold h-7 sm:h-8", isColored ? "text-current opacity-80" : "text-muted-foreground")}>
                                 {isLive ? (
                                     isAdmin && !isEditing && (
                                         <Button
@@ -853,7 +857,7 @@ export function UnifiedMatchCard({
                                     </div>
                                 ) : (
                                     <>
-                                        <Calendar className="h-3.5 w-3.5 text-muted-foreground/60" />
+                                        <Calendar className={cn("h-3.5 w-3.5", isColored ? "text-current opacity-80" : "text-muted-foreground/60")} />
                                         <span className="text-[11px] sm:text-[13px] font-bold">
                                             {formatMatchDate(match.date, match.championship_id)}
                                         </span>
