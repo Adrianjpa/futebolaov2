@@ -686,7 +686,7 @@ export function UnifiedMatchCard({
                                             </Button>
                                             
                                             {/* COMBO BUTTON */}
-                                            {comboEnabled && (
+                                            {comboEnabled && (availableComboTokens > 0 || isComboActive) && (
                                                 <Button
                                                     size="sm"
                                                     variant="outline"
