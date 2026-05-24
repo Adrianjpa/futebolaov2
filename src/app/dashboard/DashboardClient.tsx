@@ -382,9 +382,7 @@ export default function DashboardClient() {
                                             {isLocked 
                                                 ? "Ação Necessária"
                                                 : upcomingChampionship.earliestMatchDate
-                                                    ? (differenceInDays(upcomingChampionship.earliestMatchDate, currentTime) <= 7
-                                                        ? "Prepare-se para o lançamento!"
-                                                        : "Em Breve!")
+                                                    ? "Prepare-se para o lançamento!"
                                                     : "Campeonato em Breve!"
                                             }
                                         </h3>
@@ -392,9 +390,7 @@ export default function DashboardClient() {
                                             {isLocked
                                                 ? <>Você foi convocado para <span className="text-primary font-bold">{upcomingChampionship.name}</span>. Leia o regulamento.</>
                                                 : upcomingChampionship.earliestMatchDate
-                                                    ? (differenceInDays(upcomingChampionship.earliestMatchDate, currentTime) <= 7
-                                                        ? <>O campeonato <span className="text-primary font-bold">{upcomingChampionship.name}</span> vai começar em:</>
-                                                        : <>Lançamento do torneio <span className="text-primary font-bold">{upcomingChampionship.name}</span> em {formatDate(upcomingChampionship.earliestMatchDate, "PP", { locale: ptBR })}</>)
+                                                    ? <>Você está inscrito! O torneio <span className="text-primary font-bold">{upcomingChampionship.name}</span> vai começar em:</>
                                                     : <>O campeonato <span className="text-primary font-bold">{upcomingChampionship.name}</span> está sendo preparado.</>
                                             }
                                         </p>
@@ -406,18 +402,12 @@ export default function DashboardClient() {
                                             Ler Regulamento
                                         </Button>
                                     ) : upcomingChampionship.earliestMatchDate ? (
-                                        differenceInDays(upcomingChampionship.earliestMatchDate, currentTime) <= 7 ? (
-                                            <>
-                                                <Countdown targetDate={upcomingChampionship.earliestMatchDate} />
-                                                <div className="flex items-center gap-1 text-[10px] uppercase font-black text-muted-foreground/60 tracking-widest mt-1">
-                                                    <span>Dias</span> • <span>Horas</span> • <span>Minutos</span>
-                                                </div>
-                                            </>
-                                        ) : (
-                                            <div className="bg-primary/5 text-muted-foreground px-4 py-2 rounded-lg font-bold text-xs uppercase tracking-widest border border-dashed border-primary/10">
-                                                Inscrições Abertas
+                                        <>
+                                            <Countdown targetDate={upcomingChampionship.earliestMatchDate} />
+                                            <div className="flex items-center gap-1 text-[10px] uppercase font-black text-muted-foreground/60 tracking-widest mt-1">
+                                                <span>Dias</span> • <span>Horas</span> • <span>Minutos</span>
                                             </div>
-                                        )
+                                        </>
                                     ) : (
                                         <div className="bg-primary/10 text-primary px-4 py-2 rounded-lg font-bold text-xs uppercase tracking-widest border border-primary/20 animate-pulse">
                                             Aguardando Tabela
