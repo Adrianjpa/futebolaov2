@@ -396,9 +396,6 @@ export default function ProfilePage() {
         <div className="space-y-8">
             {/* Header Section */}
             <Card className="bg-card dark:bg-slate-950/50 border-border dark:border-slate-800 text-card-foreground overflow-hidden relative shadow-lg">
-                <div className="absolute top-0 right-0 p-4 opacity-5 dark:opacity-10 pointer-events-none">
-                    <Trophy className="h-64 w-64 text-foreground dark:text-slate-700" />
-                </div>
                 <CardContent className="p-6 sm:p-8 flex flex-col sm:flex-row items-center sm:items-start gap-6 relative z-10">
                     <div className="relative">
                         <Avatar className="h-24 w-24 sm:h-32 sm:w-32 border-4 border-background dark:border-slate-800 shadow-xl">
