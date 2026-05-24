@@ -62,21 +62,31 @@ export function MatchesProvider({ children }: { children: ReactNode }) {
                 .from("championship_participants") as any)
                 .select("championship_id, has_accepted_rules")
                 .eq("user_id", user.id);
-            const partSet = new Set<string>();
+            
+            const dbPartsSet = new Set<string>();
             const rulesSet = new Set<string>();
             
             parts?.forEach((p: any) => {
-                partSet.add(p.championship_id);
+                dbPartsSet.add(p.championship_id);
                 if (p.has_accepted_rules) {
                     rulesSet.add(p.championship_id);
                 }
             });
 
-            // Also check participants in championship settings
+            const partSet = new Set<string>();
+
+            // A user is a participant if:
+            // They are in settings.participants OR (settings.participants is empty AND they are in championship_participants db table)
             champs?.forEach((c: any) => {
                 const settingsParticipants = (c.settings as any)?.participants || [];
-                if (settingsParticipants.some((p: any) => p.userId === user.id)) {
-                    partSet.add(c.id);
+                const hasParticipantList = settingsParticipants.length > 0;
+                const isUserInList = settingsParticipants.some((p: any) => p.userId === user.id);
+
+                if (hasParticipantList) {
+                    if (isUserInList) partSet.add(c.id);
+                } else {
+                    // If no explicit list is defined, anyone who joined is a participant
+                    if (dbPartsSet.has(c.id)) partSet.add(c.id);
                 }
             });
 
