@@ -46,18 +46,31 @@ export default function PublicProfilePage() {
                     .single() as any);
 
                 if (profileError || !profile) {
-                    // Try public_profiles (email will be missing)
-                    const { data: pubData } = await (supabase
-                        .from("public_profiles") as any)
-                        .select("*")
-                        .eq("id", id as string)
-                        .single();
+                    // Try bypassing RLS via public API
+                    const res = await fetch('/api/users/public');
+                    if (res.ok) {
+                        const json = await res.json();
+                        const pubData = (json.data || []).find((u: any) => u.id === id);
+                        if (pubData) {
+                            profile = pubData;
+                        } else {
+                            setLoading(false);
+                            return;
+                        }
+                    } else {
+                        // Fallback to direct supabase call
+                        const { data: pubData } = await (supabase
+                            .from("public_profiles") as any)
+                            .select("*")
+                            .eq("id", id as string)
+                            .single();
 
-                    if (!pubData) {
-                        setLoading(false);
-                        return;
+                        if (!pubData) {
+                            setLoading(false);
+                            return;
+                        }
+                        profile = pubData as any;
                     }
-                    profile = pubData as any;
                 }
 
                 setProfileData(profile);
