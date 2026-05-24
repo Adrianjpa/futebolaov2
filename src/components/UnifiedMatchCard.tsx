@@ -929,12 +929,13 @@ export function UnifiedMatchCard({
                                         const isComputed = isLive || isFinished;
                                         const points = pred.points || 0;
                                         const isZero = isComputed && points === 0;
-                                        const isExact = isComputed && !isLive && (pred.home_score === match.score_home && pred.away_score === match.score_away);
+                                        const isExactDynamic = isComputed && (pred.home_score === match.score_home && pred.away_score === match.score_away);
+                                        const isWinnerDynamic = isComputed && Math.sign(pred.home_score - pred.away_score) === Math.sign((match.score_home || 0) - (match.score_away || 0));
 
                                         const hitGoals = pred.is_combo && pred.combo_total_goals === ((match.score_home ?? 0) + (match.score_away ?? 0));
                                         
-                                        const isCombo = isExact && hitGoals;
-                                        const isBonus = !isExact && hitGoals;
+                                        const isCombo = isExactDynamic && hitGoals;
+                                        const isBonus = !isExactDynamic && hitGoals;
                                         const usedToken = pred.is_combo;
 
                                         let bgClass = "";
@@ -946,18 +947,18 @@ export function UnifiedMatchCard({
                                         } else if (isCombo) {
                                             bgClass = "bg-yellow-900/40 border-yellow-600/40 hover:bg-yellow-800/40 shadow-[0_0_10px_rgba(234,179,8,0.1)]";
                                             badgeClass = "bg-gradient-to-br from-yellow-300 to-yellow-600 text-black shadow-lg shadow-yellow-900/20 ring-1 ring-yellow-400/50 scale-105";
+                                        } else if (isExactDynamic) {
+                                            bgClass = "bg-emerald-950/60 border-emerald-600/60 hover:bg-emerald-900/50 shadow-[0_0_15px_rgba(16,185,129,0.15)]";
+                                            badgeClass = "bg-emerald-500 text-white shadow-lg shadow-emerald-900/20 ring-1 ring-emerald-400/50 scale-110";
+                                        } else if (isWinnerDynamic) {
+                                            bgClass = "bg-blue-950/50 border-blue-800/50 hover:bg-blue-900/50";
+                                            badgeClass = "bg-blue-600 text-white font-bold";
                                         } else if (isBonus) {
                                             bgClass = "bg-slate-700/60 border-slate-400/50 hover:bg-slate-600/60";
                                             badgeClass = "bg-gradient-to-br from-slate-200 to-slate-400 text-black shadow-md ring-1 ring-slate-300/50";
-                                        } else if (isZero) {
+                                        } else {
                                             bgClass = "bg-red-950/60 border-red-800/60 hover:bg-red-900/50";
                                             badgeClass = "bg-red-600 text-white font-bold";
-                                        } else if (isExact) {
-                                            bgClass = "bg-emerald-950/60 border-emerald-600/60 hover:bg-emerald-900/50 shadow-[0_0_15px_rgba(16,185,129,0.15)]";
-                                            badgeClass = "bg-emerald-500 text-white shadow-lg shadow-emerald-900/20 ring-1 ring-emerald-400/50 scale-110";
-                                        } else {
-                                            bgClass = "bg-blue-950/50 border-blue-800/50 hover:bg-blue-900/50";
-                                            badgeClass = "bg-blue-600 text-white font-bold";
                                         }
 
                                         return (
