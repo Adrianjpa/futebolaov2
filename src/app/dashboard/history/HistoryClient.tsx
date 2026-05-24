@@ -76,7 +76,8 @@ export default function HistoryClient() {
             const { data: allChamps } = await (supabase.from("championships") as any)
                 .select("*");
 
-            let champs = (allChamps || []) as Championship[];
+            // Filter out 'agendado' championships
+            let champs = (allChamps || []).filter((c: any) => c.status !== 'agendado') as Championship[];
             
             // Sort by start_date (actual event date) DESC, fallback to created_at
             champs.sort((a, b) => {
