@@ -76,16 +76,17 @@ export function MatchesProvider({ children }: { children: ReactNode }) {
             const partSet = new Set<string>();
 
             // A user is a participant if:
-            // They are in settings.participants OR (settings.participants is empty AND they are in championship_participants db table)
+            // They are in settings.participants (modern approach) OR 
+            // settings.participants is undefined AND they are in championship_participants db table (legacy fallback)
             champs?.forEach((c: any) => {
-                const settingsParticipants = (c.settings as any)?.participants || [];
-                const hasParticipantList = settingsParticipants.length > 0;
-                const isUserInList = settingsParticipants.some((p: any) => p.userId === user.id);
+                const settingsParticipants = (c.settings as any)?.participants;
 
-                if (hasParticipantList) {
+                if (settingsParticipants !== undefined) {
+                    // Modern championship: Source of truth is the settings.participants array
+                    const isUserInList = settingsParticipants.some((p: any) => p.userId === user.id);
                     if (isUserInList) partSet.add(c.id);
                 } else {
-                    // If no explicit list is defined, anyone who joined is a participant
+                    // Legacy championship: Fallback to database table
                     if (dbPartsSet.has(c.id)) partSet.add(c.id);
                 }
             });
