@@ -293,9 +293,8 @@ export default function HistoryClient() {
     const handleCategoryChange = (val: string) => {
         setSelectedCategory(val);
         if (val !== "all") {
-            const inCat = championships
-                .filter(c => c.category === val)
-                .sort((a, b) => new Date((b as any).created_at || 0).getTime() - new Date((a as any).created_at || 0).getTime());
+            // championships is already sorted by newest event date first
+            const inCat = championships.filter(c => (c.category || "other") === val);
 
             if (inCat.length > 0) {
                 setSelectedChampionship(inCat[0].id);
