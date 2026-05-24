@@ -568,9 +568,8 @@ export function UnifiedMatchCard({
                         </div>
                     </div>
                     
-                    {/* Future Block Overlay Banner */}
                     {isFutureBlock && (
-                        <div className="absolute inset-0 z-30 flex items-center justify-center bg-background/40 backdrop-blur-[1px] pointer-events-none">
+                        <div className="absolute inset-0 z-30 flex items-center justify-center bg-background/80 dark:bg-background/40 dark:backdrop-blur-[1px] pointer-events-none">
                             <span className="bg-slate-900/90 text-slate-200 border border-slate-700 font-bold text-xs uppercase tracking-widest px-4 py-1.5 rounded-full drop-shadow-md">
                                 Fase Futura (Aguarde)
                             </span>
@@ -768,7 +767,7 @@ export function UnifiedMatchCard({
                                 ) : (
                                     <div className="flex flex-col items-center">
                                         {isLive || isFinished ? (
-                                            <div className="bg-slate-100/80 dark:bg-black px-5 py-2 sm:px-8 sm:py-3 rounded-2xl md:rounded-full border border-slate-200 dark:border-slate-800 flex items-center gap-4 sm:gap-8 min-w-[100px] sm:min-w-[140px] justify-center shadow-2xl backdrop-blur-sm">
+                                            <div className="bg-white dark:bg-black/80 px-5 py-2 sm:px-8 sm:py-3 rounded-2xl md:rounded-full border border-slate-200 dark:border-slate-800 flex items-center gap-4 sm:gap-8 min-w-[100px] sm:min-w-[140px] justify-center shadow-2xl dark:backdrop-blur-sm">
                                                 <span className="text-3xl sm:text-4xl font-bold text-slate-900 dark:text-white font-mono break-keep">{match.score_home ?? 0}</span>
                                                 <span className="text-slate-400 dark:text-slate-600 font-bold text-xl">-</span>
                                                 <span className="text-3xl sm:text-4xl font-bold text-slate-900 dark:text-white font-mono break-keep">{match.score_away ?? 0}</span>
