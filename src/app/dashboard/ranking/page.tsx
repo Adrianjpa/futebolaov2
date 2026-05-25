@@ -87,14 +87,14 @@ export default function RankingPage() {
             const { data: champs } = await (supabase.from("championships") as any)
                 .select("*");
 
-            let allChamps = champs || [];
+            let allChamps = (champs || []).filter((c: any) => c.status !== 'agendado');
 
-            // Sort logic: Open championships first, then by start date descending (newest first)
+            // Sort logic: Ativo championships first, then by start date descending (newest first)
             allChamps.sort((a: any, b: any) => {
-                const aOpen = a.status === 'open';
-                const bOpen = b.status === 'open';
-                if (aOpen && !bOpen) return -1;
-                if (!aOpen && bOpen) return 1;
+                const aActive = a.status === 'ativo';
+                const bActive = b.status === 'ativo';
+                if (aActive && !bActive) return -1;
+                if (!aActive && bActive) return 1;
                 
                 const dateA = a.settings?.startDate ? new Date(a.settings.startDate).getTime() : new Date(a.created_at).getTime();
                 const dateB = b.settings?.startDate ? new Date(b.settings.startDate).getTime() : new Date(b.created_at).getTime();
@@ -102,49 +102,30 @@ export default function RankingPage() {
             });
 
             setChampionships(allChamps);
-
-            // 2. Determine Participation History
-            const { data: participation } = await (supabase.from("championship_participants") as any)
-                .select("championship_id")
-                .eq("user_id", currentUser.id);
-
-            const participatedIds = (participation || []).map((p: any) => p.championship_id);
-
-            const { data: predChamps } = await (supabase.from("predictions") as any)
-                .select("matches(championship_id)")
-                .eq("user_id", currentUser.id);
-
-            const predictedIds = Array.from(new Set((predChamps || []).map((p: any) => p.matches?.championship_id).filter(Boolean)));
-            const allUserChampIds = Array.from(new Set([...participatedIds, ...predictedIds]));
-
-            const userHistoryChamps = allChamps.filter((c: any) => allUserChampIds.includes(c.id));
-            const hasAnyHistory = userHistoryChamps.length > 0 || isAdmin;
-            setHasHistory(hasAnyHistory);
+            setHasHistory(allChamps.length > 0);
 
             // 3. Handle default selection or URL params
             if (initialChampionshipId !== "all") {
                 const current = allChamps.find((c: any) => c.id === initialChampionshipId);
                 if (current) {
-                    setCategoryFilter(current.category || "all");
+                    setCategoryFilter(current.category || "other");
                     setSelectedChampionship(initialChampionshipId);
                 }
-            } else if (hasAnyHistory) {
-                // If history exists, default to the most recent participated championship
-                // If admin, default to the most recent overall
-                const defaultChamp = isAdmin ? allChamps[0] : userHistoryChamps[0];
-                if (defaultChamp) {
-                    setSelectedChampionship(defaultChamp.id);
-                    setCategoryFilter(defaultChamp.category || "all");
-                }
+            } else if (allChamps.length > 0) {
+                // Default to the most recent overall (since users can see all in Ranking)
+                const defaultChamp = allChamps[0];
+                setSelectedChampionship(defaultChamp.id);
+                setCategoryFilter(defaultChamp.category || "other");
             } else {
-                setSelectedChampionship("all");
+                setSelectedChampionship("");
+                setCategoryFilter("");
             }
             setLoading(false);
         };
         fetchInitial();
     }, [currentUser, profile, isAdmin]);
 
-    const categories = Array.from(new Set(championships.map((c: any) => c.category).filter(Boolean)));
+    const categories = Array.from(new Set(championships.map((c: any) => c.category || "other")));
 
     const fetchRankingAndSettings = async () => {
         if (!selectedChampionship || selectedChampionship === "all") {
@@ -406,17 +387,15 @@ export default function RankingPage() {
                                 value={categoryFilter}
                                 onValueChange={(val) => {
                                     setCategoryFilter(val);
-                                    if (val !== "all") {
-                                        const inCat = championships.filter(c => c.category === val);
-                                        if (inCat.length > 0) setSelectedChampionship(inCat[0].id);
-                                    }
+                                    // Auto-select the newest championship in this category
+                                    const inCat = championships.filter(c => (c.category || "other") === val);
+                                    if (inCat.length > 0) setSelectedChampionship(inCat[0].id);
                                 }}
                             >
                                 <SelectTrigger className="w-full sm:w-[200px]">
                                     <SelectValue placeholder="Agrupamento" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="all">Todos os Agrupamentos</SelectItem>
                                     {categories.map((cat: any) => (
                                         <SelectItem key={cat} value={cat}>{CATEGORY_MAP[cat] || cat}</SelectItem>
                                     ))}
@@ -429,7 +408,7 @@ export default function RankingPage() {
                                 </SelectTrigger>
                                 <SelectContent>
                                     {championships
-                                        .filter(c => categoryFilter === "all" || c.category === categoryFilter)
+                                        .filter(c => (c.category || "other") === categoryFilter)
                                         .map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                                 </SelectContent>
                             </Select>
