@@ -248,6 +248,60 @@ export default function RankingPage() {
             }
             setParticipantsData(pMap);
 
+            // Compute real points for injected users (those missing from the SQL view)
+            const injectedUserIds = rawData.filter((r: any) => !rankingData?.some((o: any) => o.user_id === r.user_id)).map((r: any) => r.user_id);
+            
+            if (injectedUserIds.length > 0) {
+                const { data: missingPreds } = await supabase
+                    .from("predictions")
+                    .select("user_id, points, home_score, away_score, is_combo, combo_total_goals, matches!inner(championship_id, score_home, score_away)")
+                    .eq("matches.championship_id", selectedChampionship)
+                    .in("user_id", injectedUserIds);
+                    
+                if (missingPreds && missingPreds.length > 0) {
+                    rawData.forEach((user: any) => {
+                        if (injectedUserIds.includes(user.user_id)) {
+                            const userPreds = missingPreds.filter((p: any) => p.user_id === user.user_id);
+                            
+                            let pontos = 0;
+                            let buchas = 0;
+                            let situacao = 0;
+                            let erros = 0;
+
+                            userPreds.forEach((p: any) => {
+                                pontos += (p.points || 0);
+
+                                const match = p.matches;
+                                if (match && match.score_home !== null && match.score_away !== null) {
+                                    const ph = p.home_score;
+                                    const pa = p.away_score;
+                                    const mh = match.score_home;
+                                    const ma = match.score_away;
+
+                                    const winP = ph > pa ? 1 : (ph < pa ? 2 : 0);
+                                    const winM = mh > ma ? 1 : (mh < ma ? 2 : 0);
+
+                                    const isExact = ph === mh && pa === ma;
+                                    const hitGoals = p.is_combo && p.combo_total_goals === (mh + ma);
+
+                                    if (isExact) {
+                                        buchas++;
+                                    } else {
+                                        if (winP === winM) situacao++;
+                                        if (winP !== winM && !hitGoals) erros++;
+                                    }
+                                }
+                            });
+                            
+                            user.total_points = pontos;
+                            user.exact_scores = buchas;
+                            user.outcomes = situacao;
+                            user.errors = erros;
+                        }
+                    });
+                }
+            }
+
             const tiebreakers = settings.tiebreakerCriteria || ['pontos', 'buchas', 'situacoes', 'erros', 'highlander'];
 
             rawData.sort((a: any, b: any) => {
