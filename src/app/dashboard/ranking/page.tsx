@@ -101,19 +101,37 @@ export default function RankingPage() {
                 return dateB - dateA;
             });
 
-            setChampionships(allChamps);
-            setHasHistory(allChamps.length > 0);
+            // 2. Determine Participation History
+            const { data: participation } = await (supabase.from("championship_participants") as any)
+                .select("championship_id")
+                .eq("user_id", currentUser.id);
+
+            const participatedIds = (participation || []).map((p: any) => p.championship_id);
+
+            const { data: predChamps } = await (supabase.from("predictions") as any)
+                .select("matches(championship_id)")
+                .eq("user_id", currentUser.id);
+
+            const predictedIds = Array.from(new Set((predChamps || []).map((p: any) => p.matches?.championship_id).filter(Boolean)));
+            const allUserChampIds = Array.from(new Set([...participatedIds, ...predictedIds]));
+
+            const userHistoryChamps = allChamps.filter((c: any) => allUserChampIds.includes(c.id));
+            const hasAnyHistory = userHistoryChamps.length > 0 || isAdmin;
+            setHasHistory(hasAnyHistory);
+
+            const targetChampionships = isAdmin ? allChamps : userHistoryChamps;
+            setChampionships(targetChampionships);
 
             // 3. Handle default selection or URL params
             if (initialChampionshipId !== "all") {
-                const current = allChamps.find((c: any) => c.id === initialChampionshipId);
+                const current = targetChampionships.find((c: any) => c.id === initialChampionshipId);
                 if (current) {
                     setCategoryFilter(current.category || "other");
                     setSelectedChampionship(initialChampionshipId);
                 }
-            } else if (allChamps.length > 0) {
-                // Default to the most recent overall (since users can see all in Ranking)
-                const defaultChamp = allChamps[0];
+            } else if (targetChampionships.length > 0) {
+                // Default to the most recent participated (or overall if admin)
+                const defaultChamp = targetChampionships[0];
                 setSelectedChampionship(defaultChamp.id);
                 setCategoryFilter(defaultChamp.category || "other");
             } else {
@@ -381,7 +399,7 @@ export default function RankingPage() {
             <div className="space-y-6">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <h1 className="text-3xl font-bold tracking-tight">Ranking</h1>
-                    {championships.length > 0 && (
+                    {(hasHistory || isAdmin) && championships.length > 0 && (
                         <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
                             <Select
                                 value={categoryFilter}
@@ -417,7 +435,7 @@ export default function RankingPage() {
                 </div>
 
                 <Card className={`bg-slate-900 border-slate-800 ${isSwitching ? 'opacity-50 pointer-events-none' : ''} transition-opacity duration-200`}>
-                    {!loading && (
+                    {!loading && (hasHistory || isAdmin) && (
                         <CardHeader className="border-b bg-muted/5 p-0">
                             <div className="flex items-center text-xs font-bold text-muted-foreground px-4 py-3 gap-2 uppercase tracking-wider">
                                 <div className="w-8 text-center">Pos.</div>
@@ -451,6 +469,14 @@ export default function RankingPage() {
                             <div className="p-12 text-center flex flex-col items-center justify-center min-h-[300px]">
                                 <Loader2 className="h-8 w-8 animate-spin text-primary mb-2" />
                                 <p className="text-xs text-muted-foreground font-medium">Carregando dados...</p>
+                            </div>
+                        ) : hasHistory === false && !isAdmin ? (
+                            <div className="p-20 text-center bg-card/30 border border-dashed rounded-2xl m-4 animate-in fade-in zoom-in duration-500">
+                                <Trophy className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-20" />
+                                <h3 className="text-xl font-bold text-foreground">Ranking não disponível</h3>
+                                <p className="text-muted-foreground max-w-sm mx-auto mt-2 leading-relaxed">
+                                    Você ainda não participa de nenhum campeonato ativo ou finalizado para visualizar o ranking.
+                                </p>
                             </div>
                         ) : sortedUsers.length === 0 ? (
                             <div className="p-20 text-center bg-card/30 border border-dashed rounded-2xl m-4">
