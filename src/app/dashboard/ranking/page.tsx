@@ -168,10 +168,61 @@ export default function RankingPage() {
 
             const settings = (champ as any)?.settings || {};
 
-            let sortedData = rankingData || [];
+            let rawData = rankingData || [];
+            
+            // 3. Fetch Participants Selections (Try Relational Table first)
+            const { data: parts, error: partsError } = await supabase
+                .from("championship_participants")
+                .select("user_id, team_selections")
+                .eq("championship_id", selectedChampionship);
+
+            const pMap = new Map<string, string[]>();
+
+            if (parts && parts.length > 0) {
+                // Fetch public profiles to get missing users' names
+                const res = await fetch('/api/users/public');
+                const { data: publicProfiles } = await res.json();
+                const profilesMap = new Map((publicProfiles || []).map((p: any) => [p.id, p]));
+                
+                const existingUserIds = new Set(rawData.map((r: any) => r.user_id));
+
+                parts.forEach((p: any) => {
+                    pMap.set(p.user_id, p.team_selections || []);
+                    
+                    // Add participant to ranking with 0 points if they are missing
+                    if (!existingUserIds.has(p.user_id)) {
+                        const prof = profilesMap.get(p.user_id) as any;
+                        if (prof) {
+                            rawData.push({
+                                user_id: p.user_id,
+                                nome: prof.nome,
+                                nickname: prof.nickname,
+                                foto_perfil: prof.foto_perfil,
+                                total_points: 0,
+                                exact_scores: 0,
+                                outcomes: 0,
+                                errors: 0
+                            });
+                            existingUserIds.add(p.user_id);
+                        }
+                    }
+                });
+            } else {
+                // FALLBACK: Legacy Participants in Settings (Euro 2012 style)
+                const legacyParts = settings.participants || [];
+                legacyParts.forEach((p: any) => {
+                    const uid = p.userId || p.id || p.user_id;
+                    const selections = p.teamSelections || p.team_selections || p.selections || [];
+                    if (uid) {
+                        pMap.set(uid, selections);
+                    }
+                });
+            }
+            setParticipantsData(pMap);
+
             const tiebreakers = settings.tiebreakerCriteria || ['pontos', 'buchas', 'situacoes', 'erros', 'highlander'];
 
-            sortedData.sort((a: any, b: any) => {
+            rawData.sort((a: any, b: any) => {
                 for (const criteria of tiebreakers) {
                     if (criteria === 'pontos') {
                         if (b.total_points !== a.total_points) return b.total_points - a.total_points;
@@ -188,38 +239,12 @@ export default function RankingPage() {
                 return nameA.localeCompare(nameB);
             });
 
-            setUsers(sortedData);
+            setUsers(rawData);
 
             setOfficialRanking(settings.officialRanking || []);
             setEnablePriority(settings.enableSelectionPriority ?? true);
             setEnableTiebreaker(settings.enableSelectionTiebreaker ?? false);
             setLegacyUrl(settings.legacySpreadsheetUrl || "");
-
-            // 3. Fetch Participants Selections (Try Relational Table first)
-            const { data: parts, error: partsError } = await supabase
-                .from("championship_participants")
-                .select("user_id, team_selections")
-                .eq("championship_id", selectedChampionship);
-
-            const pMap = new Map<string, string[]>();
-
-            if (parts && parts.length > 0) {
-                parts.forEach((p: any) => {
-                    pMap.set(p.user_id, p.team_selections || []);
-                });
-            } else {
-                // FALLBACK: Legacy Participants in Settings (Euro 2012 style)
-                const legacyParts = settings.participants || [];
-                legacyParts.forEach((p: any) => {
-                    // Handle various potential key names in legacy JSON
-                    const uid = p.userId || p.id || p.user_id;
-                    const selections = p.teamSelections || p.team_selections || p.selections || [];
-                    if (uid) {
-                        pMap.set(uid, selections);
-                    }
-                });
-            }
-            setParticipantsData(pMap);
         } catch (error) {
             console.error("Failed to fetch ranking:", error);
         } finally {
