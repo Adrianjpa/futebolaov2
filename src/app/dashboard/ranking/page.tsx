@@ -458,8 +458,7 @@ export default function RankingPage() {
                         </div>
                     )}
                 </div>
-
-                <Card className={`bg-slate-900 border-slate-800 ${isSwitching ? 'opacity-50 pointer-events-none' : ''} transition-opacity duration-200`}>
+                <Card className={`bg-card ${isSwitching ? 'opacity-50 pointer-events-none' : ''} transition-opacity duration-200`}>
                     {!loading && (hasHistory || isAdmin) && (
                         <CardHeader className="border-b bg-muted/5 p-0">
                             <div className="flex items-center text-xs font-bold text-muted-foreground px-4 py-3 gap-2 uppercase tracking-wider">
