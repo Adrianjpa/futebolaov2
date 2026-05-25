@@ -381,7 +381,7 @@ export default function RankingPage() {
             <div className="space-y-6">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <h1 className="text-3xl font-bold tracking-tight">Ranking</h1>
-                    {(hasHistory || isAdmin) && (
+                    {championships.length > 0 && (
                         <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
                             <Select
                                 value={categoryFilter}
@@ -417,7 +417,7 @@ export default function RankingPage() {
                 </div>
 
                 <Card className={`bg-slate-900 border-slate-800 ${isSwitching ? 'opacity-50 pointer-events-none' : ''} transition-opacity duration-200`}>
-                    {!loading && (hasHistory || isAdmin) && (
+                    {!loading && (
                         <CardHeader className="border-b bg-muted/5 p-0">
                             <div className="flex items-center text-xs font-bold text-muted-foreground px-4 py-3 gap-2 uppercase tracking-wider">
                                 <div className="w-8 text-center">Pos.</div>
@@ -451,14 +451,6 @@ export default function RankingPage() {
                             <div className="p-12 text-center flex flex-col items-center justify-center min-h-[300px]">
                                 <Loader2 className="h-8 w-8 animate-spin text-primary mb-2" />
                                 <p className="text-xs text-muted-foreground font-medium">Carregando dados...</p>
-                            </div>
-                        ) : hasHistory === false && !isAdmin ? (
-                            <div className="p-20 text-center bg-card/30 border border-dashed rounded-2xl m-4 animate-in fade-in zoom-in duration-500">
-                                <Trophy className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-20" />
-                                <h3 className="text-xl font-bold text-foreground">Ranking não disponível</h3>
-                                <p className="text-muted-foreground max-w-sm mx-auto mt-2 leading-relaxed">
-                                    Você ainda não participa de nenhum campeonato ativo ou finalizado para visualizar o ranking.
-                                </p>
                             </div>
                         ) : sortedUsers.length === 0 ? (
                             <div className="p-20 text-center bg-card/30 border border-dashed rounded-2xl m-4">
