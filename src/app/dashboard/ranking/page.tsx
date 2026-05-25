@@ -511,7 +511,7 @@ export default function RankingPage() {
                         ) : (
                             <div className="divide-y">
                                 {sortedUsers.map((user, index) => (
-                                    <div key={user.user_id} className={`flex items-center px-4 py-3 gap-2 hover:bg-muted/30 transition-colors ${currentUser?.id === user.user_id ? "bg-primary/5 border-l-4 border-primary" : ""}`}>
+                                    <div key={user.user_id} className="flex items-center px-4 py-3 gap-2 hover:bg-muted/30 transition-colors">
                                         <div className="w-8 text-center font-bold text-muted-foreground">{index + 1}</div>
                                         <div className="flex-1 flex items-center gap-3 min-w-0">
                                             <Avatar className="h-10 w-10 border shrink-0">
