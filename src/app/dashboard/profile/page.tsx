@@ -54,7 +54,8 @@ export default function ProfilePage() {
         goldMedals: 0
     });
     const [championships, setChampionships] = useState<any[]>([]);
-    const [selectedChampionship, setSelectedChampionship] = useState("all");
+    const [selectedChampionship, setSelectedChampionship] = useState("");
+    const [categoryFilter, setCategoryFilter] = useState("");
     const [userPredictions, setUserPredictions] = useState<any[]>([]);
     const [isDialogOpen, setIsDialogOpen] = useState(false);
 
@@ -112,12 +113,20 @@ export default function ProfilePage() {
                 const { data: allChamps } = await (supabase.from("championships") as any).select("*");
                 const champs = (allChamps || []) as any[];
                 const filteredChamps = champs
-                    .filter(c => uniqueChampionshipIds.includes(c.id))
-                    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+                    .filter(c => uniqueChampionshipIds.includes(c.id) && c.status !== 'agendado')
+                    .sort((a, b) => {
+                        const dateA = new Date(a.settings?.startDate || a.created_at).getTime();
+                        const dateB = new Date(b.settings?.startDate || b.created_at).getTime();
+                        if (a.status === 'ativo' && b.status !== 'ativo') return -1;
+                        if (b.status === 'ativo' && a.status !== 'ativo') return 1;
+                        return dateB - dateA;
+                    });
 
                 setChampionships(filteredChamps);
-                if (filteredChamps.length > 0 && selectedChampionship === "all") {
-                    setSelectedChampionship(filteredChamps[0].id);
+                if (filteredChamps.length > 0 && selectedChampionship === "") {
+                    const defaultChamp = filteredChamps[0];
+                    setSelectedChampionship(defaultChamp.id);
+                    setCategoryFilter(defaultChamp.category || "other");
                 }
 
                 // 5. Titles and Medals would come from a winners table or JSON settings in championship
@@ -339,7 +348,7 @@ export default function ProfilePage() {
 
     const getFilteredStats = () => {
         let filteredPreds = userPredictions;
-        if (selectedChampionship !== "all") {
+        if (selectedChampionship !== "") {
             filteredPreds = userPredictions.filter((p: any) => p.championship_id === selectedChampionship);
         }
 
@@ -383,10 +392,20 @@ export default function ProfilePage() {
     const filteredStats = getFilteredStats();
     
     const champObj = championships.find(c => c.id === selectedChampionship);
-    const comboEnabledForChamp = selectedChampionship === 'all' 
+    const comboEnabledForChamp = selectedChampionship === '' 
         ? championships.some(c => c.settings?.comboEnabled)
         : !!champObj?.settings?.comboEnabled;
     const displayName = nickname || fullName || "Usuário sem nome";
+
+    const categories = Array.from(new Set(championships.map((c: any) => c.category || "other")));
+
+    const handleCategoryChange = (cat: string) => {
+        setCategoryFilter(cat);
+        const firstInCategory = championships.find((c: any) => (c.category || "other") === cat);
+        if (firstInCategory) {
+            setSelectedChampionship(firstInCategory.id);
+        }
+    };
 
     if (loading) {
         return <div className="flex justify-center p-8"><Loader2 className="h-8 w-8 animate-spin" /></div>;
@@ -547,13 +566,26 @@ export default function ProfilePage() {
 
             {championships.length > 0 && (
                 <div className="space-y-4">
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
                         <h2 className="text-xl font-bold">Estatísticas por Campeonato</h2>
-                        <div className="w-[250px]">
-                            <Select value={selectedChampionship} onValueChange={setSelectedChampionship}>
-                                <SelectTrigger><SelectValue placeholder="Selecione um campeonato" /></SelectTrigger>
+                        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                            <Select value={categoryFilter} onValueChange={handleCategoryChange}>
+                                <SelectTrigger className="w-full sm:w-[150px]"><SelectValue placeholder="Agrupamento" /></SelectTrigger>
                                 <SelectContent>
-                                    {championships.map((champ) => <SelectItem key={champ.id} value={champ.id}>{champ.name}</SelectItem>)}
+                                    {categories.map((cat: any) => (
+                                        <SelectItem key={cat} value={cat}>
+                                            {cat === "other" ? "Outros" : cat}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+
+                            <Select value={selectedChampionship} onValueChange={setSelectedChampionship}>
+                                <SelectTrigger className="w-full sm:w-[250px]"><SelectValue placeholder="Selecione um campeonato" /></SelectTrigger>
+                                <SelectContent>
+                                    {championships
+                                        .filter(c => (c.category || "other") === categoryFilter)
+                                        .map((champ) => <SelectItem key={champ.id} value={champ.id}>{champ.name}</SelectItem>)}
                                 </SelectContent>
                             </Select>
                         </div>
