@@ -208,13 +208,41 @@ export default function RankingPage() {
                     }
                 });
             } else {
-                // FALLBACK: Legacy Participants in Settings (Euro 2012 style)
+                // FALLBACK: Legacy Participants in Settings (Euro 2012 style) or Manually added by Admin
                 const legacyParts = settings.participants || [];
+                
+                const res = await fetch('/api/users/public');
+                const { data: publicProfiles } = await res.json();
+                const profilesMap = new Map((publicProfiles || []).map((p: any) => [p.id, p]));
+                
+                const existingUserIds = new Set(rawData.map((r: any) => r.user_id));
+
                 legacyParts.forEach((p: any) => {
                     const uid = p.userId || p.id || p.user_id;
                     const selections = p.teamSelections || p.team_selections || p.selections || [];
                     if (uid) {
                         pMap.set(uid, selections);
+                        
+                        // Add participant to ranking with 0 points if they are missing
+                        if (!existingUserIds.has(uid)) {
+                            // First try to get from legacy data, then from public profiles
+                            const prof = profilesMap.get(uid) as any;
+                            const legacyName = p.displayName || p.name || p.nome;
+                            
+                            if (prof || legacyName) {
+                                rawData.push({
+                                    user_id: uid,
+                                    nome: prof?.nome || legacyName || "Usuário",
+                                    nickname: prof?.nickname || "",
+                                    foto_perfil: prof?.foto_perfil || p.photoUrl || p.foto_perfil || "",
+                                    total_points: 0,
+                                    exact_scores: 0,
+                                    outcomes: 0,
+                                    errors: 0
+                                });
+                                existingUserIds.add(uid);
+                            }
+                        }
                     }
                 });
             }
