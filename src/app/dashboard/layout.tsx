@@ -20,7 +20,7 @@ import {
     Activity
 } from "lucide-react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { createClient } from "@/lib/supabase";
@@ -38,9 +38,23 @@ export default function DashboardLayout({
 }) {
     const { profile } = useAuth();
     const pathname = usePathname();
+    const router = useRouter();
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [pendingUsers, setPendingUsers] = useState(0);
     const isAdmin = profile?.funcao === "admin" || profile?.funcao === "moderator";
+
+    const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
+        // Se estiver no mobile (tela < 768px), atrasa a navegação para a animação do menu não engasgar
+        if (window.innerWidth < 768) {
+            e.preventDefault();
+            setIsSidebarOpen(false);
+            setTimeout(() => {
+                router.push(href);
+            }, 250); // Tempo ligeiramente maior que a duração da animação (200ms)
+        } else {
+            setIsSidebarOpen(false);
+        }
+    };
 
     const supabase = createClient();
 
@@ -139,7 +153,7 @@ export default function DashboardLayout({
                                 const Icon = item.icon;
                                 const isActive = pathname === item.href;
                                 return (
-                                    <Link key={item.href} href={item.href} onClick={() => setIsSidebarOpen(false)} prefetch={false}>
+                                    <Link key={item.href} href={item.href} onClick={(e) => handleNavClick(e, item.href)} prefetch={false}>
                                         <Button
                                             variant={isActive ? "secondary" : "ghost"}
                                             className={`w-full justify-start transition-all duration-300 rounded-xl mb-1 ${isActive ? "bg-white/60 text-primary shadow-sm font-medium" : "hover:bg-white/30 hover:text-primary"}`}
@@ -162,7 +176,7 @@ export default function DashboardLayout({
                                         const Icon = item.icon;
                                         const isActive = pathname === item.href;
                                         return (
-                                            <Link key={item.href} href={item.href} onClick={() => setIsSidebarOpen(false)} prefetch={false}>
+                                            <Link key={item.href} href={item.href} onClick={(e) => handleNavClick(e, item.href)} prefetch={false}>
                                                 <Button
                                                     variant={isActive ? "secondary" : "ghost"}
                                                     className={`w-full justify-between transition-all duration-300 rounded-xl mb-1 ${isActive ? "bg-red-500/10 text-red-700 font-medium" : "hover:bg-red-500/5 hover:text-red-600 text-muted-foreground"}`}
