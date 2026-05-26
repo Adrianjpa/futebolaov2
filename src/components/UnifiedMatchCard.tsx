@@ -522,9 +522,9 @@ export function UnifiedMatchCard({
                                     <PopoverTrigger asChild onClick={(e) => e.stopPropagation()}>
                                         <button className="outline-none flex items-center justify-center">
                                             {(match.championshipLogoUrl || match.championship_logo) ? (
-                                                <img src={match.championshipLogoUrl || match.championship_logo} className="h-8 w-auto max-w-[2.5rem] object-contain" alt="champ" />
+                                                <img src={match.championshipLogoUrl || match.championship_logo} className="h-12 w-auto max-w-[4rem] object-contain" alt="champ" />
                                             ) : (
-                                                <Trophy className={cn("h-7 w-7", isColored ? "text-current" : "text-blue-500")} />
+                                                <Trophy className={cn("h-10 w-10", isColored ? "text-current" : "text-blue-500")} />
                                             )}
                                         </button>
                                     </PopoverTrigger>
