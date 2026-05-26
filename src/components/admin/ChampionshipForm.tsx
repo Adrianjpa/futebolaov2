@@ -353,7 +353,7 @@ export function ChampionshipForm({ initialData, onSubmit, isSubmitting = false, 
                 }
 
                 if (allPartsSelections && allPartsSelections.length > 0) {
-                    const bestHits = allPartsSelections.map((p: any) => {
+                    let bestHits = allPartsSelections.map((p: any) => {
                         const selections = (p.team_selections as string[]) || [];
                         const hitRanks = selections.map((t: string) => {
                             // Trim para evitar erros de espaço
@@ -362,9 +362,6 @@ export function ChampionshipForm({ initialData, onSubmit, isSubmitting = false, 
                             return r === -1 ? 999 : r;
                         });
 
-                        const minRank = Math.min(...hitRanks);
-                        const optIdx = hitRanks.indexOf(minRank);
-
                         // Encontrar os dados do perfil para o banner
                         const profile = participants.find(part => part.userId === p.user_id);
 
@@ -372,20 +369,35 @@ export function ChampionshipForm({ initialData, onSubmit, isSubmitting = false, 
                             userId: p.user_id,
                             displayName: profile?.displayName || "Usuário",
                             photoUrl: profile?.photoUrl,
-                            minRank,
-                            optIdx
+                            hitRanks
                         };
                     });
 
-                    // Filtrar quem não acertou nada (999) ou seleções vazias (Infinity)
-                    const validHits = bestHits.filter(h => h.minRank !== 999 && h.minRank !== Infinity);
+                    // Deep Tiebreaker Logic (Highlander)
+                    // Compara Slot 1, depois Slot 2, depois Slot 3... (Menor Ranking = Melhor)
+                    bestHits.sort((a, b) => {
+                        const maxLen = Math.max(a.hitRanks.length, b.hitRanks.length);
+                        for (let i = 0; i < maxLen; i++) {
+                            const rankA = a.hitRanks[i] ?? 999;
+                            const rankB = b.hitRanks[i] ?? 999;
+                            if (rankA !== rankB) return rankA - rankB;
+                        }
+                        return 0;
+                    });
 
-                    if (validHits.length > 0) {
-                        const globalMinRank = Math.min(...validHits.map(h => h.minRank));
-                        const candidates = validHits.filter(h => h.minRank === globalMinRank);
-                        const bestOpt = Math.min(...candidates.map(c => c.optIdx));
-                        goldWinners = candidates.filter(c => c.optIdx === bestOpt);
-                        console.log(`✨ Palpiteiro(s) de Ouro encontratos:`, goldWinners.map(g => g.displayName));
+                    // O primeiro é o grande vencedor. Precisamos ver se houve empates exatos.
+                    if (bestHits.length > 0 && bestHits[0].hitRanks.some((r: number) => r !== 999)) {
+                        const best = bestHits[0];
+                        goldWinners = bestHits.filter((h: any) => {
+                            const maxLen = Math.max(h.hitRanks.length, best.hitRanks.length);
+                            for (let i = 0; i < maxLen; i++) {
+                                const rankH = h.hitRanks[i] ?? 999;
+                                const rankB = best.hitRanks[i] ?? 999;
+                                if (rankH !== rankB) return false;
+                            }
+                            return true;
+                        });
+                        console.log(`✨ Palpiteiro(s) de Ouro encontrados pela regra Highlander:`, goldWinners.map(g => g.displayName));
                     }
                 }
             }

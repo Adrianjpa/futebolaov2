@@ -485,9 +485,7 @@ export default function DashboardClient() {
             )}
 
             {(isAdmin || userActiveChampsCount > 0) && (
-                <div className="grid gap-6 grid-cols-1 lg:grid-cols-7">
-                    {/* Main Content (Left) */}
-                    <div className="lg:col-span-4 space-y-6">
+                <div className="space-y-6 w-full">
                         {/* Upcoming Matches */}
                         <Card className="overflow-hidden" id="upcoming-matches-section">
                             <CardHeader className="bg-muted/10 pb-4 border-b">
@@ -527,7 +525,7 @@ export default function DashboardClient() {
                                     </div>
                                 )}
                                 {nextMatches.length > 0 && (
-                                    <Link href="/dashboard/matches" className="w-full">
+                                    <Link href="/dashboard/matches" className="w-full" prefetch={false}>
                                         <Button variant="outline" size="sm" className="w-full text-xs gap-2">
                                             Ver todos os jogos <ArrowRight className="h-3 w-3" />
                                         </Button>
@@ -576,7 +574,7 @@ export default function DashboardClient() {
                                     </div>
                                 )}
                                 {filteredRecent.length > 0 && (
-                                    <Link href="/dashboard/history" className="w-full">
+                                    <Link href="/dashboard/history" className="w-full" prefetch={false}>
                                         <Button variant="outline" size="sm" className="w-full text-xs gap-2">
                                             Ver histórico completo <ArrowRight className="h-3 w-3" />
                                         </Button>
@@ -584,84 +582,6 @@ export default function DashboardClient() {
                                 )}
                             </CardContent>
                         </Card>
-                    </div>
-
-                    {/* Sidebar (Right) */}
-                    <div className="lg:col-span-3 space-y-6">
-                        <Card className="overflow-hidden border-border dark:border-border/50">
-                            <CardHeader className="bg-muted/10 pb-4 border-b">
-                                <CardTitle className="flex items-center text-lg">
-                                    <Trophy className="mr-2 h-5 w-5 text-yellow-500" />
-                                    Líderes por Campeonato
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent className="pt-4 space-y-4">
-                                {Object.values(championshipsMap)
-                                    .filter((c: any) => c.status === 'ativo' && (isAdmin || userParticipation.has(c.id)))
-                                    .map((champ: any) => {
-                                        // Seleciona o líder ESPECÍFICO deste campeonato
-                                        const leader = leadersMap[champ.id];
-
-                                        // Se não houver líder (ninguém pontuou ainda neste campeonato), não mostra
-                                        if (!leader) return null;
-
-                                        return (
-                                            <div key={champ.id} className="relative p-4 rounded-xl bg-accent/20 border hover:border-primary/50 group overflow-hidden">
-                                                <div className="absolute top-0 right-0 w-24 h-24 bg-primary/5 rounded-full -mr-8 -mt-8 group-hover:bg-primary/10 transition-colors" />
-
-                                                <div className="flex flex-col gap-4 relative">
-                                                    <div className="flex items-center justify-between">
-                                                        <span className="text-[10px] font-black uppercase text-primary tracking-widest bg-primary/10 px-2 py-0.5 rounded">
-                                                            {champ.name}
-                                                        </span>
-                                                    </div>
-
-                                                    <div className="flex items-center gap-4">
-                                                        <div className="relative">
-                                                            <Avatar className="h-16 w-16 border-2 border-yellow-500 ring-4 ring-yellow-500/20">
-                                                                <AvatarImage src={leader?.foto_perfil} />
-                                                                <AvatarFallback className="bg-yellow-500 text-white font-bold">
-                                                                    {(leader?.nickname || leader?.nome || "?").substring(0, 2).toUpperCase()}
-                                                                </AvatarFallback>
-                                                            </Avatar>
-                                                            <div className="absolute -bottom-1 -right-1 bg-yellow-500 text-white text-[10px] font-black w-6 h-6 flex items-center justify-center rounded-full border-2 border-background">
-                                                                1º
-                                                            </div>
-                                                        </div>
-
-                                                        <div className="flex flex-col flex-1 min-w-0">
-                                                            <Link href={`/dashboard/profile/${leader?.user_id}`} className="hover:underline decoration-primary underline-offset-4">
-                                                                <p className="font-bold text-base truncate">{leader?.nickname || leader?.nome || "Sem competidor"}</p>
-                                                            </Link>
-                                                            <div className="flex items-center gap-2 mt-1">
-                                                                <span className="text-xl font-black text-primary font-mono">{leader?.total_points || 0}</span>
-                                                                <span className="text-[10px] uppercase font-bold text-muted-foreground">pontos</span>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-
-                                                    <Link href={`/dashboard/ranking?championship=${champ.id}`}>
-                                                        <Button size="sm" className="w-full h-8 text-xs font-bold rounded-lg group/btn">
-                                                            Ver Ranking Completo
-                                                            <ArrowRight className="ml-1 h-3 w-3 group-hover/btn:translate-x-1 transition-transform" />
-                                                        </Button>
-                                                    </Link>
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-
-                                {/* Mensagem caso não haja nenhum líder visível */}
-                                {(Object.keys(leadersMap).length === 0) && (
-                                    <div className="text-center py-10 bg-card/5 border border-dashed rounded-xl m-2">
-                                        <Trophy className="h-10 w-10 mx-auto mb-3 text-muted-foreground opacity-10" />
-                                        <h4 className="text-sm font-bold text-muted-foreground">Ranking em breve</h4>
-                                        <p className="text-xs text-muted-foreground/60 px-4 mt-1">Os primeiros palpites ainda estão sendo computados.</p>
-                                    </div>
-                                )}
-                            </CardContent>
-                        </Card>
-                    </div>
                 </div>
             )}
 

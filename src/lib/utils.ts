@@ -36,15 +36,20 @@ export const getFlagUrl = (country: string) => {
     "Polônia": "pl", "Poland": "pl",
     "Irlanda": "ie", "Ireland": "ie",
     "Suíça": "ch", "Switzerland": "ch",
-    "Bélgica": "be", "Belgium": "be",
+    "Bélgica": "be", "Belgium": "be", "Belgica": "be",
     "Áustria": "at", "Austria": "at",
     "Turquia": "tr", "Turkey": "tr", "Túrquia": "tr",
     "País de Gales": "gb-wls", "Wales": "gb-wls",
     "Finlândia": "fi", "Finland": "fi",
     "Macedônia do Norte": "mk", "North Macedonia": "mk", "Macedônia": "mk",
     "Escócia": "gb-sct", "Scotland": "gb-sct",
-    "Eslováquia": "sk", "Slovakia": "sk", "Eslovênia": "sk",
-    "Hungria": "hu", "Hungary": "hu"
+    "Eslováquia": "sk", "Slovakia": "sk", 
+    "Eslovênia": "si", "Slovenia": "si",
+    "Hungria": "hu", "Hungary": "hu",
+    "Albânia": "al", "Albania": "al",
+    "Romênia": "ro", "Romania": "ro",
+    "Sérvia": "rs", "Serbia": "rs",
+    "Geórgia": "ge", "Georgia": "ge"
   };
 
   const code = countryMap[normalizedCountry];

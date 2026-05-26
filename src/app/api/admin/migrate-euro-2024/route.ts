@@ -11,13 +11,13 @@ export async function POST(request: Request) {
     }
 
     try {
-        const champId = "uefa_euro_2024";
+        const champId = "e2024000-0000-0000-0000-000000000000";
 
         // 1. Ensure Championship Exists
         await (supabaseAdmin.from("championships") as any).upsert({
             id: champId,
             name: "Eurocopa 2024",
-            status: "finished",
+            status: "finalizado",
             category: "euro",
             settings: {
                 banner: {
@@ -38,7 +38,7 @@ export async function POST(request: Request) {
             const base = new Date("2024-06-14T19:00:00Z");
             base.setHours(base.getHours() + i * 24); // 1 match a day approx
             return {
-                id: `euro2024_match_${i}`,
+                id: `e2024000-0000-0000-0000-0000000000${i.toString().padStart(2, '0')}`,
                 championship_id: champId,
                 round: i + 1,
                 date: base.toISOString(),
@@ -98,7 +98,7 @@ export async function POST(request: Request) {
             userRecord.predictions.forEach((bet, i) => {
                 if (i >= euro2024Matches.length) return;
                 const match = euro2024Matches[i];
-                const matchId = `euro2024_match_${i}`;
+                const matchId = `e2024000-0000-0000-0000-0000000000${i.toString().padStart(2, '0')}`;
 
                 let points = 0;
                 if (match.homeScore === bet.homeScore && match.awayScore === bet.awayScore) {
@@ -108,13 +108,12 @@ export async function POST(request: Request) {
                 }
 
                 predictionsToInsert.push({
-                    id: `euro2024_pred_${i}_${userUuid}`,
+                    id: crypto.randomUUID(),
                     match_id: matchId,
                     user_id: userUuid,
                     home_score: bet.homeScore,
                     away_score: bet.awayScore,
                     points: points,
-                    status: "finalized",
                     is_combo: false
                 });
             });

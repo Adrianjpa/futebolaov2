@@ -139,7 +139,7 @@ export default function DashboardLayout({
                                 const Icon = item.icon;
                                 const isActive = pathname === item.href;
                                 return (
-                                    <Link key={item.href} href={item.href} onClick={() => setIsSidebarOpen(false)}>
+                                    <Link key={item.href} href={item.href} onClick={() => setIsSidebarOpen(false)} prefetch={false}>
                                         <Button
                                             variant={isActive ? "secondary" : "ghost"}
                                             className={`w-full justify-start transition-all duration-300 rounded-xl mb-1 ${isActive ? "bg-white/60 text-primary shadow-sm font-medium" : "hover:bg-white/30 hover:text-primary"}`}
@@ -162,7 +162,7 @@ export default function DashboardLayout({
                                         const Icon = item.icon;
                                         const isActive = pathname === item.href;
                                         return (
-                                            <Link key={item.href} href={item.href} onClick={() => setIsSidebarOpen(false)}>
+                                            <Link key={item.href} href={item.href} onClick={() => setIsSidebarOpen(false)} prefetch={false}>
                                                 <Button
                                                     variant={isActive ? "secondary" : "ghost"}
                                                     className={`w-full justify-between transition-all duration-300 rounded-xl mb-1 ${isActive ? "bg-red-500/10 text-red-700 font-medium" : "hover:bg-red-500/5 hover:text-red-600 text-muted-foreground"}`}

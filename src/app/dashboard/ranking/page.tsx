@@ -19,7 +19,7 @@ const TEAM_ISO_MAP: Record<string, string> = {
     'Holanda': 'nl', 'Dinamarca': 'dk', 'Alemanha': 'de', 'Portugal': 'pt',
     'Espanha': 'es', 'Itália': 'it', 'Irlanda': 'ie', 'Croácia': 'hr',
     'França': 'fr', 'Inglaterra': 'gb-eng', 'Ucrânia': 'ua', 'Suécia': 'se',
-    'Brasil': 'br', 'Argentina': 'ar', 'Uruguai': 'uy', 'Bélgica': 'be',
+    'Brasil': 'br', 'Argentina': 'ar', 'Uruguai': 'uy', 'Bélgica': 'be', 'Belgica': 'be',
     'Suíça': 'ch', 'México': 'mx', 'Colômbia': 'co', 'Japão': 'jp',
     'Senegal': 'sn', 'Marrocos': 'ma', 'Irã': 'ir', 'Egito': 'eg',
     'Arábia Saudita': 'sa', 'Austrália': 'au', 'Islândia': 'is', 'Peru': 'pe',
@@ -74,6 +74,7 @@ export default function RankingPage() {
     const [officialRanking, setOfficialRanking] = useState<string[]>([]);
     const [enablePriority, setEnablePriority] = useState<boolean>(true);
     const [enableTiebreaker, setEnableTiebreaker] = useState<boolean>(false);
+    const [manualGoldWinners, setManualGoldWinners] = useState<string[]>([]);
     const [participantsData, setParticipantsData] = useState<Map<string, string[]>>(new Map());
     const [legacyUrl, setLegacyUrl] = useState<string>("");
 
@@ -325,7 +326,12 @@ export default function RankingPage() {
 
             setOfficialRanking(settings.officialRanking || []);
             setEnablePriority(settings.enableSelectionPriority ?? true);
-            setEnableTiebreaker(settings.enableSelectionTiebreaker ?? false);
+            setEnableTiebreaker(settings.enableSelectionTiebreaker ?? true);
+            
+            const manualWinners = settings.manualWinners || [];
+            const goldIds = manualWinners.filter((w: any) => w.position === 'gold_winner').map((w: any) => w.userId);
+            setManualGoldWinners(goldIds);
+            
             setLegacyUrl(settings.legacySpreadsheetUrl || "");
         } catch (error) {
             console.error("Failed to fetch ranking:", error);
@@ -409,7 +415,13 @@ export default function RankingPage() {
         let winnersSet = new Set<string>();
         let matchedAdminTeams = new Set<string>();
 
-        if (enablePriority) {
+        if (manualGoldWinners.length > 0) {
+            // Bypass the local calculation if the admin manually set the winners
+            manualGoldWinners.forEach(id => winnersSet.add(id));
+            if (officialRanking.length > 0) {
+                 winningTeam = officialRanking[0];
+            }
+        } else if (enablePriority) {
             let currentCandidates = Array.from(participantsData.entries()).map(([uid, selections]) => ({
                 userId: uid,
                 teamSelections: selections || []
