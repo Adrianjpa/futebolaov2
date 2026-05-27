@@ -194,6 +194,8 @@ export default function RankingPage() {
                 parts.forEach((p: any) => {
                     pMap.set(p.user_id, p.team_selections || []);
                     
+                    if (ghostIds.includes(p.user_id)) return;
+
                     // Add participant to ranking with 0 points if they are missing
                     if (!existingUserIds.has(p.user_id)) {
                         const prof = profilesMap.get(p.user_id) as any;
@@ -228,6 +230,8 @@ export default function RankingPage() {
                     if (uid) {
                         pMap.set(uid, selections);
                         
+                        if (ghostIds.includes(uid)) return;
+
                         // Add participant to ranking with 0 points if they are missing
                         if (!existingUserIds.has(uid)) {
                             // First try to get from legacy data, then from public profiles
