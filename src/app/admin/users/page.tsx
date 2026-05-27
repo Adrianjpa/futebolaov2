@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Loader2, Trash2, Search, Filter, Shield, ShieldAlert, UserCheck, Key, Mail, Ghost } from "lucide-react";
+import { Loader2, Trash2, Search, Filter, Shield, ShieldAlert, UserCheck, Key, Mail } from "lucide-react";
 import { format } from "date-fns";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -21,7 +21,7 @@ interface UserProfile {
     nome: string;
     nickname: string;
     email: string;
-    funcao: "admin" | "moderator" | "usuario" | "teste";
+    funcao: "admin" | "moderator" | "usuario";
     status: "ativo" | "bloqueado" | "pendente";
     foto_perfil: string | null;
     created_at: string;
@@ -259,7 +259,6 @@ export default function AdminUsersPage() {
                                 <SelectItem value="usuario">Usuário</SelectItem>
                                 <SelectItem value="moderator">Moderador</SelectItem>
                                 <SelectItem value="admin">Admin</SelectItem>
-                                <SelectItem value="teste">Teste (Ghost)</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>
@@ -375,7 +374,6 @@ export default function AdminUsersPage() {
                                                             {user.funcao === "admin" && <ShieldAlert className="h-3 w-3 text-red-500" />}
                                                             {user.funcao === "moderator" && <Shield className="h-3 w-3 text-blue-500" />}
                                                             {user.funcao === "usuario" && <UserCheck className="h-3 w-3 text-green-500" />}
-                                                            {user.funcao === "teste" && <Ghost className="h-3 w-3 text-purple-500" />}
                                                             <SelectValue />
                                                         </div>
                                                     </SelectTrigger>
@@ -383,7 +381,6 @@ export default function AdminUsersPage() {
                                                         <SelectItem value="usuario">Usuário</SelectItem>
                                                         <SelectItem value="moderator">Moderador</SelectItem>
                                                         <SelectItem value="admin">Admin</SelectItem>
-                                                        <SelectItem value="teste">Teste (Ghost)</SelectItem>
                                                     </SelectContent>
                                                 </Select>
                                             </TableCell>

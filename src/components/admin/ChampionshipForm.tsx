@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect } from "react";
-import { Check, ChevronsUpDown, ChevronUp, ChevronDown, X, Settings, BookOpen, Shield, Users, Trophy, Image as ImageIcon, AlertCircle, Upload, Calendar as CalendarIcon, Save, Loader2, Plus, Award } from "lucide-react";
+import { Check, ChevronsUpDown, ChevronUp, ChevronDown, X, Settings, BookOpen, Shield, Users, Trophy, Image as ImageIcon, AlertCircle, Upload, Calendar as CalendarIcon, Save, Loader2, Plus, Award, Ghost } from "lucide-react";
 import { createClient } from "@/lib/supabase";
 import * as z from "zod";
 import { useForm } from "react-hook-form";
@@ -66,7 +66,7 @@ const formSchema = z.object({
     category: z.string().default("other"),
     teamMode: z.enum(["clubes", "selecoes", "mista"]),
     // Rules
-    ghostPlayer: z.boolean().default(false),
+    ghostPlayer: z.string().nullable().optional(),
     selectionSlots: z.coerce.number().min(0).default(3).optional(),
     enableSelectionPriority: z.boolean().default(false),
     enableSelectionTiebreaker: z.boolean().default(false),
@@ -149,7 +149,7 @@ export function ChampionshipForm({ initialData, onSubmit, isSubmitting = false, 
             type: initialData?.type || "copa",
             category: initialData?.category || "other",
             teamMode: initialData?.teamMode || "selecoes",
-            ghostPlayer: initialData?.ghostPlayer ?? false,
+            ghostPlayer: typeof initialData?.ghostPlayer === 'string' ? initialData.ghostPlayer : null,
             selectionSlots: initialData?.selectionSlots ?? 3,
             enableSelectionPriority: initialData?.enableSelectionPriority ?? false,
             enableSelectionTiebreaker: initialData?.enableSelectionTiebreaker ?? false,
@@ -1312,6 +1312,59 @@ export function ChampionshipForm({ initialData, onSubmit, isSubmitting = false, 
                                     </span>
                                 </div>
                             )}
+
+                            <div className="rounded-lg border border-purple-500/30 bg-purple-500/5 p-4 space-y-4">
+                                <div className="flex items-center gap-2">
+                                    <Ghost className="h-5 w-5 text-purple-500" />
+                                    <h3 className="font-bold text-purple-700 dark:text-purple-400">Usuário Fantasma (Opcional)</h3>
+                                </div>
+                                <p className="text-xs text-muted-foreground">
+                                    Selecione um usuário para agir como fantasma neste campeonato. As apostas dele não serão exibidas no ranking público, mas ele poderá participar e ver as próprias pontuações.
+                                </p>
+                                
+                                {form.watch("ghostPlayer") ? (
+                                    <div className="flex items-center justify-between p-3 rounded-md border border-purple-500/50 bg-background">
+                                        <div className="flex items-center gap-3">
+                                            {/* Get details from participants or use a placeholder */}
+                                            {(() => {
+                                                const ghostId = form.watch("ghostPlayer");
+                                                const p = participants.find(part => part.userId === ghostId);
+                                                return (
+                                                    <>
+                                                        <div className="h-9 w-9 rounded-full bg-muted flex items-center justify-center overflow-hidden border border-border">
+                                                            {p?.photoUrl ? <img src={p.photoUrl} alt="Ghost" className="h-full w-full object-cover" /> : <Ghost className="h-4 w-4 text-purple-500" />}
+                                                        </div>
+                                                        <div className="flex flex-col">
+                                                            <span className="text-sm font-medium text-foreground leading-none mb-0.5">{p?.displayName || 'Usuário Selecionado'}</span>
+                                                            <span className="text-[10px] text-muted-foreground">Fantasma Ativo</span>
+                                                        </div>
+                                                    </>
+                                                );
+                                            })()}
+                                        </div>
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => form.setValue("ghostPlayer", null)}
+                                            className="text-red-500 hover:text-red-600 hover:bg-red-500/10"
+                                        >
+                                            Remover
+                                        </Button>
+                                    </div>
+                                ) : (
+                                    <div className="w-[300px]">
+                                        <UserSearch
+                                            onSelect={(user) => {
+                                                form.setValue("ghostPlayer", user.id);
+                                                // Automatically add the ghost to participants if not already there
+                                                addParticipant(user);
+                                            }}
+                                            disabled={false}
+                                        />
+                                    </div>
+                                )}
+                            </div>
 
                             <div className="grid gap-2 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
                                 {participants.map((p, index) => (

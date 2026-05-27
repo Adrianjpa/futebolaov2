@@ -169,11 +169,9 @@ export default function RankingPage() {
 
             const settings = (champ as any)?.settings || {};
 
-            // 2. Fetch ghost users to filter them out of the ranking
-            const { data: profiles } = await supabase.from("public_profiles").select("id, funcao");
-            const ghostIds = (profiles || []).filter((p: any) => p.funcao === "teste").map((p: any) => p.id);
-
-            let rawData = (rankingData || []).filter((r: any) => !ghostIds.includes(r.user_id));
+            // 2. Filter out the specific ghost player for this championship
+            const ghostUserId = settings.ghostPlayer || null;
+            let rawData = (rankingData || []).filter((r: any) => r.user_id !== ghostUserId);
             
             // 3. Fetch Participants Selections (Try Relational Table first)
             const { data: parts, error: partsError } = await supabase
@@ -194,7 +192,7 @@ export default function RankingPage() {
                 parts.forEach((p: any) => {
                     pMap.set(p.user_id, p.team_selections || []);
                     
-                    if (ghostIds.includes(p.user_id)) return;
+                    if (ghostUserId && p.user_id === ghostUserId) return;
 
                     // Add participant to ranking with 0 points if they are missing
                     if (!existingUserIds.has(p.user_id)) {
@@ -230,7 +228,7 @@ export default function RankingPage() {
                     if (uid) {
                         pMap.set(uid, selections);
                         
-                        if (ghostIds.includes(uid)) return;
+                        if (ghostUserId && uid === ghostUserId) return;
 
                         // Add participant to ranking with 0 points if they are missing
                         if (!existingUserIds.has(uid)) {
