@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 
 export async function GET() {
     try {
-        const { data, error } = await supabaseAdmin.from('public_profiles').select('*');
+        const { data, error } = await supabaseAdmin.from('public_profiles').select('*').neq('funcao', 'teste');
         if (error) throw error;
         
         return NextResponse.json({ data });

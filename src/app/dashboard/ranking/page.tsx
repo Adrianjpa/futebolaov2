@@ -169,7 +169,11 @@ export default function RankingPage() {
 
             const settings = (champ as any)?.settings || {};
 
-            let rawData = rankingData || [];
+            // 2. Fetch ghost users to filter them out of the ranking
+            const { data: profiles } = await supabase.from("public_profiles").select("id, funcao");
+            const ghostIds = (profiles || []).filter((p: any) => p.funcao === "teste").map((p: any) => p.id);
+
+            let rawData = (rankingData || []).filter((r: any) => !ghostIds.includes(r.user_id));
             
             // 3. Fetch Participants Selections (Try Relational Table first)
             const { data: parts, error: partsError } = await supabase
