@@ -24,16 +24,24 @@ import { UserSearch } from "@/components/admin/UserSearch";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 // ... (rest of imports/schemas/components until generic component start)
-function TeamSelectorItems({ supabase, selectedTeamIds = [] }: { supabase: any, selectedTeamIds?: string[] }) {
+function TeamSelectorItems({ supabase, selectedTeamIds = [], teamMode }: { supabase: any, selectedTeamIds?: string[], teamMode?: string }) {
     const [teams, setTeams] = useState<any[]>([]);
 
     useEffect(() => {
         const fetchTeams = async () => {
-            const { data } = await supabase.from("teams").select("*").order("name", { ascending: true });
+            let query = supabase.from("teams").select("*").order("name", { ascending: true });
+            
+            if (teamMode === "clubes") {
+                query = query.eq("type", "club");
+            } else if (teamMode === "selecoes") {
+                query = query.eq("type", "national");
+            }
+            
+            const { data } = await query;
             setTeams(data || []);
         };
         fetchTeams();
-    }, [supabase]);
+    }, [supabase, teamMode]);
 
     const availableTeams = teams.filter(t => !selectedTeamIds.includes(t.id));
 
@@ -1125,6 +1133,7 @@ export function ChampionshipForm({ initialData, onSubmit, isSubmitting = false, 
                                             <TeamSelectorItems
                                                 supabase={supabase}
                                                 selectedTeamIds={((form.watch("teams") as any[]) || []).map((t: any) => t.id)}
+                                                teamMode={form.watch("teamMode")}
                                             />
                                         </SelectContent>
                                     </Select>
