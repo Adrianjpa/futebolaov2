@@ -94,6 +94,28 @@ export default function HallOfFamePage() {
                 .filter(c => c.bannerEnabled === true)
                 .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
+            // 2. For any championship that has no manual winners, try to fetch the automatic points leader
+            for (const champ of list) {
+                if (!champ.manualWinners || champ.manualWinners.length === 0) {
+                    const { data: topUsers } = await supabase
+                        .from("ranking_by_championship")
+                        .select("user_id, nickname, nome, foto_perfil")
+                        .eq("championship_id", champ.id)
+                        .order("total_points", { ascending: false })
+                        .limit(1);
+
+                    if (topUsers && topUsers.length > 0) {
+                        const top = topUsers[0];
+                        champ.manualWinners = [{
+                            userId: top.user_id,
+                            displayName: top.nickname || top.nome || "Campeão",
+                            photoUrl: top.foto_perfil || undefined,
+                            position: 'champion'
+                        }];
+                    }
+                }
+            }
+
             setChampionships(list);
         } catch (error) {
             console.error("Error loading Hall of Fame:", error);
