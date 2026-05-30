@@ -26,11 +26,12 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: "Invalid parameters" }, { status: 400 });
         }
 
-        // Get primary team name
-        const { data: primaryTeam, error: ptError } = await supabaseAdmin.from('teams').select('name').eq('id', primaryTeamId).single();
+        // Get primary team name and shield
+        const { data: primaryTeam, error: ptError } = await supabaseAdmin.from('teams').select('name, shield_url').eq('id', primaryTeamId).single();
         if (ptError || !primaryTeam) throw new Error("Primary team not found");
         
         const primaryName = primaryTeam.name;
+        const primaryShield = primaryTeam.shield_url;
 
         // Get duplicate teams names
         const { data: duplicateTeams, error: dtError } = await supabaseAdmin.from('teams').select('id, name').in('id', duplicateTeamIds);
@@ -41,7 +42,7 @@ export async function POST(request: Request) {
         // 3. Update Matches (home_team)
         const { error: homeError } = await supabaseAdmin
             .from('matches')
-            .update({ home_team: primaryName })
+            .update({ home_team: primaryName, home_team_crest: primaryShield })
             .in('home_team', duplicateNames);
             
         if (homeError) console.error("Error updating home_team", homeError);
@@ -49,7 +50,7 @@ export async function POST(request: Request) {
         // 4. Update Matches (away_team)
         const { error: awayError } = await supabaseAdmin
             .from('matches')
-            .update({ away_team: primaryName })
+            .update({ away_team: primaryName, away_team_crest: primaryShield })
             .in('away_team', duplicateNames);
             
         if (awayError) console.error("Error updating away_team", awayError);
