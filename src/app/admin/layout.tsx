@@ -69,9 +69,7 @@ export default function AdminLayout({
         { href: "/admin", label: "Visão Geral", icon: LayoutDashboard },
         { href: "/admin/users", label: "Usuários", icon: Users },
         { href: "/admin/championships", label: "Campeonatos", icon: Trophy },
-
-
-
+        { href: "/admin/teams", label: "Equipes", icon: Swords },
         { href: "/admin/messaging", label: "Mensagens", icon: MessageSquare },
         { href: "/admin/notifications", label: "Notificações", icon: Bell },
         { href: "/admin/migrations/linker", label: "Vincular Legado", icon: History },

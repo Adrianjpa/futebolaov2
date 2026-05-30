@@ -4,10 +4,11 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Shield, Search } from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Plus, Shield, Search, MoreHorizontal, Edit, Trash2 } from "lucide-react";
 import { createClient } from "@/lib/supabase";
 
 interface Team {
@@ -22,19 +23,24 @@ export default function AdminTeamsPage() {
     const [teams, setTeams] = useState<Team[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");
+    
+    // Add/Edit Dialog
     const [isDialogOpen, setIsDialogOpen] = useState(false);
-
-    // Form State
+    const [editingTeam, setEditingTeam] = useState<Team | null>(null);
     const [newName, setNewName] = useState("");
     const [newShortName, setNewShortName] = useState("");
     const [newShieldUrl, setNewShieldUrl] = useState("");
     const [newType, setNewType] = useState<"club" | "national">("club");
 
+    // Delete Dialog
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const [deletingTeam, setDeletingTeam] = useState<Team | null>(null);
+
+    const supabase = createClient();
+
     useEffect(() => {
         fetchTeams();
     }, []);
-
-    const supabase = createClient();
 
     const fetchTeams = async () => {
         setLoading(true);
@@ -50,7 +56,7 @@ export default function AdminTeamsPage() {
                 id: t.id,
                 name: t.name,
                 shortName: t.short_name,
-                shieldUrl: t.shield_url,
+                shieldUrl: t.shield_url || t.crest_url || "",
                 type: t.type
             })) || []);
         } catch (error) {
@@ -60,125 +66,224 @@ export default function AdminTeamsPage() {
         }
     };
 
-    const handleAddTeam = async () => {
-        try {
-            const { error } = await (supabase.from("teams") as any).insert({
-                name: newName,
-                short_name: newShortName,
-                shield_url: newShieldUrl,
-                type: newType,
-            });
+    const openAddDialog = () => {
+        setEditingTeam(null);
+        setNewName("");
+        setNewShortName("");
+        setNewShieldUrl("");
+        setNewType("club");
+        setIsDialogOpen(true);
+    };
 
-            if (error) throw error;
+    const openEditDialog = (team: Team) => {
+        setEditingTeam(team);
+        setNewName(team.name);
+        setNewShortName(team.shortName);
+        setNewShieldUrl(team.shieldUrl);
+        setNewType(team.type || "club");
+        setIsDialogOpen(true);
+    };
+
+    const handleSaveTeam = async () => {
+        try {
+            if (editingTeam) {
+                // Update
+                const { error } = await supabase.from("teams").update({
+                    name: newName,
+                    short_name: newShortName,
+                    shield_url: newShieldUrl,
+                    type: newType,
+                }).eq("id", editingTeam.id);
+                if (error) throw error;
+            } else {
+                // Insert
+                const { error } = await supabase.from("teams").insert({
+                    name: newName,
+                    short_name: newShortName,
+                    shield_url: newShieldUrl,
+                    type: newType,
+                });
+                if (error) throw error;
+            }
 
             setIsDialogOpen(false);
-            // Reset form
-            setNewName("");
-            setNewShortName("");
-            setNewShieldUrl("");
-            setNewType("club");
+            fetchTeams();
+        } catch (error: any) {
+            console.error("Error saving team:", error);
+            alert("Erro ao salvar equipe: " + (error.message || ""));
+        }
+    };
 
-            fetchTeams(); // Refresh list
-        } catch (error) {
-            console.error("Error adding team:", error);
-            alert("Erro ao adicionar time.");
+    const confirmDelete = (team: Team) => {
+        setDeletingTeam(team);
+        setIsDeleteDialogOpen(true);
+    };
+
+    const handleDeleteTeam = async () => {
+        if (!deletingTeam) return;
+        try {
+            const { error } = await supabase.from("teams").delete().eq("id", deletingTeam.id);
+            if (error) throw error;
+            setIsDeleteDialogOpen(false);
+            fetchTeams();
+        } catch (error: any) {
+            console.error("Error deleting team:", error);
+            alert("Erro ao excluir equipe: " + (error.message || ""));
         }
     };
 
     const filteredTeams = teams.filter(team =>
         team.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        team.shortName.toLowerCase().includes(searchTerm.toLowerCase())
+        team.shortName?.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
     return (
         <div className="space-y-6">
             <div className="flex items-center justify-between">
-                <h1 className="text-3xl font-bold tracking-tight">Gerenciar Equipes</h1>
-                <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                    <DialogTrigger asChild>
-                        <Button>
-                            <Plus className="mr-2 h-4 w-4" />
-                            Adicionar Time
-                        </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                        <DialogHeader>
-                            <DialogTitle>Adicionar Nova Equipe</DialogTitle>
-                            <DialogDescription>
-                                Cadastre um novo time ou seleção para usar nos campeonatos.
-                            </DialogDescription>
-                        </DialogHeader>
-                        <div className="grid gap-4 py-4">
-                            <div className="grid gap-2">
-                                <Label htmlFor="name">Nome Completo</Label>
-                                <Input id="name" value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Ex: Clube de Regatas do Flamengo" />
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="grid gap-2">
-                                    <Label htmlFor="shortName">Nome Curto (Sigla)</Label>
-                                    <Input id="shortName" value={newShortName} onChange={(e) => setNewShortName(e.target.value)} placeholder="Ex: FLA" />
-                                </div>
-                                <div className="grid gap-2">
-                                    <Label htmlFor="type">Tipo</Label>
-                                    <Select value={newType} onValueChange={(val: "club" | "national") => setNewType(val)}>
-                                        <SelectTrigger>
-                                            <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="club">Clube</SelectItem>
-                                            <SelectItem value="national">Seleção</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                            </div>
-                            <div className="grid gap-2">
-                                <Label htmlFor="shieldUrl">URL do Escudo</Label>
-                                <Input id="shieldUrl" value={newShieldUrl} onChange={(e) => setNewShieldUrl(e.target.value)} placeholder="https://..." />
-                            </div>
-                        </div>
-                        <DialogFooter>
-                            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancelar</Button>
-                            <Button onClick={handleAddTeam}>Salvar</Button>
-                        </DialogFooter>
-                    </DialogContent>
-                </Dialog>
+                <h1 className="text-3xl font-bold tracking-tight">Gestão de Equipes</h1>
+                <Button onClick={openAddDialog}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Adicionar Equipe
+                </Button>
             </div>
 
             <div className="flex items-center space-x-2">
                 <div className="relative flex-1 max-w-sm">
                     <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                     <Input
-                        placeholder="Buscar times..."
+                        placeholder="Buscar por nome ou sigla..."
                         className="pl-8"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                     />
                 </div>
+                <div className="text-sm text-muted-foreground">
+                    Total: {filteredTeams.length} equipes
+                </div>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-4">
-                {filteredTeams.map((team) => (
-                    <Card key={team.id} className="overflow-hidden">
-                        <CardContent className="p-4 flex flex-col items-center text-center space-y-2">
-                            <div className="h-20 w-20 bg-muted rounded-full flex items-center justify-center overflow-hidden mb-2">
-                                {team.shieldUrl ? (
-                                    <img src={team.shieldUrl} alt={team.name} className="h-full w-full object-cover" />
-                                ) : (
-                                    <Shield className="h-10 w-10 text-muted-foreground" />
-                                )}
-                            </div>
-                            <h3 className="font-bold truncate w-full" title={team.name}>{team.name}</h3>
-                            <p className="text-sm text-muted-foreground">{team.shortName}</p>
-                            <span className="text-xs px-2 py-1 bg-secondary rounded-full capitalize">{team.type === 'club' ? 'Clube' : 'Seleção'}</span>
-                        </CardContent>
-                    </Card>
-                ))}
-                {filteredTeams.length === 0 && !loading && (
-                    <div className="col-span-full text-center py-10 text-muted-foreground">
-                        Nenhum time encontrado.
-                    </div>
-                )}
+            <div className="border rounded-md bg-white">
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead className="w-[80px]">Escudo</TableHead>
+                            <TableHead>Nome</TableHead>
+                            <TableHead>Sigla</TableHead>
+                            <TableHead>Tipo</TableHead>
+                            <TableHead className="w-[100px] text-right">Ações</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {loading ? (
+                            <TableRow>
+                                <TableCell colSpan={5} className="text-center py-10 text-muted-foreground">Carregando equipes...</TableCell>
+                            </TableRow>
+                        ) : filteredTeams.length === 0 ? (
+                            <TableRow>
+                                <TableCell colSpan={5} className="text-center py-10 text-muted-foreground">Nenhuma equipe encontrada.</TableCell>
+                            </TableRow>
+                        ) : (
+                            filteredTeams.map((team) => (
+                                <TableRow key={team.id}>
+                                    <TableCell>
+                                        <div className="h-8 w-8 bg-muted rounded-full flex items-center justify-center overflow-hidden">
+                                            {team.shieldUrl ? (
+                                                <img src={team.shieldUrl} alt={team.name} className="h-full w-full object-cover" />
+                                            ) : (
+                                                <Shield className="h-4 w-4 text-muted-foreground" />
+                                            )}
+                                        </div>
+                                    </TableCell>
+                                    <TableCell className="font-medium">{team.name}</TableCell>
+                                    <TableCell>{team.shortName || "-"}</TableCell>
+                                    <TableCell>
+                                        <span className="text-xs px-2 py-1 bg-secondary rounded-full capitalize">
+                                            {team.type === 'club' ? 'Clube' : 'Seleção'}
+                                        </span>
+                                    </TableCell>
+                                    <TableCell className="text-right">
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <Button variant="ghost" className="h-8 w-8 p-0">
+                                                    <MoreHorizontal className="h-4 w-4" />
+                                                </Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align="end">
+                                                <DropdownMenuItem onClick={() => openEditDialog(team)}>
+                                                    <Edit className="mr-2 h-4 w-4 text-blue-500" /> Editar
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem onClick={() => confirmDelete(team)} className="text-red-600 focus:text-red-600">
+                                                    <Trash2 className="mr-2 h-4 w-4" /> Excluir
+                                                </DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
+                                    </TableCell>
+                                </TableRow>
+                            ))
+                        )}
+                    </TableBody>
+                </Table>
             </div>
+
+            {/* Add/Edit Dialog */}
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>{editingTeam ? "Editar Equipe" : "Adicionar Nova Equipe"}</DialogTitle>
+                        <DialogDescription>
+                            {editingTeam ? "Altere as informações da equipe selecionada." : "Cadastre uma nova equipe para usar no dicionário global."}
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                        <div className="grid gap-2">
+                            <Label htmlFor="name">Nome Completo</Label>
+                            <Input id="name" value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Ex: Clube de Regatas do Flamengo" />
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="grid gap-2">
+                                <Label htmlFor="shortName">Nome Curto (Sigla)</Label>
+                                <Input id="shortName" value={newShortName} onChange={(e) => setNewShortName(e.target.value)} placeholder="Ex: FLA" />
+                            </div>
+                            <div className="grid gap-2">
+                                <Label htmlFor="type">Tipo</Label>
+                                <Select value={newType} onValueChange={(val: "club" | "national") => setNewType(val)}>
+                                    <SelectTrigger>
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="club">Clube</SelectItem>
+                                        <SelectItem value="national">Seleção</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="shieldUrl">URL do Escudo</Label>
+                            <Input id="shieldUrl" value={newShieldUrl} onChange={(e) => setNewShieldUrl(e.target.value)} placeholder="https://..." />
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancelar</Button>
+                        <Button onClick={handleSaveTeam}>Salvar</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Delete Dialog */}
+            <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle className="text-red-600">Excluir Equipe</DialogTitle>
+                        <DialogDescription>
+                            Tem certeza que deseja excluir a equipe <strong>{deletingTeam?.name}</strong>? Essa ação não pode ser desfeita e pode afetar campeonatos que a utilizam.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>Cancelar</Button>
+                        <Button variant="destructive" onClick={handleDeleteTeam}>Sim, Excluir</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }
