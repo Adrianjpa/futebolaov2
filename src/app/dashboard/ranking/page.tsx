@@ -77,6 +77,7 @@ export default function RankingPage() {
     const [manualGoldWinners, setManualGoldWinners] = useState<string[]>([]);
     const [participantsData, setParticipantsData] = useState<Map<string, string[]>>(new Map());
     const [legacyUrl, setLegacyUrl] = useState<string>("");
+    const [teamDict, setTeamDict] = useState<Map<string, string>>(new Map());
 
     const isAdmin = profile?.funcao === "admin" || profile?.funcao === "moderator";
 
@@ -139,6 +140,15 @@ export default function RankingPage() {
                 setSelectedChampionship("");
                 setCategoryFilter("");
             }
+            
+            // Fetch teams dictionary for shields
+            const { data: teamsData } = await supabase.from('teams').select('name, shield_url').not('shield_url', 'is', null);
+            const tDict = new Map<string, string>();
+            if (teamsData) {
+                teamsData.forEach((t: any) => tDict.set(t.name, t.shield_url));
+            }
+            setTeamDict(tDict);
+            
             setLoading(false);
         };
         fetchInitial();
@@ -395,15 +405,16 @@ export default function RankingPage() {
         if (!isRankingReady) {
             return teamSelections.map((team, idx) => {
                 const iso = TEAM_ISO_MAP[team] || 'xx';
+                const shieldUrl = teamDict.get(team) || `https://flagcdn.com/w40/${iso}.png`;
                 return (
                     <Tooltip key={`${userId}-${idx}`}>
                         <TooltipTrigger asChild>
                             <div className="relative group/flag">
                                 <img
-                                    src={`https://flagcdn.com/w40/${iso}.png`}
+                                    src={shieldUrl}
                                     className={cn(
                                         "border border-white/10",
-                                        teamMode === 'selecoes' ? "h-5 w-5 rounded-full object-cover" : "h-3 w-4.5 rounded-[2px] object-cover"
+                                        teamMode === 'selecoes' ? "h-5 w-5 rounded-full object-cover" : "h-4 w-4 rounded-full object-contain bg-white"
                                     )}
                                 />
                             </div>
@@ -482,6 +493,7 @@ export default function RankingPage() {
 
         return teamSelections.map((team, idx) => {
             const iso = TEAM_ISO_MAP[team] || 'xx';
+            const shieldUrl = teamDict.get(team) || `https://flagcdn.com/w40/${iso}.png`;
             const teamRank = officialRanking.indexOf(team);
             const isHit = teamRank !== -1;
 
@@ -501,11 +513,11 @@ export default function RankingPage() {
                              ${!enablePriority && isHit ? "opacity-100 grayscale-0" : ""}
                         `}>
                             <img
-                                src={`https://flagcdn.com/w40/${iso}.png`}
+                                src={shieldUrl}
                                 alt={team}
                                 className={cn(
                                     "shadow-sm cursor-help transition-all",
-                                    teamMode === 'selecoes' ? "h-5 w-5 rounded-full object-cover" : "h-3 w-4.5 rounded-[2px] object-cover"
+                                    teamMode === 'selecoes' ? "h-5 w-5 rounded-full object-cover" : "h-5 w-5 rounded-full object-contain bg-white border border-slate-200 dark:border-slate-800"
                                 )}
                             />
                         </div>
