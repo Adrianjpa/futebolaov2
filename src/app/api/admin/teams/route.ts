@@ -27,6 +27,9 @@ export async function POST(request: Request) {
         const finalShortName = short_name || (name ? name.substring(0, 3).toUpperCase() : "TMP");
 
         if (overwrite && id) {
+            // Get old team details before update
+            const { data: oldTeam } = await (supabaseAdmin.from("teams") as any).select("name").eq("id", id).single();
+            
             const { data, error } = await (supabaseAdmin
                 .from("teams") as any)
                 .update({ name, short_name: finalShortName, shield_url, type })
@@ -34,6 +37,20 @@ export async function POST(request: Request) {
                 .select()
                 .single();
             if (error) throw error;
+            
+            // Cascade updates to matches table if it was updated successfully
+            if (oldTeam && oldTeam.name) {
+                // Update home team
+                await supabaseAdmin.from('matches')
+                    .update({ home_team: name, home_team_crest: shield_url })
+                    .eq('home_team', oldTeam.name);
+                    
+                // Update away team
+                await supabaseAdmin.from('matches')
+                    .update({ away_team: name, away_team_crest: shield_url })
+                    .eq('away_team', oldTeam.name);
+            }
+
             return NextResponse.json(data);
         } else {
             // Check for existing by name first (extra safety)
