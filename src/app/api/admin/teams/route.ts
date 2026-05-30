@@ -61,3 +61,29 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 }
+
+export async function DELETE(request: Request) {
+    try {
+        const supabase = await createServerSupabaseClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+        const { data: profile } = await (supabaseAdmin.from("profiles") as any).select("funcao").eq("id", user.id).single();
+        if (profile?.funcao !== 'admin' && profile?.funcao !== 'moderator') {
+            return NextResponse.json({ error: "Forbidden: Admins only" }, { status: 403 });
+        }
+
+        const { searchParams } = new URL(request.url);
+        const id = searchParams.get('id');
+
+        if (!id) return NextResponse.json({ error: "Missing ID" }, { status: 400 });
+
+        const { error } = await supabaseAdmin.from('teams').delete().eq('id', id);
+        if (error) throw error;
+
+        return NextResponse.json({ success: true });
+    } catch (error: any) {
+        console.error("Admin Teams DELETE API Error:", error);
+        return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+}

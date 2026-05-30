@@ -92,22 +92,22 @@ export default function AdminTeamsPage() {
 
     const handleSaveTeam = async () => {
         try {
-            if (editingTeam) {
-                const { error } = await supabase.from("teams").update({
+            const response = await fetch("/api/admin/teams", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    id: editingTeam ? editingTeam.id : undefined,
                     name: newName,
                     short_name: newShortName,
                     shield_url: newShieldUrl,
                     type: newType,
-                }).eq("id", editingTeam.id);
-                if (error) throw error;
-            } else {
-                const { error } = await supabase.from("teams").insert({
-                    name: newName,
-                    short_name: newShortName,
-                    shield_url: newShieldUrl,
-                    type: newType,
-                });
-                if (error) throw error;
+                    overwrite: !!editingTeam // if editing, we overwrite
+                })
+            });
+
+            if (!response.ok) {
+                const data = await response.json();
+                throw new Error(data.error || "Erro na API");
             }
 
             setIsDialogOpen(false);
@@ -126,8 +126,15 @@ export default function AdminTeamsPage() {
     const handleDeleteTeam = async () => {
         if (!deletingTeam) return;
         try {
-            const { error } = await supabase.from("teams").delete().eq("id", deletingTeam.id);
-            if (error) throw error;
+            const response = await fetch(`/api/admin/teams?id=${deletingTeam.id}`, {
+                method: 'DELETE'
+            });
+
+            if (!response.ok) {
+                const data = await response.json();
+                throw new Error(data.error || "Erro na API ao excluir");
+            }
+
             setIsDeleteDialogOpen(false);
             fetchTeams();
         } catch (error: any) {
