@@ -102,12 +102,31 @@ export async function syncMatchesFromExternalApi(force: boolean = false) {
                 if (['IN_PLAY', 'PAUSED', 'LIVE'].includes(rawStatus)) newStatus = 'live';
                 if (['FINISHED', 'AWARDED'].includes(rawStatus)) newStatus = 'finished';
 
-                // User Strategy: "Always get Full Time (90m + ET)". 
-                // If a specific League/Cup rule requires 90m only, Admin will fix manually.
-                const scoreType = 'FULL (90m+ET)';
+                // Determine score based on championship settings
+                const champ = championships.find(c => c.id === localMatch.championship_id);
+                const apiScorePref = (champ?.settings as any)?.apiScoreType || 'fullTime';
+                const scoreType = apiScorePref === 'regularTime' ? 'REGULAR (90m)' : 'FULL (90m+ET)';
 
-                const apiHomeScoreRaw = apiMatch.score?.fullTime?.home ?? null;
-                const apiAwayScoreRaw = apiMatch.score?.fullTime?.away ?? null;
+                let apiHomeScoreRaw = null;
+                let apiAwayScoreRaw = null;
+
+                if (apiScorePref === 'regularTime') {
+                    // Only 90 minutes
+                    apiHomeScoreRaw = apiMatch.score?.regularTime?.home ?? apiMatch.score?.fullTime?.home ?? null;
+                    apiAwayScoreRaw = apiMatch.score?.regularTime?.away ?? apiMatch.score?.fullTime?.away ?? null;
+                } else {
+                    // Full Time (90m + ET). We MUST exclude penalties!
+                    // In football-data.org v4, fullTime INCLUDES penalties.
+                    // The safest way is to sum regularTime + extraTime goals.
+                    if (apiMatch.score?.regularTime?.home !== undefined && apiMatch.score?.regularTime?.home !== null) {
+                        apiHomeScoreRaw = apiMatch.score.regularTime.home + (apiMatch.score?.extraTime?.home || 0);
+                        apiAwayScoreRaw = apiMatch.score.regularTime.away + (apiMatch.score?.extraTime?.away || 0);
+                    } else {
+                        // Fallback if regularTime is somehow missing
+                        apiHomeScoreRaw = apiMatch.score?.fullTime?.home ?? null;
+                        apiAwayScoreRaw = apiMatch.score?.fullTime?.away ?? null;
+                    }
+                }
 
                 const apiHomeScore = apiHomeScoreRaw ?? 0;
                 const apiAwayScore = apiAwayScoreRaw ?? 0;
