@@ -435,8 +435,20 @@ export default function RankingPage() {
         if (manualGoldWinners.length > 0) {
             // Bypass the local calculation if the admin manually set the winners
             manualGoldWinners.forEach(id => winnersSet.add(id));
-            if (officialRanking.length > 0) {
-                 winningTeam = officialRanking[0];
+            
+            // Determine the "winning team" to light up based on what the manual winners actually picked
+            for (const adminTeam of officialRanking) {
+                if (!adminTeam) continue;
+                // If any of the manual winners picked this team, it is the highest ranked team they hit
+                const pickedByWinner = manualGoldWinners.some(uid => {
+                    const sel = participantsData.get(uid);
+                    return sel && sel.includes(adminTeam);
+                });
+                
+                if (pickedByWinner) {
+                    winningTeam = adminTeam;
+                    break;
+                }
             }
         } else if (enablePriority) {
             let currentCandidates = Array.from(participantsData.entries()).map(([uid, selections]) => ({
