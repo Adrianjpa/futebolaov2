@@ -513,7 +513,8 @@ export default function RankingPage() {
             // Absolute Winner: Full Opacity
             // Hit (Legacy/NoPriority): Full Opacity
             // Others: Dimmed (Opacity 30%), Grayscale
-            const isAbsoluteWinner = enablePriority
+            const enforceAbsoluteLogic = manualGoldWinners.length > 0 || enablePriority;
+            const isAbsoluteWinner = enforceAbsoluteLogic
                 ? (winnersSet.has(userId) && team === winningTeam)
                 : isHit;
 
@@ -522,7 +523,7 @@ export default function RankingPage() {
                     <TooltipTrigger asChild>
                         <div className={`relative group/flag transition-all duration-300
                             ${isAbsoluteWinner ? "opacity-100" : "opacity-30 grayscale"}
-                             ${!enablePriority && isHit ? "opacity-100 grayscale-0" : ""}
+                             ${!enforceAbsoluteLogic && isHit ? "opacity-100 grayscale-0" : ""}
                         `}>
                             <img
                                 src={shieldUrl}
