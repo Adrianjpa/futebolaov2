@@ -40,16 +40,16 @@ export async function POST(request: Request) {
         const duplicateNames = (duplicateTeams as any[]).map(t => t.name);
 
         // 3. Update Matches (home_team)
-        const { error: homeError } = await supabaseAdmin
-            .from('matches')
+        const { error: homeError } = await (supabaseAdmin
+            .from('matches') as any)
             .update({ home_team: primaryName, home_team_crest: primaryShield })
             .in('home_team', duplicateNames);
             
         if (homeError) console.error("Error updating home_team", homeError);
 
         // 4. Update Matches (away_team)
-        const { error: awayError } = await supabaseAdmin
-            .from('matches')
+        const { error: awayError } = await (supabaseAdmin
+            .from('matches') as any)
             .update({ away_team: primaryName, away_team_crest: primaryShield })
             .in('away_team', duplicateNames);
             
@@ -57,7 +57,7 @@ export async function POST(request: Request) {
 
         // 5. Update championship_participants (team_selections)
         // Since it's a JSON array, it's easier to fetch all, replace and update.
-        const { data: participants } = await supabaseAdmin.from('championship_participants').select('*');
+        const { data: participants } = await (supabaseAdmin.from('championship_participants') as any).select('*');
         if (participants) {
             for (const p of participants) {
                 if (p.team_selections && Array.isArray(p.team_selections)) {
@@ -71,7 +71,7 @@ export async function POST(request: Request) {
                     });
                     
                     if (changed) {
-                        await supabaseAdmin.from('championship_participants')
+                        await (supabaseAdmin.from('championship_participants') as any)
                             .update({ team_selections: newSelections })
                             .eq('id', p.id);
                     }
@@ -80,7 +80,7 @@ export async function POST(request: Request) {
         }
 
         // 6. Delete duplicate teams from dictionary
-        const { error: deleteError } = await supabaseAdmin.from('teams').delete().in('id', duplicateTeamIds);
+        const { error: deleteError } = await (supabaseAdmin.from('teams') as any).delete().in('id', duplicateTeamIds);
         if (deleteError) throw deleteError;
 
         return NextResponse.json({ success: true, message: "Teams merged successfully" });
