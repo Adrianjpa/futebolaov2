@@ -587,7 +587,7 @@ export default function DashboardClient() {
 
             {/* Rules Modal */}
             <Dialog open={showRulesModal} onOpenChange={setShowRulesModal}>
-                <DialogContent className="max-w-xl max-h-[85vh] overflow-hidden flex flex-col bg-slate-950 border-slate-800">
+                <DialogContent className="max-w-xl max-h-[85vh] overflow-hidden flex flex-col bg-card border-border">
                     <DialogHeader>
                         <div className="flex items-center justify-center mb-4 mt-2">
                             {(selectedRulesChamp?.settings as any)?.iconUrl || selectedRulesChamp?.icon_url ? (
@@ -609,7 +609,7 @@ export default function DashboardClient() {
                     </DialogHeader>
 
                     <div className="flex-1 overflow-y-auto pr-2 my-4 space-y-4">
-                        <div className="bg-slate-900 border border-slate-800 rounded-lg p-5">
+                        <div className="bg-muted/30 border border-border rounded-lg p-5">
                             <div className="prose prose-sm dark:prose-invert max-w-none whitespace-pre-wrap">
                                 {(selectedRulesChamp?.settings as any)?.rulesText || "Nenhum regulamento fornecido."}
                             </div>
