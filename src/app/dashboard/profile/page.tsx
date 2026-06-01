@@ -399,6 +399,19 @@ export default function ProfilePage() {
 
     const categories = Array.from(new Set(championships.map((c: any) => c.category || "other")));
 
+    const formatCategory = (cat: string) => {
+        const map: Record<string, string> = {
+            world_cup: "Copa do Mundo",
+            euro: "Eurocopa",
+            copa_america: "Copa América",
+            champions: "Champions League",
+            libertadores: "Libertadores",
+            brasileirao: "Brasileirão",
+            other: "Outros"
+        };
+        return map[cat] || (cat === "other" ? "Outros" : cat);
+    };
+
     const handleCategoryChange = (cat: string) => {
         setCategoryFilter(cat);
         const firstInCategory = championships.find((c: any) => (c.category || "other") === cat);
@@ -574,7 +587,7 @@ export default function ProfilePage() {
                                 <SelectContent>
                                     {categories.map((cat: any) => (
                                         <SelectItem key={cat} value={cat}>
-                                            {cat === "other" ? "Outros" : cat}
+                                            {formatCategory(cat)}
                                         </SelectItem>
                                     ))}
                                 </SelectContent>
