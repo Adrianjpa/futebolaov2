@@ -30,14 +30,14 @@ export async function POST(request: Request) {
         const { data: primaryTeam, error: ptError } = await supabaseAdmin.from('teams').select('name, shield_url').eq('id', primaryTeamId).single();
         if (ptError || !primaryTeam) throw new Error("Primary team not found");
         
-        const primaryName = primaryTeam.name;
-        const primaryShield = primaryTeam.shield_url;
+        const primaryName = (primaryTeam as any).name;
+        const primaryShield = (primaryTeam as any).shield_url;
 
         // Get duplicate teams names
         const { data: duplicateTeams, error: dtError } = await supabaseAdmin.from('teams').select('id, name').in('id', duplicateTeamIds);
         if (dtError || !duplicateTeams) throw new Error("Duplicate teams not found");
 
-        const duplicateNames = duplicateTeams.map(t => t.name);
+        const duplicateNames = (duplicateTeams as any[]).map(t => t.name);
 
         // 3. Update Matches (home_team)
         const { error: homeError } = await supabaseAdmin
