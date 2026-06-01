@@ -41,12 +41,12 @@ export async function POST(request: Request) {
             // Cascade updates to matches table if it was updated successfully
             if (oldTeam && oldTeam.name) {
                 // Update home team
-                await supabaseAdmin.from('matches')
+                await (supabaseAdmin.from('matches') as any)
                     .update({ home_team: name, home_team_crest: shield_url })
                     .eq('home_team', oldTeam.name);
                     
                 // Update away team
-                await supabaseAdmin.from('matches')
+                await (supabaseAdmin.from('matches') as any)
                     .update({ away_team: name, away_team_crest: shield_url })
                     .eq('away_team', oldTeam.name);
             }
@@ -95,7 +95,7 @@ export async function DELETE(request: Request) {
 
         if (!id) return NextResponse.json({ error: "Missing ID" }, { status: 400 });
 
-        const { error } = await supabaseAdmin.from('teams').delete().eq('id', id);
+        const { error } = await (supabaseAdmin.from('teams') as any).delete().eq('id', id);
         if (error) throw error;
 
         return NextResponse.json({ success: true });
