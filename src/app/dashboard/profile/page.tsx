@@ -324,23 +324,29 @@ export default function ProfilePage() {
                 (window as any)._pendingAvatarBlob = null; // Clear pending
             }
 
-            // 2. Update profile with the Storage URL
-            const { error } = await (supabase.from("profiles") as any).update({
-                nome: fullName,
-                nickname: nickname,
-                foto_perfil: finalPhotoURL
-            }).eq("id", user.id);
+            // 2. Update profile with the Storage URL via API Route (bypasses RLS issues)
+            const response = await fetch('/api/users/update-profile', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    userId: user.id,
+                    nome: fullName,
+                    nickname: nickname,
+                    foto_perfil: finalPhotoURL
+                })
+            });
 
-            if (error) throw error;
+            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(data.error || 'Failed to update profile');
+            }
+
             setIsDialogOpen(false);
             setPhotoURL(finalPhotoURL); // Update state with stable URL
         } catch (error: any) {
-            console.error("Error updating profile details:", {
-                code: error.code,
-                message: error.message,
-                details: error.details
-            });
-            alert(`Erro ao atualizar perfil: ${error.message || "Tente novamente"}`);
+            console.error("Error updating profile details:", error);
+            const errMsg = error?.message || (typeof error === 'string' ? error : "Erro desconhecido. Tente novamente.");
+            alert(`Erro ao atualizar perfil: ${errMsg}`);
         } finally {
             setSaving(false);
         }
