@@ -105,7 +105,7 @@ export default function HallOfFamePage() {
                         .limit(1);
 
                     if (topUsers && topUsers.length > 0) {
-                        const top = topUsers[0];
+                        const top = topUsers[0] as any;
                         champ.manualWinners = [{
                             userId: top.user_id,
                             displayName: top.nickname || top.nome || "Campeão",
