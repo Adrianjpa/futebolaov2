@@ -214,7 +214,7 @@ export default function AdminTeamsPage() {
                 </div>
             </div>
 
-            <div className="border rounded-md bg-white">
+            <div className="border rounded-md bg-card">
                 <Table>
                     <TableHeader>
                         <TableRow>
@@ -308,9 +308,9 @@ export default function AdminTeamsPage() {
                         {mergePrimaryTeamId && (
                             <div className="space-y-2">
                                 <Label className="font-bold text-red-700">2. Duplicatas a serem apagadas e mescladas (Selecione Várias)</Label>
-                                <div className="border rounded-md p-3 max-h-[200px] overflow-y-auto space-y-2 bg-slate-50">
+                                <div className="border rounded-md p-3 max-h-[200px] overflow-y-auto space-y-2 bg-muted/50">
                                     {teams.filter(t => t.id !== mergePrimaryTeamId).map(t => (
-                                        <label key={t.id} className="flex items-center space-x-2 p-1 hover:bg-slate-100 rounded cursor-pointer">
+                                        <label key={t.id} className="flex items-center space-x-2 p-1 hover:bg-muted rounded cursor-pointer">
                                             <input 
                                                 type="checkbox" 
                                                 checked={mergeDuplicateTeamIds.includes(t.id)}
