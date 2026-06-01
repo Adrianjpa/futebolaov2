@@ -12,7 +12,7 @@ export async function POST(request: Request) {
 
         const { data, error } = await supabaseAdmin.from('profiles').update({
             nome,
-            nickname,
+            nickname: nickname?.trim() || null,
             foto_perfil
         }).eq('id', userId);
 
