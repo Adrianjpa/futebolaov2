@@ -888,8 +888,8 @@ export function ChampionshipForm({ initialData, onSubmit, isSubmitting = false, 
                                     </p>
                                 </div>
                                 <Switch
-                                    checked={form.watch("ghostPlayer")}
-                                    onCheckedChange={(checked) => form.setValue("ghostPlayer", checked)}
+                                    checked={!!form.watch("ghostPlayer")}
+                                    onCheckedChange={(checked) => form.setValue("ghostPlayer", checked as any)}
                                 />
                             </div>
 
