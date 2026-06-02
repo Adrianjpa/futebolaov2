@@ -5,7 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { createClient } from "@/lib/supabase";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Trophy, Calendar, ArrowRight, Loader2, Activity, History, Info } from "lucide-react";
+import { Trophy, Calendar, ArrowRight, Loader2, Activity, History, Info, X } from "lucide-react";
 import Link from "next/link";
 import { isPast, parseISO, differenceInDays, format as formatDate, differenceInMinutes } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -41,6 +41,7 @@ export default function DashboardClient() {
     // const [topUsers, setTopUsers] = useState<any[]>([]); // Deprecated for global simple list
     const [leadersMap, setLeadersMap] = useState<Record<string, any>>({});
     const [announcement, setAnnouncement] = useState<string>("");
+    const [dismissedAnnouncement, setDismissedAnnouncement] = useState<string>("");
     const [currentTime, setCurrentTime] = useState(new Date());
 
     const [showRulesModal, setShowRulesModal] = useState(false);
@@ -53,6 +54,9 @@ export default function DashboardClient() {
     // 1. Fetch Users, Ranking & System Settings
     useEffect(() => {
         if (!user) return;
+        
+        const storedDismiss = localStorage.getItem("dismissedDashboardAnnouncement");
+        if (storedDismiss) setDismissedAnnouncement(storedDismiss);
 
         const fetchData = async () => {
             try {
@@ -211,11 +215,7 @@ export default function DashboardClient() {
             }
 
             // Fallback: If no start_date...
-            // If status is 'ativo', assume it started unless proven otherwise by start_date (handled above).
-            // So if we are here (no start_date), and it's active, DO NOT show banner.
-            if (c.status === 'ativo') return null;
-
-            // Only for 'agendado' or others, try to infer from matches
+            // Try to infer from matches
             const champMatches = allActiveMatches.filter(m => m.championship_id === c.id);
             const hasStarted = champMatches.some(m => m.status === 'live' || m.status === 'finished' || isPast(parseISO(m.date)));
 
@@ -223,8 +223,11 @@ export default function DashboardClient() {
 
             const earliestMatch = [...champMatches].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())[0];
 
-            if (!earliestMatch) return null; // No matches and no start date -> ignore or keep? 
-            // If no matches, maybe it's "TBD"? But let's return it with null date
+            if (!earliestMatch) {
+                // If no matches and status is 'ativo', we assume it's active but empty, so don't show countdown
+                if (c.status === 'ativo') return null;
+                return null;
+            }
 
             return {
                 ...c,
@@ -329,13 +332,24 @@ export default function DashboardClient() {
                 </div>
 
                 {/* System Announcement Banner */}
-                {announcement && (
-                    <div className="bg-primary/10 border border-primary/20 text-primary-foreground p-4 rounded-xl flex items-start gap-3 shadow-sm animate-in fade-in slide-in-from-top-2">
+                {announcement && announcement !== dismissedAnnouncement && (
+                    <div className="bg-primary/10 border border-primary/20 text-primary-foreground p-4 rounded-xl flex items-start gap-3 shadow-sm animate-in fade-in slide-in-from-top-2 relative pr-10">
                         <Info className="h-5 w-5 text-primary shrink-0 mt-0.5" />
                         <div>
                             <p className="font-bold text-sm text-primary uppercase tracking-wide mb-1">Comunicado Oficial</p>
                             <p className="text-sm text-foreground/90 whitespace-pre-wrap">{announcement}</p>
                         </div>
+                        <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="absolute top-3 right-3 h-6 w-6 rounded-full hover:bg-primary/20 text-primary shrink-0"
+                            onClick={() => {
+                                localStorage.setItem("dismissedDashboardAnnouncement", announcement);
+                                setDismissedAnnouncement(announcement);
+                            }}
+                        >
+                            <X className="h-4 w-4" />
+                        </Button>
                     </div>
                 )}
 

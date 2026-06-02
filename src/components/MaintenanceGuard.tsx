@@ -38,16 +38,21 @@ export function MaintenanceGuard({ children }: { children: React.ReactNode }) {
         ? new Date(`${settings.returnDate}T${settings.returnTime}`)
         : null;
 
-    let isMaintenance = manualLock;
+    let isMaintenance = false;
 
     // 1. If we have a lock time, and we passed it -> Lock
     if (lockTime && now >= lockTime) {
         isMaintenance = true;
     }
 
-    // 2. If we have an unlock time, and we passed it -> Unlock (highest priority)
+    // 2. If we have an unlock time, and we passed it -> Unlock
     if (unlockTime && now >= unlockTime) {
         isMaintenance = false;
+    }
+
+    // 3. Manual Lock (Bloqueio Imediato) overrides everything
+    if (manualLock) {
+        isMaintenance = true;
     }
 
     const isAdmin = profile?.funcao === "admin" || profile?.funcao === "moderator";

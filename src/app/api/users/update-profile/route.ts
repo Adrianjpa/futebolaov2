@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-server';
+import { logActivity } from '@/lib/logger';
 
 export async function POST(request: Request) {
     try {
@@ -20,6 +21,9 @@ export async function POST(request: Request) {
             console.error("Supabase Admin Error updating profile:", error);
             return NextResponse.json({ error: error.message }, { status: 500 });
         }
+
+        // Registrando no banco de logs
+        await logActivity(supabaseAdmin, userId, 'update_profile', { nome, nickname });
 
         return NextResponse.json({ success: true, data });
     } catch (error: any) {

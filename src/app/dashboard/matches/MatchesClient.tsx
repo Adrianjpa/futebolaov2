@@ -84,6 +84,7 @@ export default function MatchesClient() {
     const [users, setUsers] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
     const [isDialogOpen, setIsDialogOpen] = useState(false);
+    const [isSelectionDialogOpen, setIsSelectionDialogOpen] = useState(false);
 
     // Pagination
     const [currentPage, setCurrentPage] = useState(1);
@@ -416,7 +417,7 @@ export default function MatchesClient() {
                 3. Aparece apenas se bannerEnabled estiver ativo no campeonato
             */}
             {selectedChampionship !== "all" && !isAdmin && bannerEnabled && (
-                <Card className="mb-6 overflow-hidden border-2 border-primary/20 bg-gradient-to-br from-blue-950/20 to-slate-950/40 backdrop-blur-md relative group">
+                <Card className="mb-6 overflow-hidden border-2 border-primary/20 bg-gradient-to-br from-blue-50 to-slate-100 dark:from-blue-950/40 dark:to-slate-950/60 backdrop-blur-md relative group">
                     <div className="absolute inset-0 bg-blue-500/5 opacity-50 group-hover:opacity-100 transition-opacity" />
                     <CardContent className="p-4 sm:p-6 relative">
                         <div className="flex flex-col lg:flex-row items-center justify-between gap-6">
@@ -425,7 +426,7 @@ export default function MatchesClient() {
                                     <Award className="h-6 w-6 text-primary" />
                                 </div>
                                 <div className="min-w-0">
-                                    <h3 className="text-lg font-bold text-slate-100 flex items-center gap-2 truncate">
+                                    <h3 className="text-lg font-bold text-foreground flex items-center gap-2 truncate">
                                         Favoritos do Campeonato
                                         {isSelectionLocked && <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />}
                                     </h3>
@@ -449,23 +450,42 @@ export default function MatchesClient() {
                                     const currentTeamMode = currentChamp?.settings?.teamMode || 'clubes';
 
                                     return (
-                                        <div key={idx} className="flex flex-col items-center gap-1.5 p-2 rounded-xl bg-slate-900/40 border border-white/5 transition-all hover:bg-slate-900/60 min-w-[70px] sm:min-w-[80px]">
+                                        <div key={idx} className="flex flex-col items-center gap-1.5 p-2 rounded-xl bg-slate-100 dark:bg-slate-900/40 border border-black/5 dark:border-white/5 transition-all hover:bg-slate-200 dark:hover:bg-slate-900/60 min-w-[70px] sm:min-w-[80px]">
                                             <span className="text-[9px] sm:text-[10px] font-bold text-muted-foreground uppercase">{idx + 1}º Opção</span>
                                             {team ? (
                                                 <TooltipProvider>
                                                     <Tooltip>
                                                         <TooltipTrigger asChild>
                                                             <div className={`transition-all duration-700 ${showFade ? "opacity-20 grayscale blur-[1px] scale-90" : "opacity-100 scale-105 drop-shadow-[0_0_8px_rgba(255,255,255,0.2)]"}`}>
-                                                                <img
-                                                                    src={`https://flagcdn.com/w80/${iso}.png`}
-                                                                    alt={team}
-                                                                    className={cn(
-                                                                        "shadow-lg border border-white/10 transition-all",
-                                                                        currentTeamMode === 'selecoes'
-                                                                            ? "h-10 w-10 sm:h-12 sm:w-12 object-cover rounded-full"
-                                                                            : "h-6 sm:h-8 w-10 sm:w-12 object-cover rounded"
-                                                                    )}
-                                                                />
+                                                                {(() => {
+                                                                    const tData = championshipTeams.find((ct: any) => ct.name === team);
+                                                                    if (tData?.shieldUrl) {
+                                                                        return (
+                                                                            <img
+                                                                                src={tData.shieldUrl}
+                                                                                alt={team}
+                                                                                className={cn(
+                                                                                    "shadow-lg transition-all",
+                                                                                    currentTeamMode === 'selecoes'
+                                                                                        ? "h-10 w-10 sm:h-12 sm:w-12 object-cover rounded-full"
+                                                                                        : "h-6 sm:h-8 w-10 sm:w-12 object-contain"
+                                                                                )}
+                                                                            />
+                                                                        );
+                                                                    }
+                                                                    return (
+                                                                        <img
+                                                                            src={`https://flagcdn.com/w80/${iso}.png`}
+                                                                            alt={team}
+                                                                            className={cn(
+                                                                                "shadow-lg border border-white/10 transition-all",
+                                                                                currentTeamMode === 'selecoes'
+                                                                                    ? "h-10 w-10 sm:h-12 sm:w-12 object-cover rounded-full"
+                                                                                    : "h-6 sm:h-8 w-10 sm:w-12 object-cover rounded"
+                                                                            )}
+                                                                        />
+                                                                    );
+                                                                })()}
                                                             </div>
                                                         </TooltipTrigger>
                                                         <TooltipContent className={showFade ? "opacity-70 line-through" : "font-bold"}>
@@ -474,11 +494,11 @@ export default function MatchesClient() {
                                                     </Tooltip>
                                                 </TooltipProvider>
                                             ) : (
-                                                <div className="h-6 sm:h-8 w-10 sm:w-12 bg-slate-800/50 rounded border border-dashed border-white/10 flex items-center justify-center">
-                                                    <Plus className="h-3 w-3 text-white/20" />
+                                                <div className="h-6 sm:h-8 w-10 sm:w-12 bg-slate-200 dark:bg-slate-800/50 rounded border border-dashed border-black/10 dark:border-white/10 flex items-center justify-center">
+                                                    <Plus className="h-3 w-3 text-foreground/20 dark:text-white/20" />
                                                 </div>
                                             )}
-                                            <span className={`text-[9px] sm:text-[10px] font-bold truncate max-w-[65px] sm:max-w-[70px] ${showFade ? "opacity-30 line-through" : "text-slate-200"}`}>
+                                            <span className={`text-[9px] sm:text-[10px] font-bold truncate max-w-[65px] sm:max-w-[70px] ${showFade ? "opacity-30 line-through" : "text-foreground dark:text-slate-200"}`}>
                                                 {team || "Pendente"}
                                             </span>
                                         </div>
@@ -488,23 +508,23 @@ export default function MatchesClient() {
 
                             {/* BOTÃO DE EDIÇÃO (Se não estiver bloqueado) */}
                             {!isSelectionLocked && (
-                                <Dialog>
+                                <Dialog open={isSelectionDialogOpen} onOpenChange={setIsSelectionDialogOpen}>
                                     <DialogTrigger asChild>
                                         <Button size="sm" variant="outline" className="text-xs font-bold bg-primary/10 border-primary/20 hover:bg-primary/20">
                                             {userSelection.length > 0 ? "Alterar" : "Escolher"}
                                         </Button>
                                     </DialogTrigger>
-                                    <DialogContent className="sm:max-w-[500px] bg-slate-950 border-white/10">
+                                    <DialogContent className="sm:max-w-[500px] bg-white dark:bg-slate-950 border-border dark:border-white/10 shadow-xl">
                                         <DialogHeader>
-                                            <DialogTitle className="text-xl font-bold text-slate-100">Suas Escolhas de Favoritos</DialogTitle>
-                                            <DialogDescription className="text-slate-400">
+                                            <DialogTitle className="text-xl font-bold text-foreground dark:text-slate-100">Suas Escolhas de Favoritos</DialogTitle>
+                                            <DialogDescription className="text-muted-foreground dark:text-slate-400">
                                                 Selecione as 3 seleções que você acredita que chegarão no topo.
                                             </DialogDescription>
                                         </DialogHeader>
                                         <div className="space-y-6 py-4">
                                             {Array.from({ length: selectionSlots }).map((_, idx) => (
                                                 <div key={idx} className="space-y-2">
-                                                    <Label className="text-slate-300 font-bold">{idx + 1}º Opção</Label>
+                                                    <Label className="text-foreground dark:text-slate-300 font-bold">{idx + 1}º Opção</Label>
                                                     <Select
                                                         value={userSelection[idx]}
                                                         onValueChange={(val) => {
@@ -513,15 +533,19 @@ export default function MatchesClient() {
                                                             setUserSelection(newSel);
                                                         }}
                                                     >
-                                                        <SelectTrigger className="bg-slate-900/50 border-white/10">
+                                                        <SelectTrigger className="bg-white dark:bg-slate-900 border-input dark:border-white/10 text-foreground dark:text-slate-100">
                                                             <SelectValue placeholder="Selecione uma seleção..." />
                                                         </SelectTrigger>
-                                                        <SelectContent className="bg-slate-900 border-white/10">
+                                                        <SelectContent className="bg-white dark:bg-slate-900 border-border dark:border-white/10 text-foreground dark:text-slate-100 shadow-md">
                                                             {championshipTeams.map((t: any) => (
                                                                 <SelectItem key={t.id} value={t.name} disabled={userSelection.includes(t.name) && userSelection[idx] !== t.name}>
                                                                     <div className="flex items-center gap-2">
-                                                                        {TEAM_ISO_MAP[t.name] && <img src={`https://flagcdn.com/w20/${TEAM_ISO_MAP[t.name]}.png`} className="h-3 w-4 object-contain" />}
-                                                                        {t.name}
+                                                                        {t.shieldUrl ? (
+                                                                            <img src={t.shieldUrl} alt={t.name} className="h-4 w-4 sm:h-5 sm:w-5 object-contain hidden sm:block" />
+                                                                        ) : TEAM_ISO_MAP[t.name] ? (
+                                                                            <img src={`https://flagcdn.com/w20/${TEAM_ISO_MAP[t.name]}.png`} alt={t.name} className="h-4 w-4 sm:h-5 sm:w-5 object-contain hidden sm:block" />
+                                                                        ) : null}
+                                                                        <span>{t.name}</span>
                                                                     </div>
                                                                 </SelectItem>
                                                             ))}
@@ -545,6 +569,7 @@ export default function MatchesClient() {
 
                                                         if (error) throw error;
                                                         alert("Escolhas salvas com sucesso!");
+                                                        setIsSelectionDialogOpen(false);
                                                         fetchChampionshipData();
                                                     } catch (e: any) {
                                                         alert("Erro ao salvar: " + e.message);

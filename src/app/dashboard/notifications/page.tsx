@@ -18,6 +18,7 @@ interface Notification {
     created_at: string;
     type: string;
     link?: string;
+    action_link?: string;
     meta?: any;
 }
 
@@ -94,8 +95,9 @@ export default function NotificationsPage() {
         if (!notif.read) {
             await markAsRead(notif.id);
         }
-        if (notif.link) {
-            router.push(notif.link);
+        const targetLink = notif.action_link || notif.link;
+        if (targetLink) {
+            router.push(targetLink);
         }
     };
 
@@ -108,9 +110,6 @@ export default function NotificationsPage() {
                     </Button>
                     <h1 className="text-2xl font-bold">Minhas Notificações</h1>
                 </div>
-                <Button onClick={simulateNotification} variant="outline" size="sm">
-                    Simular Notificação
-                </Button>
             </div>
 
             <Card>

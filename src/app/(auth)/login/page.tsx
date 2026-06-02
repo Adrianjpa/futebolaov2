@@ -44,12 +44,20 @@ export default function LoginPage() {
         }
 
         try {
-            const { error: authError } = await supabase.auth.signInWithPassword({
+            const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
                 email,
                 password,
             });
 
             if (authError) throw authError;
+
+            if (authData?.user) {
+                await (supabase.from('activity_logs') as any).insert({
+                    user_id: authData.user.id,
+                    action: 'login',
+                    details: { method: 'password' }
+                });
+            }
 
             router.push("/dashboard");
         } catch (err: any) {

@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useRouter } from "next/navigation";
@@ -19,6 +20,15 @@ export default function LandingClient() {
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
   const [loginError, setLoginError] = useState("");
+  const [loginRememberMe, setLoginRememberMe] = useState(true);
+
+  // Load remembered email
+  useEffect(() => {
+    const savedEmail = localStorage.getItem("rememberedEmail");
+    if (savedEmail) {
+        setLoginEmail(savedEmail);
+    }
+  }, []);
 
   // --- REGISTER STATE ---
   const [regName, setRegName] = useState("");
@@ -34,6 +44,13 @@ export default function LandingClient() {
     e.preventDefault();
     setLoading(true);
     setLoginError("");
+
+    if (loginRememberMe) {
+        localStorage.setItem("rememberedEmail", loginEmail);
+    } else {
+        localStorage.removeItem("rememberedEmail");
+    }
+
     try {
       const { error } = await supabase.auth.signInWithPassword({
         email: loginEmail,
@@ -145,7 +162,20 @@ export default function LandingClient() {
                     required
                   />
                 </div>
-                <div className="flex justify-end">
+                <div className="flex items-center justify-between my-2">
+                  <div className="flex items-center space-x-2">
+                      <Checkbox
+                          id="remember"
+                          checked={loginRememberMe}
+                          onCheckedChange={(checked) => setLoginRememberMe(!!checked)}
+                      />
+                      <Label
+                          htmlFor="remember"
+                          className="text-sm font-medium leading-none cursor-pointer"
+                      >
+                          Lembrar-me
+                      </Label>
+                  </div>
                   <a href="/forgot-password" className="text-xs text-primary hover:underline">Esqueceu a senha?</a>
                 </div>
 

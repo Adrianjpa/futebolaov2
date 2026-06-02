@@ -74,6 +74,7 @@ export default function AdminLayout({
         { href: "/admin/notifications", label: "Notificações", icon: Bell },
         { href: "/admin/migrations/linker", label: "Vincular Legado", icon: History },
         { href: "/admin/settings", label: "Configurações", icon: Settings },
+        { href: "/admin/logs", label: "Logs do Sistema", icon: Activity },
         { href: "/admin/debug", label: "Debug", icon: Activity },
     ];
 

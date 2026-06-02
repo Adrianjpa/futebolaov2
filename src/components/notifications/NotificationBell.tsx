@@ -24,6 +24,7 @@ interface Notification {
     created_at: string;
     type: string;
     link?: string;
+    action_link?: string;
     meta?: any;
 }
 
@@ -136,8 +137,9 @@ export function NotificationBell() {
             await markAsRead(notif.id);
         }
         setIsOpen(false);
-        if (notif.link) {
-            router.push(notif.link);
+        const targetLink = notif.action_link || notif.link;
+        if (targetLink) {
+            router.push(targetLink);
         }
     };
 
