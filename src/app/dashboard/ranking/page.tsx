@@ -383,7 +383,8 @@ export default function RankingPage() {
                 
             let started = false;
             if (firstMatch) {
-                started = firstMatch.status === 'live' || firstMatch.status === 'finished' || new Date(firstMatch.date).getTime() < new Date().getTime();
+                const fm = firstMatch as any;
+                started = fm.status === 'live' || fm.status === 'finished' || new Date(fm.date).getTime() < new Date().getTime();
             }
             // For legacy migrated tournaments, they are already finished so it will be true
             setHasChampStarted(started);
