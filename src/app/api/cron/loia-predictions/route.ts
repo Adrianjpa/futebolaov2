@@ -112,9 +112,7 @@ ${promptMatches}
             match_id: p.match_id,
             user_id: (loiaUser as any).id,
             home_score: p.home_score,
-            away_score: p.away_score,
-            points: 0,
-            outcome: null
+            away_score: p.away_score
         }));
 
         const { error: insertError } = await supabaseAdmin
