@@ -201,7 +201,7 @@ export function UnifiedMatchCard({
                 const loiaParticipant = participants.find((p: any) => p.email === "lindoaldo@legacy.local");
                 const loiaId = loiaParticipant?.userId || loiaParticipant?.id || loiaParticipant?.user_id;
                 
-                if (loiaId) {
+                if (loiaId && (champ as any)?.settings?.enableLoia) {
                     const { data: pred } = await supabase
                         .from("predictions")
                         .select("home_score, away_score")
@@ -497,6 +497,15 @@ export function UnifiedMatchCard({
                         // Exclude ghost user from missing predictions calculations
                         if (settings.ghostPlayer) {
                             finalParticipants = finalParticipants.filter(p => p.userId !== settings.ghostPlayer);
+                        }
+
+                        // Exclude Loia if disabled
+                        if (!settings.enableLoia) {
+                            const loiaPart = (settings.participants || []).find((p: any) => p.email === "lindoaldo@legacy.local");
+                            const loId = loiaPart?.userId || loiaPart?.id || loiaPart?.user_id;
+                            if (loId) {
+                                finalParticipants = finalParticipants.filter(p => p.userId !== loId);
+                            }
                         }
 
                         setParticipantsData(finalParticipants);
