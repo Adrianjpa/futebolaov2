@@ -886,9 +886,9 @@ export function ChampionshipForm({ initialData, onSubmit, isSubmitting = false, 
 
                             <div className="flex items-center justify-between rounded-lg border p-4">
                                 <div className="space-y-0.5">
-                                    <Label className="text-base">Jogador Fantasma</Label>
+                                    <Label className="text-base">Conta de Teste (Fantasma)</Label>
                                     <p className="text-sm text-muted-foreground">
-                                        Permitir palpites em nome de outros (Admin).
+                                        Oculta o usuário do Ranking e cards. Use apenas para testar a visão de jogador sem afetar o jogo.
                                     </p>
                                 </div>
                                 <Switch
