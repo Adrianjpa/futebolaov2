@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase";
 import { Card, CardContent } from "@/components/ui/card";
 import { format, isToday, isTomorrow, isYesterday, differenceInMinutes, differenceInHours, parseISO, isPast } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Calendar, ChevronDown, ChevronUp, CheckCircle2, Edit, Loader2, Trophy, Users, Clock, Save, UserX, AlertTriangle, Star, History, Gem } from "lucide-react";
+import { Calendar, ChevronDown, ChevronUp, CheckCircle2, Edit, Loader2, Trophy, Users, Clock, Save, UserX, AlertTriangle, Star, History, Gem, Ghost } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -932,7 +932,9 @@ export function UnifiedMatchCard({
                                         </div>
                                         <div className="flex flex-col min-w-0 leading-none">
                                             <span className="text-[9px] font-bold text-purple-600 dark:text-purple-400 uppercase tracking-widest">IA</span>
-                                            <span className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate mt-0.5">Lindoaldo</span>
+                                            <span className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate mt-0.5 flex items-center gap-1">
+                                                Lindoaldo <Ghost className="h-3 w-3 text-purple-500 dark:text-purple-400 opacity-80" />
+                                            </span>
                                         </div>
                                     </div>
                                     
