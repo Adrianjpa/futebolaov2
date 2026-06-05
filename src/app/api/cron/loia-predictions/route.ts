@@ -36,12 +36,12 @@ export async function GET(request: Request) {
             .from("championships")
             .select("id, name, settings");
 
-        const loiaChamps = activeChamps?.filter((c: any) => c.settings?.enableLoia === true) || [];
+        const loiaChamps = (activeChamps as any[])?.filter((c: any) => c.settings?.enableLoia === true) || [];
         if (loiaChamps.length === 0) {
             return NextResponse.json({ success: true, message: "Nenhum campeonato com Loia ativado." });
         }
 
-        const champIds = loiaChamps.map(c => c.id);
+        const champIds = loiaChamps.map((c: any) => c.id);
 
         // 3. Buscar jogos "agendados" (scheduled) nas próximas 48 horas para esses campeonatos
         const now = new Date();
@@ -60,15 +60,15 @@ export async function GET(request: Request) {
         }
 
         // 4. Filtrar jogos que o Loia JÁ palpitou para não repetir
-        const matchIds = matches.map(m => m.id);
+        const matchIds = (matches as any[]).map((m: any) => m.id);
         const { data: existingPredictions } = await supabaseAdmin
             .from("predictions")
             .select("match_id")
-            .eq("user_id", loiaUser.id)
+            .eq("user_id", (loiaUser as any).id)
             .in("match_id", matchIds);
 
-        const predictedMatchIds = new Set(existingPredictions?.map(p => p.match_id) || []);
-        const pendingMatches = matches.filter(m => !predictedMatchIds.has(m.id));
+        const predictedMatchIds = new Set((existingPredictions as any[])?.map((p: any) => p.match_id) || []);
+        const pendingMatches = (matches as any[]).filter((m: any) => !predictedMatchIds.has(m.id));
 
         if (pendingMatches.length === 0) {
             return NextResponse.json({ success: true, message: "Loia já palpitou em todos os jogos das próximas 48h." });
@@ -78,7 +78,7 @@ export async function GET(request: Request) {
         // O ideal aqui seria buscar a posição do Loia no Ranking. Para simplificar nesta versão inicial:
         // Assumimos um comportamento padrão inteligente. (Podemos evoluir o prompt no futuro).
         
-        let promptMatches = pendingMatches.map(m => `Match ID: ${m.id} | ${m.home_team} vs ${m.away_team} | Date: ${m.date}`).join("\n");
+        let promptMatches = pendingMatches.map((m: any) => `Match ID: ${m.id} | ${m.home_team} vs ${m.away_team} | Date: ${m.date}`).join("\n");
         
         const prompt = `
 Você é o Lindoaldo (apelido: Loia), um analista e apostador fanático de futebol.
@@ -108,7 +108,7 @@ ${promptMatches}
         // 6. Inserir os palpites no banco
         const predictionsToInsert = predictionsArray.map((p: any) => ({
             match_id: p.match_id,
-            user_id: loiaUser.id,
+            user_id: (loiaUser as any).id,
             home_score: p.home_score,
             away_score: p.away_score,
             points: 0,
