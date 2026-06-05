@@ -110,9 +110,6 @@ export function UnifiedMatchCard({
     const [initialComboActive, setInitialComboActive] = useState<boolean>(false);
     const [betTotalGoals, setBetTotalGoals] = useState<string>("");
 
-    // --- LOIA PREDICTION FRONT-FACING ---
-    const [loiaPrediction, setLoiaPrediction] = useState<{home: number, away: number} | null>(null);
-
     // --- USER RESULT COLOR (Live & Finished) ---
     // Computes the border/background of the main card based on the target user's prediction outcome.
     const userResultClass = useMemo(() => {
@@ -183,32 +180,6 @@ export function UnifiedMatchCard({
         };
         fetchUserPrediction();
     }, [effectiveUserId, match.id, showBetButton, isLive, isFinished, supabase]);
-
-    // Fetch Loia's prediction for the card face if game hasn't started
-    useEffect(() => {
-        if (!isLive && !isFinished) {
-            const fetchLoia = async () => {
-                const { data } = await supabase
-                    .from("profiles")
-                    .select("id")
-                    .eq("email", "lindoaldo@legacy.local")
-                    .single();
-                
-                if ((data as any)?.id) {
-                    const { data: pred } = await supabase
-                        .from("predictions")
-                        .select("home_score, away_score")
-                        .eq("match_id", match.id)
-                        .eq("user_id", (data as any).id)
-                        .maybeSingle();
-                    if (pred) {
-                        setLoiaPrediction({ home: (pred as any).home_score, away: (pred as any).away_score });
-                    }
-                }
-            };
-            fetchLoia();
-        }
-    }, [match.id, isLive, isFinished, supabase]);
 
     // --- HIGHLANDER LOGIC (Strict Priority) ---
     // Calculates the "Highlander" winners: Find the highest ranking team that was selected,
@@ -647,17 +618,6 @@ export function UnifiedMatchCard({
                         )}>
                             {translateRoundName(match.round_name || match.round)}
                         </span>
-                        {/* Loia Front-Facing Indicator (Mobile) */}
-                        {!isLive && !isFinished && loiaPrediction && (
-                            <div className="flex items-center gap-1.5 mt-1 bg-purple-500/10 border border-purple-500/20 px-2 py-0.5 rounded-full shadow-sm shadow-purple-500/10">
-                                <span className="text-[10px] font-black tracking-wider text-purple-600 dark:text-purple-400 uppercase">
-                                    🤖 Loia
-                                </span>
-                                <span className="text-[11px] font-bold font-mono text-purple-700 dark:text-purple-300 bg-purple-500/20 px-1.5 rounded">
-                                    {loiaPrediction.home} - {loiaPrediction.away}
-                                </span>
-                            </div>
-                        )}
                     </div>
 
                     {/* 3. MAIN TEAMS AREA */}
@@ -847,17 +807,6 @@ export function UnifiedMatchCard({
                                         ) : (
                                             <div className="flex flex-col items-center gap-2">
                                                 <span className="text-2xl sm:text-3xl font-black text-slate-300 dark:text-slate-700/60 uppercase tracking-tighter">vs</span>
-                                                {/* Loia Front-Facing Indicator (Desktop) */}
-                                                {!isLive && !isFinished && loiaPrediction && (
-                                                    <div className="hidden md:flex items-center gap-2 bg-purple-500/10 border border-purple-500/20 px-3 py-1 rounded-full shadow-sm shadow-purple-500/10">
-                                                        <span className="text-xs font-black tracking-widest text-purple-600 dark:text-purple-400 uppercase">
-                                                            🤖 PALPITE DA IA:
-                                                        </span>
-                                                        <span className="text-sm font-bold font-mono text-purple-700 dark:text-purple-300 bg-purple-500/20 px-2 rounded">
-                                                            {loiaPrediction.home} - {loiaPrediction.away}
-                                                        </span>
-                                                    </div>
-                                                )}
                                             </div>
                                         )}
                                     </div>
@@ -1015,17 +964,7 @@ export function UnifiedMatchCard({
                                 </div>
                             ) : predictions.length > 0 ? (
                                 <div className="space-y-2">
-                                    {predictions
-                                        .filter(pred => {
-                                            // Hide Lindoaldo from the expanded list if the match hasn't started yet 
-                                            // (because his prediction is already visible on the card face)
-                                            if (!isLive && !isFinished) {
-                                                const pu = users.find(u => u.id === pred.user_id);
-                                                if (pu && pu.email === "lindoaldo@legacy.local") return false;
-                                            }
-                                            return true;
-                                        })
-                                        .map((pred) => {
+                                    {predictions.map((pred) => {
                                         const userProfile = users.find(u => u.id === pred.user_id);
                                         const isComputed = isLive || isFinished;
                                         const points = pred.points || 0;
