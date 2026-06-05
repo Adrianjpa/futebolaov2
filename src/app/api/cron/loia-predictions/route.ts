@@ -36,7 +36,7 @@ export async function GET(request: Request) {
             .from("championships")
             .select("id, name, settings");
 
-        const loiaChamps = activeChamps?.filter(c => c.settings?.enableLoia === true) || [];
+        const loiaChamps = activeChamps?.filter((c: any) => c.settings?.enableLoia === true) || [];
         if (loiaChamps.length === 0) {
             return NextResponse.json({ success: true, message: "Nenhum campeonato com Loia ativado." });
         }
