@@ -188,18 +188,23 @@ export function UnifiedMatchCard({
     useEffect(() => {
         if (!isLive && !isFinished && !isAdmin) {
             const fetchLoia = async () => {
-                const { data } = await supabase
-                    .from("profiles")
-                    .select("id")
-                    .eq("email", "lindoaldo@legacy.local")
+                const champId = match.championship_id || match.championshipId;
+                if (!champId) return;
+
+                const { data: champ } = await supabase
+                    .from("championships")
+                    .select("settings")
+                    .eq("id", champId)
                     .single();
+
+                const ghostId = (champ as any)?.settings?.ghostPlayer;
                 
-                if ((data as any)?.id) {
+                if (ghostId) {
                     const { data: pred } = await supabase
                         .from("predictions")
                         .select("home_score, away_score")
                         .eq("match_id", match.id)
-                        .eq("user_id", (data as any).id)
+                        .eq("user_id", ghostId)
                         .maybeSingle();
                     if (pred) {
                         setLoiaPrediction({ home: (pred as any).home_score, away: (pred as any).away_score });
@@ -208,7 +213,7 @@ export function UnifiedMatchCard({
             };
             fetchLoia();
         }
-    }, [match.id, isLive, isFinished, isAdmin, supabase]);
+    }, [match.id, match.championship_id, match.championshipId, isLive, isFinished, isAdmin, supabase]);
 
     // --- HIGHLANDER LOGIC (Strict Priority) ---
     // Calculates the "Highlander" winners: Find the highest ranking team that was selected,
