@@ -331,9 +331,12 @@ export default function PublicProfilePage() {
                         {profileData.nickname && <p className="text-muted-foreground text-sm">({profileData.nome})</p>}
                         
                         {profileData.nickname === "Lóia" && (
-                            <div className="mt-4 bg-purple-500/10 border border-purple-500/20 p-3 rounded-md max-w-xl text-left">
-                                <p className="text-sm text-slate-300 italic">
+                            <div className="mt-4 bg-purple-50 dark:bg-purple-500/10 border border-purple-200 dark:border-purple-500/20 p-4 rounded-lg max-w-xl text-left shadow-sm">
+                                <p className="text-sm text-purple-900 dark:text-slate-300 italic mb-2">
                                     "Membro fundador e lenda do Bolão. Sua última participação física foi em 2019. Agora, sua essência e genialidade foram resgatadas e vivem eternamente através desta Inteligência Artificial, honrando seu legado a cada palpite."
+                                </p>
+                                <p className="text-xs font-semibold text-purple-700 dark:text-purple-400 mt-2 border-t border-purple-200 dark:border-purple-500/20 pt-2">
+                                    ⚠️ Nota: Este perfil é exclusivamente uma simulação controlada por IA para fins de entretenimento. Sua pontuação não influencia o resultado real do campeonato e não concorre a nenhum prêmio.
                                 </p>
                             </div>
                         )}
