@@ -75,6 +75,7 @@ const formSchema = z.object({
     teamMode: z.enum(["clubes", "selecoes", "mista"]),
     // Rules
     ghostPlayer: z.string().nullable().optional(),
+    enableLoia: z.boolean().default(false).optional(),
     selectionSlots: z.coerce.number().min(0).default(3).optional(),
     enableSelectionPriority: z.boolean().default(false),
     enableSelectionTiebreaker: z.boolean().default(false),
@@ -158,6 +159,7 @@ export function ChampionshipForm({ initialData, onSubmit, isSubmitting = false, 
             category: initialData?.category || "other",
             teamMode: initialData?.teamMode || "selecoes",
             ghostPlayer: typeof initialData?.ghostPlayer === 'string' ? initialData.ghostPlayer : null,
+            enableLoia: initialData?.enableLoia === true,
             selectionSlots: initialData?.selectionSlots ?? 3,
             enableSelectionPriority: initialData?.enableSelectionPriority ?? false,
             enableSelectionTiebreaker: initialData?.enableSelectionTiebreaker ?? false,
@@ -894,6 +896,20 @@ export function ChampionshipForm({ initialData, onSubmit, isSubmitting = false, 
                                 <Switch
                                     checked={!!form.watch("ghostPlayer")}
                                     onCheckedChange={(checked) => form.setValue("ghostPlayer", checked as any)}
+                                />
+                            </div>
+
+                            <div className="flex items-center justify-between rounded-lg border p-4 bg-purple-950/20 border-purple-900/50">
+                                <div className="space-y-0.5">
+                                    <Label className="text-base text-purple-400">Ativar IA de Competição (Projeto Loia)</Label>
+                                    <p className="text-sm text-muted-foreground">
+                                        Botão do Pânico (Kill Switch): Liga ou desliga a inteligência artificial do Lindoaldo. Se desativado, ele some do ranking e dos palpites.
+                                    </p>
+                                </div>
+                                <Switch
+                                    checked={!!form.watch("enableLoia")}
+                                    onCheckedChange={(checked) => form.setValue("enableLoia", checked)}
+                                    className="data-[state=checked]:bg-purple-600"
                                 />
                             </div>
 
