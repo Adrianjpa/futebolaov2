@@ -197,14 +197,16 @@ export function UnifiedMatchCard({
                     .eq("id", champId)
                     .single();
 
-                const ghostId = (champ as any)?.settings?.ghostPlayer;
+                const participants = (champ as any)?.settings?.participants || [];
+                const loiaParticipant = participants.find((p: any) => p.email === "lindoaldo@legacy.local");
+                const loiaId = loiaParticipant?.userId || loiaParticipant?.id || loiaParticipant?.user_id;
                 
-                if (ghostId) {
+                if (loiaId) {
                     const { data: pred } = await supabase
                         .from("predictions")
                         .select("home_score, away_score")
                         .eq("match_id", match.id)
-                        .eq("user_id", ghostId)
+                        .eq("user_id", loiaId)
                         .maybeSingle();
                     if (pred) {
                         setLoiaPrediction({ home: (pred as any).home_score, away: (pred as any).away_score });
@@ -921,19 +923,28 @@ export function UnifiedMatchCard({
                         
                         {/* Loia Front-Facing Prediction for Normal Users (Pre-match) */}
                         {!isAdmin && !isLive && !isFinished && loiaPrediction && (
-                            <div className="w-full mt-4 pt-4 border-t border-slate-200 dark:border-slate-800/60" onClick={(e) => e.stopPropagation()}>
-                                <div className="flex items-center justify-between bg-purple-50 dark:bg-purple-900/10 px-4 py-2 sm:px-6 sm:py-3 rounded-xl border border-purple-200 dark:border-purple-800/30">
-                                    <div className="flex items-center gap-3">
-                                        <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-full bg-purple-500/20 flex items-center justify-center border border-purple-500/30 shrink-0">
-                                            <span className="text-[14px] sm:text-[18px]">🤖</span>
+                            <div className="w-full mt-3 pt-3 border-t border-slate-200 dark:border-slate-800/60" onClick={(e) => e.stopPropagation()}>
+                                <div className="grid grid-cols-[1fr_auto_1fr] sm:grid-cols-3 items-center gap-2 p-2 rounded-xl border bg-purple-50 dark:bg-purple-900/10 border-purple-200 dark:border-purple-800/30 transition-colors">
+                                    {/* Left: Avatar + Name */}
+                                    <div className="flex items-center gap-2.5 min-w-0 overflow-hidden text-left pl-1">
+                                        <div className="h-7 w-7 rounded-full bg-purple-500/20 flex items-center justify-center border border-purple-500/30 shrink-0 shadow-sm">
+                                            <span className="text-[12px]">🤖</span>
                                         </div>
-                                        <div className="flex flex-col">
-                                            <span className="text-[10px] sm:text-[11px] font-bold text-purple-600 dark:text-purple-400 uppercase tracking-widest">Palpite da IA</span>
-                                            <span className="text-sm sm:text-base font-bold text-slate-800 dark:text-slate-200 leading-tight">Lindoaldo</span>
+                                        <div className="flex flex-col min-w-0 leading-none">
+                                            <span className="text-[9px] font-bold text-purple-600 dark:text-purple-400 uppercase tracking-widest">IA</span>
+                                            <span className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate mt-0.5">Lindoaldo</span>
                                         </div>
                                     </div>
-                                    <div className="font-mono font-bold text-xl sm:text-2xl text-purple-700 dark:text-purple-300 bg-purple-500/10 px-4 py-1.5 sm:px-5 sm:py-2 rounded-lg border border-purple-500/20 shadow-sm">
-                                        {loiaPrediction.home} - {loiaPrediction.away}
+                                    
+                                    {/* Center: Score */}
+                                    <div className="flex justify-center items-center">
+                                        <div className="font-mono font-bold text-base text-purple-700 dark:text-purple-300 bg-purple-500/10 px-4 py-1 rounded-lg border border-purple-500/20 whitespace-nowrap shadow-sm">
+                                            {loiaPrediction.home} - {loiaPrediction.away}
+                                        </div>
+                                    </div>
+                                    
+                                    {/* Right: Empty for balance */}
+                                    <div className="flex justify-end items-center pr-1">
                                     </div>
                                 </div>
                             </div>
