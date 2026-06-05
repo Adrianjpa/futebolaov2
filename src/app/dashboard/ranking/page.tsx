@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { createClient } from "@/lib/supabase";
-import { Crown, Medal, Trophy, Siren, Loader2, Info, ExternalLink, Star, Gem } from "lucide-react";
+import { Crown, Medal, Trophy, Siren, Loader2, Info, ExternalLink, Star, Gem, Ghost } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSearchParams } from "next/navigation";
@@ -517,8 +517,10 @@ export default function RankingPage() {
         const currentChamp = championships.find(c => c.id === selectedChampionship);
         const teamMode = currentChamp?.settings?.teamMode || 'clubes';
 
+        const isLoia = users.find(u => u.user_id === userId)?.nickname === "Lóia";
+        
         // BUSINESS RULE: Do not show selections of other users before the first match starts!
-        if (!hasChampStarted && userId !== currentUser?.id && !isAdmin) {
+        if (!hasChampStarted && userId !== currentUser?.id && !isAdmin && !isLoia) {
              return (
                  <Tooltip>
                      <TooltipTrigger asChild>
@@ -779,8 +781,9 @@ export default function RankingPage() {
                                             </div>
                                             <div className="truncate flex flex-col justify-center">
                                                 <div className="flex items-center gap-2">
-                                                    <Link href={`/dashboard/profile/${user.user_id}`} className="hover:underline font-bold text-sm">
+                                                    <Link href={`/dashboard/profile/${user.user_id}`} className="hover:underline font-bold text-sm flex items-center gap-1">
                                                         {user.nickname || user.nome}
+                                                        {user.nickname === "Lóia" && <Ghost className="h-3.5 w-3.5 text-purple-500" />}
                                                     </Link>
                                                     {getRankIcon(index, sortedUsers.length)}
                                                 </div>
