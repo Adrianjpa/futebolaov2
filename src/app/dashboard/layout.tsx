@@ -132,11 +132,11 @@ export default function DashboardLayout({
 
                     {/* Sidebar */}
                     <aside className={`
-          fixed inset-y-0 left-0 z-50 w-64 bg-white/40 backdrop-blur-xl border-r border-white/20 transform transition-transform duration-200 ease-in-out
-          ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"}
-          md:relative md:translate-x-0 shadow-2xl flex flex-col h-full
+          fixed inset-y-0 left-0 z-50 w-64 bg-card border-r border-border transform transition-transform duration-200 ease-in-out
+          ${isSidebarOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full"}
+          md:relative md:translate-x-0 md:shadow-none flex flex-col h-full
         `}>
-                        <div className="h-16 flex items-center px-6 border-b border-white/10 shrink-0">
+                        <div className="h-16 flex items-center px-6 border-b border-border shrink-0">
                             {/* Light Mode Logo (Colored/Dark) */}
                             <div className="dark:hidden h-14 w-auto">
                                 <img src="/images/logo-full-dark.png?v=2" alt="FuteBolão" className="h-full w-auto object-contain" />
@@ -156,7 +156,7 @@ export default function DashboardLayout({
                                     <Link key={item.href} href={item.href} onClick={(e) => handleNavClick(e, item.href)} prefetch={false}>
                                         <Button
                                             variant={isActive ? "secondary" : "ghost"}
-                                            className={`w-full justify-start transition-all duration-300 rounded-xl mb-1 ${isActive ? "bg-white/60 text-primary shadow-sm font-medium" : "hover:bg-white/30 hover:text-primary"}`}
+                                            className={`w-full justify-start rounded-xl mb-1 ${isActive ? "bg-primary/15 text-primary shadow-sm font-bold" : "hover:bg-primary/10 hover:text-primary text-foreground/70"}`}
                                         >
                                             <Icon className="mr-2 h-4 w-4" />
                                             {item.label}
@@ -179,7 +179,7 @@ export default function DashboardLayout({
                                             <Link key={item.href} href={item.href} onClick={(e) => handleNavClick(e, item.href)} prefetch={false}>
                                                 <Button
                                                     variant={isActive ? "secondary" : "ghost"}
-                                                    className={`w-full justify-between transition-all duration-300 rounded-xl mb-1 ${isActive ? "bg-red-500/10 text-red-700 font-medium" : "hover:bg-red-500/5 hover:text-red-600 text-muted-foreground"}`}
+                                                    className={`w-full justify-between rounded-xl mb-1 ${isActive ? "bg-red-500/15 text-red-600 dark:text-red-400 font-bold" : "hover:bg-red-500/10 hover:text-red-500 text-muted-foreground"}`}
                                                 >
                                                     <div className="flex items-center min-w-0">
                                                         <Icon className="mr-2 h-4 w-4 shrink-0" />
@@ -201,7 +201,7 @@ export default function DashboardLayout({
 
                     {/* Main Content */}
                     <div className="flex-1 flex flex-col h-full min-w-0 overflow-hidden relative">
-                        <header className="h-16 border-b border-white/20 flex items-center justify-between px-4 md:px-6 bg-white/30 backdrop-blur-xl shrink-0 z-30 shadow-sm relative">
+                        <header className="h-16 border-b border-border flex items-center justify-between px-4 md:px-6 bg-card shrink-0 z-30 shadow-sm relative">
                             <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setIsSidebarOpen(true)}>
                                 <Menu className="h-6 w-6" />
                             </Button>

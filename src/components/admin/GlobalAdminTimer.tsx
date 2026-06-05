@@ -127,7 +127,7 @@ export function GlobalAdminTimer() {
     return (
         <div className="w-full relative shrink-0">
             {isSyncing && (
-                <div className="absolute inset-0 z-10 flex items-center justify-center bg-yellow-500/20 backdrop-blur-[1px]">
+                <div className="absolute inset-0 z-10 flex items-center justify-center bg-yellow-500/20 -[1px]">
                     <span className="text-[10px] font-bold text-yellow-500 uppercase tracking-widest animate-pulse drop-shadow-md">
                         Sincronizando Partidas...
                     </span>

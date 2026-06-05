@@ -160,7 +160,7 @@ export default function PredictionsPage() {
                         <Card key={match.id} className={`overflow-hidden border-primary/10 ${isLocked ? 'opacity-75 bg-muted/10' : ''}`}>
                             <CardHeader className="bg-muted/30 pb-2 relative">
                                 {isLocked && (
-                                    <div className="absolute inset-0 flex items-center justify-center bg-background/50 backdrop-blur-[1px] z-10">
+                                    <div className="absolute inset-0 flex items-center justify-center bg-background/50 -[1px] z-10">
                                         <div className="flex items-center gap-2 bg-secondary px-3 py-1 rounded-full shadow-sm">
                                             <Lock className="h-4 w-4 text-muted-foreground" />
                                             <span className="text-xs font-bold text-muted-foreground">Fechado</span>

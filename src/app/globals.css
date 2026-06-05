@@ -186,11 +186,11 @@
   }
 }
 
-/* Glassmorphism Utilities */
-.glass {
-  @apply bg-white/40 backdrop-blur-xl border border-white/20 shadow-xl;
-}
-
-.dark .glass {
-  @apply bg-black/40 backdrop-blur-xl border border-white/10 shadow-xl;
+@layer utilities {
+  .glass-panel {
+    @apply bg-card border border-border shadow-md;
+  }
+  .dark .glass-panel {
+    @apply bg-card border border-border shadow-md;
+  }
 }

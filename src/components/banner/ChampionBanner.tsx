@@ -44,7 +44,7 @@ export function ChampionBanner({ championshipName, config: rawConfig, winners, c
     // Helper to render user avatar or fallback
     const renderAvatar = (url: string | undefined, sizePercent: number, border: string) => (
         <div
-            className="rounded-full overflow-hidden bg-white/10 backdrop-blur-sm flex items-center justify-center shadow-xl relative z-10"
+            className="rounded-full overflow-hidden bg-card border border-border flex items-center justify-center shadow-md relative z-10"
             style={{
                 width: `${sizePercent}cqw`,
                 height: `${sizePercent}cqw`,

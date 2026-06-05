@@ -63,7 +63,12 @@ const LEGACY_TOURNAMENT_YEARS: Record<string, string> = {
   '07532a36-6556-44ac-a1c2-7f56d42dc4fe': '2014',
   'f1d9edfe-7227-4423-a5f2-491f23e65fd5': '2016',
   'f5a811ac-82d4-49da-891d-d1118ce88ff8': '2018',
-  '14ae358e-cc7b-424c-8f4c-9faed5bbac67': '2019'
+  '14ae358e-cc7b-424c-8f4c-9faed5bbac67': '2019',
+  'e2024000-0000-0000-0000-000000000000': '2024',
+  'e2021000-0000-0000-0000-000000000000': '2021',
+  '40fab8ee-fc45-4ba0-b405-add9c3f5be59': '2025',
+  'f494300d-65d0-49d2-9987-9ee838c50f02': '2010',
+  'c2022000-0000-0000-0000-000000000000': '2022'
 };
 
 export function formatMatchDate(dateInput: string | Date, championshipId?: string) {

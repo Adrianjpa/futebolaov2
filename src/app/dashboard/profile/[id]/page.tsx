@@ -5,7 +5,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { createClient } from "@/lib/supabase";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Loader2, User, Trophy, Users, Gamepad2, Clock, Target, CheckCircle, Gem, XCircle, Goal, ArrowLeft, UserX } from "lucide-react";
+import { Loader2, User, Trophy, Users, Gamepad2, Clock, Target, CheckCircle, Gem, XCircle, Goal, ArrowLeft, UserX, Star } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -253,6 +254,58 @@ export default function PublicProfilePage() {
 
     const displayName = profileData.nickname || profileData.nome || "Usuário sem nome";
 
+    const renderPrestigeBadges = (titles: number) => {
+        if (titles <= 0) return null; // Não mostra nada se for visita a perfil com 0 títulos
+        
+        let iconType = 'star'; // 1-3
+        let count = titles;
+        
+        if (titles >= 7) {
+            iconType = 'diamond';
+            count = titles - 6; 
+            if (count > 3) count = 3; // Max 3 diamonds
+        } else if (titles >= 4) {
+            iconType = 'trophy';
+            count = titles - 3;
+        }
+
+        const icons = [];
+        for (let i = 0; i < count; i++) {
+            if (iconType === 'diamond') {
+                icons.push(<Gem key={i} className="h-4 w-4 sm:h-5 sm:w-5 text-cyan-400 drop-shadow-[0_0_3px_rgba(34,211,238,0.6)]" />);
+            } else if (iconType === 'trophy') {
+                icons.push(<Trophy key={i} className="h-4 w-4 sm:h-5 sm:w-5 text-amber-500 fill-amber-500/20 drop-shadow-[0_0_3px_rgba(245,158,11,0.6)]" />);
+            } else {
+                icons.push(<Star key={i} className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-400 fill-yellow-400 drop-shadow-[0_0_3px_rgba(250,204,21,0.6)]" />);
+            }
+        }
+
+        const content = (
+            <div role="button" tabIndex={0} className="absolute -bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-1 bg-slate-950 border border-slate-800 rounded-full px-3 py-1 shadow-xl z-20 cursor-help focus:outline-none">
+                {icons}
+            </div>
+        );
+
+        return (
+            <TooltipProvider>
+                <Tooltip delayDuration={100}>
+                    <TooltipTrigger asChild>
+                        {content}
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom" className="max-w-[250px] text-xs p-3 bg-slate-950 dark:bg-slate-950 border-slate-700 text-white shadow-xl opacity-100 touch-none">
+                        <p className="font-bold mb-1">Sistema de Prestígio 🏆</p>
+                        <p className="text-slate-300 mb-2">Este usuário venceu {titles} campeonato(s).</p>
+                        <ul className="space-y-1 text-slate-400">
+                            <li>⭐ 1 a 3 Títulos</li>
+                            <li>🏆 4 a 6 Títulos</li>
+                            <li>💎 7+ Títulos</li>
+                        </ul>
+                    </TooltipContent>
+                </Tooltip>
+            </TooltipProvider>
+        );
+    };
+
     return (
         <div className="space-y-8">
             <div>
@@ -263,12 +316,15 @@ export default function PublicProfilePage() {
 
             <Card className="bg-card dark:bg-slate-950/50 border-border dark:border-slate-800 text-card-foreground overflow-hidden relative shadow-lg">
                 <CardContent className="p-6 sm:p-8 flex flex-col sm:flex-row items-center sm:items-start gap-6 relative z-10">
-                    <Avatar className="h-24 w-24 sm:h-32 sm:w-32 border-4 border-background dark:border-slate-800 shadow-xl">
-                        <AvatarImage src={profileData.foto_perfil} />
-                        <AvatarFallback className="bg-muted dark:bg-slate-800 text-2xl font-bold">
-                            {displayName.substring(0, 2).toUpperCase()}
-                        </AvatarFallback>
-                    </Avatar>
+                    <div className="relative">
+                        <Avatar className="h-24 w-24 sm:h-32 sm:w-32 border-4 border-background dark:border-slate-800 shadow-xl">
+                            <AvatarImage src={profileData.foto_perfil} />
+                            <AvatarFallback className="bg-muted dark:bg-slate-800 text-2xl font-bold">
+                                {displayName.substring(0, 2).toUpperCase()}
+                            </AvatarFallback>
+                        </Avatar>
+                        {renderPrestigeBadges(stats.titlesWon)}
+                    </div>
 
                     <div className="flex-1 text-center sm:text-left space-y-2">
                         <h1 className="text-3xl font-bold">{displayName}</h1>

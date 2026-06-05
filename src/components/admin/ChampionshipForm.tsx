@@ -161,7 +161,11 @@ export function ChampionshipForm({ initialData, onSubmit, isSubmitting = false, 
             selectionSlots: initialData?.selectionSlots ?? 3,
             enableSelectionPriority: initialData?.enableSelectionPriority ?? false,
             enableSelectionTiebreaker: initialData?.enableSelectionTiebreaker ?? false,
-            tiebreakerCriteria: initialData?.tiebreakerCriteria || ['pontos', 'buchas', 'situacoes', 'erros', 'highlander'],
+            tiebreakerCriteria: (() => {
+                const criteria = initialData?.tiebreakerCriteria || ['pontos', 'buchas', 'situacoes', 'highlander'];
+                if (!criteria.includes('primeira_bucha')) criteria.push('primeira_bucha');
+                return criteria;
+            })(),
             exactScorePoints: initialData?.exactScorePoints ?? 3,
             winnerPoints: initialData?.winnerPoints ?? 1,
             comboEnabled: initialData?.comboEnabled ?? false,
@@ -941,12 +945,12 @@ export function ChampionshipForm({ initialData, onSubmit, isSubmitting = false, 
                                     </div>
                                 </div>
                                 <ul className="space-y-2 text-sm text-foreground">
-                                    {form.watch("tiebreakerCriteria")?.map((criteria, index, arr) => {
+                                    {form.watch("tiebreakerCriteria")?.filter((c: string) => c !== 'erros').map((criteria, index, arr) => {
                                         let label = criteria;
                                         if (criteria === 'pontos') label = 'Pontuação Geral';
                                         if (criteria === 'buchas') label = 'Maior nº de Cravadas (Buchas)';
                                         if (criteria === 'situacoes') label = 'Maior nº de Situações';
-                                        if (criteria === 'erros') label = 'Menor nº de Erros';
+                                        if (criteria === 'primeira_bucha') label = 'Primeira Bucha Chronológica (Desempate Ouro)';
                                         if (criteria === 'highlander') label = 'Melhor Posição na Escolha do Campeão';
 
                                         return (
@@ -1081,23 +1085,7 @@ export function ChampionshipForm({ initialData, onSubmit, isSubmitting = false, 
                                 </div>
                             )}
 
-                            {/* Em breve: Drag & Drop de Critérios de Desempate */}
-                            <div className="rounded-lg border p-4 bg-muted/10 opacity-60 cursor-not-allowed">
-                                <div className="flex items-center justify-between mb-2">
-                                    <Label className="font-semibold">Critérios de Desempate (Prioridade)</Label>
-                                    <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded">Em Breve</span>
-                                </div>
-                                <ul className="space-y-2 text-sm text-muted-foreground">
-                                    <li className="flex items-center gap-2 border p-2 rounded bg-background">1. Pontuação Geral</li>
-                                    <li className="flex items-center gap-2 border p-2 rounded bg-background">2. Maior nº de Cravadas (Buchas)</li>
-                                    <li className="flex items-center gap-2 border p-2 rounded bg-background">3. Maior nº de Situações</li>
-                                    <li className="flex items-center gap-2 border p-2 rounded bg-background">4. Menor nº de Erros</li>
-                                    <li className="flex items-center gap-2 border p-2 rounded bg-background font-medium text-yellow-600 dark:text-yellow-500">5. Melhor Posição na Escolha do Campeão</li>
-                                </ul>
-                                <p className="text-[10px] mt-2 text-muted-foreground">
-                                    Essa ordem será configurável via arrastar e soltar em breve.
-                                </p>
-                            </div>
+
                         </CardContent>
                     </Card>
                 </TabsContent>

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { createClient } from "@/lib/supabase";
-import { Crown, Medal, Trophy, Siren, Loader2, Info, ExternalLink } from "lucide-react";
+import { Crown, Medal, Trophy, Siren, Loader2, Info, ExternalLink, Star, Gem } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSearchParams } from "next/navigation";
@@ -66,6 +66,7 @@ export default function RankingPage() {
     const [loading, setLoading] = useState(true);
     const [isSwitching, setIsSwitching] = useState(false);
     const [championships, setChampionships] = useState<any[]>([]);
+    const [allChampionships, setAllChampionships] = useState<any[]>([]);
     const [hasHistory, setHasHistory] = useState<boolean | null>(null);
     const [categoryFilter, setCategoryFilter] = useState<string>("all");
     const [selectedChampionship, setSelectedChampionship] = useState<string>(initialChampionshipId);
@@ -78,6 +79,7 @@ export default function RankingPage() {
     const [participantsData, setParticipantsData] = useState<Map<string, string[]>>(new Map());
     const [legacyUrl, setLegacyUrl] = useState<string>("");
     const [teamDict, setTeamDict] = useState<Map<string, string>>(new Map());
+    const [hasChampStarted, setHasChampStarted] = useState<boolean>(false);
 
     const isAdmin = profile?.funcao === "admin" || profile?.funcao === "moderator";
 
@@ -123,6 +125,7 @@ export default function RankingPage() {
 
             const targetChampionships = isAdmin ? allChamps : userHistoryChamps;
             setChampionships(targetChampionships);
+            setAllChampionships(allChamps);
 
             // 3. Handle default selection or URL params
             if (initialChampionshipId !== "all") {
@@ -318,6 +321,21 @@ export default function RankingPage() {
                     });
                 }
             }
+            const exactPoints = settings.exactScorePoints || 3;
+            const { data: allBuchas } = await supabase
+                .from("predictions")
+                .select("user_id, matches!inner(date)")
+                .eq("matches.championship_id", selectedChampionship)
+                .gte("points", exactPoints);
+                
+            const firstBuchaMap = new Map();
+            if (allBuchas) {
+                allBuchas.forEach((b: any) => {
+                    const time = new Date(b.matches.date).getTime();
+                    const current = firstBuchaMap.get(b.user_id) || Infinity;
+                    if (time < current) firstBuchaMap.set(b.user_id, time);
+                });
+            }
 
             const tiebreakers = settings.tiebreakerCriteria || ['pontos', 'buchas', 'situacoes', 'erros', 'highlander'];
 
@@ -331,6 +349,10 @@ export default function RankingPage() {
                         if (b.outcomes !== a.outcomes) return (b.outcomes || 0) - (a.outcomes || 0);
                     } else if (criteria === 'erros') {
                         if (b.errors !== a.errors) return (a.errors || 0) - (b.errors || 0); // Menos erros é melhor (crescente)
+                    } else if (criteria === 'primeira_bucha') {
+                        const timeA = firstBuchaMap.get(a.user_id) || Infinity;
+                        const timeB = firstBuchaMap.get(b.user_id) || Infinity;
+                        if (timeA !== timeB) return timeA - timeB; // Data mais antiga vence
                     }
                 }
                 const nameA = a.nickname || a.nome || "";
@@ -349,6 +371,23 @@ export default function RankingPage() {
             setManualGoldWinners(goldIds);
             
             setLegacyUrl(settings.legacySpreadsheetUrl || "");
+
+            // 5. Check if championship has started (First match date is in the past)
+            const { data: firstMatch } = await supabase
+                .from("matches")
+                .select("date, status")
+                .eq("championship_id", selectedChampionship)
+                .order("date", { ascending: true })
+                .limit(1)
+                .maybeSingle();
+                
+            let started = false;
+            if (firstMatch) {
+                started = firstMatch.status === 'live' || firstMatch.status === 'finished' || new Date(firstMatch.date).getTime() < new Date().getTime();
+            }
+            // For legacy migrated tournaments, they are already finished so it will be true
+            setHasChampStarted(started);
+
         } catch (error) {
             console.error("Failed to fetch ranking:", error);
         } finally {
@@ -385,11 +424,65 @@ export default function RankingPage() {
     });
 
     const getRankIcon = (index: number, total: number) => {
-        if (index === 0) return <Crown className="h-6 w-6 text-yellow-500 animate-bounce" />;
-        if (index === 1) return <Medal className="h-5 w-5 text-gray-400" />;
-        if (index === 2) return <Medal className="h-5 w-5 text-amber-700" />;
-        if (index === total - 1 && total > 3) return <Siren className="h-6 w-6 text-red-600 animate-pulse" />;
+        if (index === 0) return <Crown className="h-6 w-6 text-yellow-500" />;
+        if (index === total - 1 && total > 3) return <Siren className="h-6 w-6 text-red-600 " />;
         return null;
+    };
+
+    const getUserTitles = (userId: string) => {
+        return allChampionships.filter((c: any) => {
+            const settings = c.settings || {};
+            const winners = settings.winners || settings.manualWinners || [];
+            return winners.some((w: any) =>
+                (w.user_id === userId || w.userId === userId) &&
+                w.position === 'champion'
+            );
+        }).length;
+    };
+
+    const renderMiniPrestigeBadges = (titles: number) => {
+        if (titles <= 0) return null;
+        
+        let iconType = 'star';
+        let count = titles;
+        
+        if (titles >= 7) {
+            iconType = 'diamond';
+            count = titles - 6; 
+            if (count > 3) count = 3;
+        } else if (titles >= 4) {
+            iconType = 'trophy';
+            count = titles - 3;
+        }
+
+        const icons = [];
+        for (let i = 0; i < count; i++) {
+            if (iconType === 'diamond') {
+                icons.push(<Gem key={i} className="h-2 w-2 text-cyan-400 drop-shadow-[0_0_2px_rgba(34,211,238,0.8)]" />);
+            } else if (iconType === 'trophy') {
+                icons.push(<Trophy key={i} className="h-2 w-2 text-amber-500 fill-amber-500/20 drop-shadow-[0_0_2px_rgba(245,158,11,0.8)]" />);
+            } else {
+                icons.push(<Star key={i} className="h-2 w-2 text-yellow-400 fill-yellow-400 drop-shadow-[0_0_2px_rgba(250,204,21,0.8)]" />);
+            }
+        }
+
+        const content = (
+            <div role="button" tabIndex={0} className="absolute -bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-[1px] bg-slate-950 border border-slate-800 rounded-full px-[5px] py-[2px] shadow-xl z-20 cursor-help focus:outline-none">
+                {icons}
+            </div>
+        );
+
+        return (
+            <Tooltip delayDuration={100}>
+                <TooltipTrigger asChild>
+                    {content}
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="max-w-[200px] text-[10px] p-2 bg-slate-950 dark:bg-slate-950 border-slate-700 text-white shadow-xl opacity-100 touch-none">
+                    <p className="font-bold mb-0.5">Sistema de Prestígio 🏆</p>
+                    <p className="text-slate-300">Venceu {titles} campeonato(s).</p>
+                </TooltipContent>
+            </Tooltip>
+        );
     };
 
     // --- Flag Logic Helpers (Highlander - Strict Priority) ---
@@ -401,6 +494,23 @@ export default function RankingPage() {
 
         const currentChamp = championships.find(c => c.id === selectedChampionship);
         const teamMode = currentChamp?.settings?.teamMode || 'clubes';
+
+        // BUSINESS RULE: Do not show selections of other users before the first match starts!
+        if (!hasChampStarted && userId !== currentUser?.id && !isAdmin) {
+             return (
+                 <Tooltip>
+                     <TooltipTrigger asChild>
+                         <div className={cn(
+                             "flex items-center justify-center border border-dashed border-slate-400 bg-slate-200 dark:bg-slate-800 text-slate-500",
+                             teamMode === 'selecoes' ? "h-5 w-5 rounded-full" : "h-4 w-4 rounded-full"
+                         )}>
+                             <span className="text-[10px] font-bold">?</span>
+                         </div>
+                     </TooltipTrigger>
+                     <TooltipContent>Seleções ocultas até o início do campeonato</TooltipContent>
+                 </Tooltip>
+             );
+        }
 
         if (!isRankingReady) {
             return teamSelections.map((team, idx) => {
@@ -521,7 +631,7 @@ export default function RankingPage() {
             return (
                 <Tooltip key={`${userId}-${idx}`}>
                     <TooltipTrigger asChild>
-                        <div className={`relative group/flag transition-all duration-300
+                        <div className={`relative group/flag  
                             ${isAbsoluteWinner ? "opacity-100" : "opacity-30 grayscale"}
                              ${!enforceAbsoluteLogic && isHit ? "opacity-100 grayscale-0" : ""}
                         `}>
@@ -529,7 +639,7 @@ export default function RankingPage() {
                                 src={shieldUrl}
                                 alt={team}
                                 className={cn(
-                                    "shadow-sm cursor-help transition-all",
+                                    "shadow-sm cursor-help ",
                                     teamMode === 'selecoes' ? "h-5 w-5 rounded-full object-cover" : "h-5 w-5 rounded-full object-contain bg-white border border-slate-200 dark:border-slate-800"
                                 )}
                             />
@@ -638,10 +748,13 @@ export default function RankingPage() {
                                     <div key={user.user_id} className="flex items-center px-4 py-3 gap-2 hover:bg-muted/30 transition-colors">
                                         <div className="w-8 text-center font-bold text-muted-foreground">{index + 1}</div>
                                         <div className="flex-1 flex items-center gap-3 min-w-0">
-                                            <Avatar className="h-10 w-10 border shrink-0">
-                                                <AvatarImage src={user.foto_perfil} />
-                                                <AvatarFallback>{(user.nickname || user.nome || "?").substring(0, 2).toUpperCase()}</AvatarFallback>
-                                            </Avatar>
+                                            <div className="relative">
+                                                <Avatar className="h-10 w-10 border shrink-0">
+                                                    <AvatarImage src={user.foto_perfil} />
+                                                    <AvatarFallback>{(user.nickname || user.nome || "?").substring(0, 2).toUpperCase()}</AvatarFallback>
+                                                </Avatar>
+                                                {renderMiniPrestigeBadges(getUserTitles(user.user_id))}
+                                            </div>
                                             <div className="truncate flex flex-col justify-center">
                                                 <div className="flex items-center gap-2">
                                                     <Link href={`/dashboard/profile/${user.user_id}`} className="hover:underline font-bold text-sm">

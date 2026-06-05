@@ -60,7 +60,7 @@ export function MaintenanceGuard({ children }: { children: React.ReactNode }) {
     if (isMaintenance && !isAdmin) {
         return (
             <div className="min-h-screen flex items-center justify-center p-4 bg-slate-950 text-white selection:bg-yellow-500/30">
-                <div className="max-w-md w-full space-y-8 text-center bg-slate-900/50 p-10 rounded-3xl border border-yellow-500/20 shadow-[0_0_50px_-12px_rgba(234,179,8,0.3)] backdrop-blur-md relative overflow-hidden group">
+                <div className="max-w-md w-full space-y-8 text-center bg-card p-10 rounded-3xl border border-yellow-500/20 shadow-md relative overflow-hidden group">
                     {/* Background Glow */}
                     <div className="absolute -top-24 -left-24 w-48 h-48 bg-yellow-500/10 blur-[80px] rounded-full group-hover:bg-yellow-500/20 transition-colors duration-1000" />
 

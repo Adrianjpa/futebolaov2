@@ -8,7 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Loader2, User, Trophy, Users, Gamepad2, Edit, Clock, Target, CheckCircle, Gem, XCircle, Goal, Upload, Trash2, Camera, Image as ImageIcon } from "lucide-react";
+import { Loader2, User, Trophy, Users, Gamepad2, Edit, Clock, Target, CheckCircle, Gem, XCircle, Goal, Upload, Trash2, Camera, Image as ImageIcon, Star, Info } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -430,6 +431,65 @@ export default function ProfilePage() {
         return <div className="flex justify-center p-8"><Loader2 className="h-8 w-8 animate-spin" /></div>;
     }
 
+    const renderPrestigeBadges = (titles: number) => {
+        let content;
+        if (titles <= 0) {
+            content = (
+                <div role="button" tabIndex={0} className="absolute -bottom-3 left-1/2 -translate-x-1/2 flex items-center justify-center bg-slate-950 border border-slate-800 rounded-full h-6 w-6 sm:h-7 sm:w-7 shadow-xl z-20 cursor-help group transition-colors hover:border-slate-600 focus:outline-none">
+                    <Info className="h-3 w-3 sm:h-4 sm:w-4 text-slate-500 group-hover:text-slate-300 transition-colors" />
+                </div>
+            );
+        } else {
+            let iconType = 'star'; // 1-3
+            let count = titles;
+            
+            if (titles >= 7) {
+                iconType = 'diamond';
+                count = titles - 6; 
+                if (count > 3) count = 3; // Max 3 diamonds
+            } else if (titles >= 4) {
+                iconType = 'trophy';
+                count = titles - 3;
+            }
+
+            const icons = [];
+            for (let i = 0; i < count; i++) {
+                if (iconType === 'diamond') {
+                    icons.push(<Gem key={i} className="h-4 w-4 sm:h-5 sm:w-5 text-cyan-400 drop-shadow-[0_0_3px_rgba(34,211,238,0.6)]" />);
+                } else if (iconType === 'trophy') {
+                    icons.push(<Trophy key={i} className="h-4 w-4 sm:h-5 sm:w-5 text-amber-500 fill-amber-500/20 drop-shadow-[0_0_3px_rgba(245,158,11,0.6)]" />);
+                } else {
+                    icons.push(<Star key={i} className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-400 fill-yellow-400 drop-shadow-[0_0_3px_rgba(250,204,21,0.6)]" />);
+                }
+            }
+
+            content = (
+                <div role="button" tabIndex={0} className="absolute -bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-1 bg-slate-950 border border-slate-800 rounded-full px-3 py-1 shadow-xl z-20 cursor-help focus:outline-none">
+                    {icons}
+                </div>
+            );
+        }
+
+        return (
+            <TooltipProvider>
+                <Tooltip delayDuration={100}>
+                    <TooltipTrigger asChild>
+                        {content}
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom" className="max-w-[250px] text-xs p-3 bg-slate-950 dark:bg-slate-950 border-slate-700 text-white shadow-xl opacity-100 touch-none">
+                        <p className="font-bold mb-1">Sistema de Prestígio 🏆</p>
+                        <p className="text-slate-300 mb-2">Vença campeonatos para evoluir suas insígnias:</p>
+                        <ul className="space-y-1 text-slate-400">
+                            <li>⭐ 1 a 3 Títulos</li>
+                            <li>🏆 4 a 6 Títulos</li>
+                            <li>💎 7+ Títulos</li>
+                        </ul>
+                    </TooltipContent>
+                </Tooltip>
+            </TooltipProvider>
+        );
+    };
+
     return (
         <div className="space-y-8">
             {/* Header Section */}
@@ -442,7 +502,10 @@ export default function ProfilePage() {
                                 {displayName?.substring(0, 2).toUpperCase() || <User />}
                             </AvatarFallback>
                         </Avatar>
-                        <div className="absolute bottom-1 right-1 h-6 w-6 bg-green-500 rounded-full border-4 border-card dark:border-slate-950" title="Online"></div>
+                        {/* Status Online Indicator (Top Right) */}
+                        <div className="absolute top-1 right-1 sm:top-2 sm:right-2 h-5 w-5 sm:h-6 sm:w-6 bg-green-500 rounded-full border-4 border-card dark:border-slate-950 shadow-sm z-20" title="Online"></div>
+                        {/* Prestige Badges (Bottom Center) */}
+                        {renderPrestigeBadges(stats.titlesWon)}
                     </div>
 
                     <div className="flex-1 text-center sm:text-left space-y-2">
@@ -553,15 +616,7 @@ export default function ProfilePage() {
                             <Trophy className="h-8 w-8 text-yellow-500 opacity-80" />
                         </CardContent>
                     </Card>
-                    <Card className="bg-card/50 hover:bg-card transition-colors">
-                        <CardContent className="p-6 flex items-start justify-between">
-                            <div className="space-y-1">
-                                <p className="text-sm font-medium text-muted-foreground">Palpite do Campeão</p>
-                                <p className="text-3xl font-bold text-amber-500">{stats.goldMedals}</p>
-                            </div>
-                            <Gem className="h-8 w-8 text-amber-500 opacity-80" />
-                        </CardContent>
-                    </Card>
+
                     <Card className="bg-card/50 hover:bg-card transition-colors">
                         <CardContent className="p-6 flex items-start justify-between">
                             <div className="space-y-1">

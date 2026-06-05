@@ -74,7 +74,7 @@ export function UnifiedMatchCard({
     const isCritical = !isAdmin && !hasPrediction && !isFinished && !isLive && minutesToStart > 0 && minutesToStart <= 30; // 30 mins
 
     const urgencyClass = isCritical
-        ? "border-red-500/50 shadow-sm shadow-red-500/20 animate-pulse bg-red-500/5"
+        ? "border-red-500/50 shadow-sm shadow-red-500/20  bg-red-500/5"
         : isUrgent
             ? "border-yellow-500/50 shadow-sm shadow-yellow-500/20 bg-yellow-500/5"
             : "";
@@ -434,7 +434,11 @@ export function UnifiedMatchCard({
                         // Try new table
                         const { data: newParts } = await supabase
                             .from("championship_participants")
-                            .select("user_id, team_selections")
+                            .select(`
+                                user_id, 
+                                team_selections,
+                                profiles!inner(nickname, nome)
+                            `)
                             .eq("championship_id", champId);
 
                         if (newParts && newParts.length > 0) {
@@ -442,7 +446,7 @@ export function UnifiedMatchCard({
                             finalParticipants = newParts.map((p: any) => ({
                                 userId: p.user_id,
                                 teamSelections: p.team_selections || [],
-                                nickname: p.nickname || "Usuário" // We might need to fetch profile names if not in this table, but usually we map by ID later
+                                nickname: p.profiles?.nickname || p.profiles?.nome || "Usuário"
                             }));
                         } else {
                             // Fallback to Settings (Legacy JSON)
@@ -452,6 +456,11 @@ export function UnifiedMatchCard({
                                 nickname: p.nickname || p.displayName || p.nome,
                                 teamSelections: p.teamSelections || p.team_selections || p.selections || []
                             }));
+                        }
+
+                        // Exclude ghost user from missing predictions calculations
+                        if (settings.ghostPlayer) {
+                            finalParticipants = finalParticipants.filter(p => p.userId !== settings.ghostPlayer);
                         }
 
                         setParticipantsData(finalParticipants);
@@ -468,7 +477,7 @@ export function UnifiedMatchCard({
 
     const StatusBadgeComponent = ({ type = "all", className = "" }: { type?: "status" | "urgency" | "all", className?: string }) => {
         if ((type === "all" || type === "status") && isLive) return (
-            <span className={cn("inline-flex items-center justify-center h-6 sm:h-7 text-[10px] sm:text-[11px] font-bold px-2 sm:px-3 rounded-lg border animate-pulse tracking-wider shrink-0 leading-none", 
+            <span className={cn("inline-flex items-center justify-center h-6 sm:h-7 text-[10px] sm:text-[11px] font-bold px-2 sm:px-3 rounded-lg border  tracking-wider shrink-0 leading-none", 
                 isColored ? "text-current bg-foreground/10 border-foreground/20" : "text-red-500 bg-red-500/10 border-red-500/20",
                 className)}>
                 AO VIVO
@@ -486,7 +495,7 @@ export function UnifiedMatchCard({
 
         // Urgency Badges
         if ((type === "all" || type === "urgency") && isCritical) return (
-            <span className={cn("inline-flex items-center justify-center h-6 sm:h-7 gap-1 text-[10px] sm:text-[11px] font-bold text-red-500 bg-red-500/10 px-2 sm:px-3 rounded-lg border border-red-500/20 animate-pulse tracking-wider shrink-0 leading-none", className)}>
+            <span className={cn("inline-flex items-center justify-center h-6 sm:h-7 gap-1 text-[10px] sm:text-[11px] font-bold text-red-500 bg-red-500/10 px-2 sm:px-3 rounded-lg border border-red-500/20  tracking-wider shrink-0 leading-none", className)}>
                 <AlertTriangle className="h-3 w-3" /> ÚLTIMA CHANCE
             </span>
         );
@@ -503,7 +512,7 @@ export function UnifiedMatchCard({
         <TooltipProvider delayDuration={0}>
             <Card
                 className={cn(
-                    "group relative overflow-hidden transition-all duration-300 border shadow-lg",
+                    "group relative overflow-hidden   border shadow-sm",
                     isFutureBlock ? "opacity-60 grayscale-[50%] cursor-not-allowed border-slate-800 bg-card dark:bg-slate-950/50" : (userResultClass ? userResultClass : "border-border bg-card dark:border-slate-800 dark:bg-slate-950/50"),
                     !isFutureBlock && canViewPredictions && !userResultClass ? "hover:bg-muted/50 dark:hover:bg-slate-900/80 cursor-pointer" : "",
                     !isFutureBlock && canViewPredictions && userResultClass ? "cursor-pointer" : "",
@@ -522,7 +531,7 @@ export function UnifiedMatchCard({
                                     <PopoverTrigger asChild onClick={(e) => e.stopPropagation()}>
                                         <button className="outline-none flex items-center justify-center">
                                             {(match.championshipLogoUrl || match.championship_logo) ? (
-                                                <img src={match.championshipLogoUrl || match.championship_logo} className="h-12 w-auto max-w-[4rem] object-contain drop-shadow-xl" alt="champ" />
+                                                <img src={match.championshipLogoUrl || match.championship_logo} className="h-12 w-auto max-w-[4rem] object-contain " alt="champ" />
                                             ) : (
                                                 <Trophy className={cn("h-10 w-10", isColored ? "text-current" : "text-blue-500")} />
                                             )}
@@ -622,14 +631,14 @@ export function UnifiedMatchCard({
                                 <Popover>
                                     <PopoverTrigger asChild onClick={(e) => e.stopPropagation()}>
                                         <button className={cn(
-                                            "h-12 w-12 sm:h-14 sm:w-14 transition-transform hover:scale-110 flex items-center justify-center shrink-0 outline-none overflow-hidden",
+                                            "h-12 w-12 sm:h-14 sm:w-14   flex items-center justify-center shrink-0 outline-none overflow-hidden",
                                             teamMode === 'selecoes' ? "rounded-full border-2 border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm" : "rounded-lg"
                                         )}>
                                             <img
                                                 src={match.home_team_crest || getFlagUrl(match.home_team || match.homeTeamName)}
                                                 alt=""
                                                 className={cn(
-                                                    "drop-shadow-sm",
+                                                    "",
                                                     teamMode === 'selecoes' ? "w-full h-full object-cover rounded-full" : "max-h-full max-w-full object-contain"
                                                 )}
                                                 onError={(e) => (e.currentTarget.style.display = 'none')}
@@ -687,7 +696,7 @@ export function UnifiedMatchCard({
                                             <Button
                                                 size="sm"
                                                 className={cn(
-                                                    "h-7 text-[10px] font-bold px-4 rounded-full transition-all duration-300",
+                                                    "h-7 text-[10px] font-bold px-4 rounded-full  ",
                                                     justSaved ? "bg-green-600 hover:bg-green-700" : "bg-primary hover:bg-primary/90"
                                                 )}
                                                 onClick={handleSavePrediction}
@@ -725,7 +734,7 @@ export function UnifiedMatchCard({
                                                         }
                                                     }}
                                                     className={cn(
-                                                        "h-7 text-[10px] mt-1 font-bold px-3 py-0 rounded-full border transition-all truncate min-w-[100px]",
+                                                        "h-7 text-[10px] mt-1 font-bold px-3 py-0 rounded-full border  truncate min-w-[100px]",
                                                         isComboActive 
                                                             ? "bg-amber-400/20 text-amber-500 border-amber-500 hover:bg-amber-400/30" 
                                                             : "border-slate-700 bg-transparent text-slate-500 hover:text-slate-300 hover:border-slate-500"
@@ -737,7 +746,7 @@ export function UnifiedMatchCard({
 
                                             {/* TOTAL GOALS COMBO INPUT */}
                                             {comboEnabled && isComboActive && (
-                                                <div className="flex flex-col items-center gap-1 mt-1 animate-in fade-in slide-in-from-top-2 duration-300">
+                                                <div className="flex flex-col items-center gap-1 mt-1">
                                                     <span className="text-[9px] font-bold text-amber-500 uppercase tracking-wider">
                                                         Total de Gols na Partida
                                                     </span>
@@ -809,14 +818,14 @@ export function UnifiedMatchCard({
                                 <Popover>
                                     <PopoverTrigger asChild onClick={(e) => e.stopPropagation()}>
                                         <button className={cn(
-                                            "h-12 w-12 sm:h-14 sm:w-14 transition-transform hover:scale-110 flex items-center justify-center shrink-0 outline-none overflow-hidden rounded-lg",
+                                            "h-12 w-12 sm:h-14 sm:w-14   flex items-center justify-center shrink-0 outline-none overflow-hidden rounded-lg",
                                             teamMode === 'selecoes' ? "rounded-full border-2 border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm" : "rounded-lg"
                                         )}>
                                             <img
                                                 src={match.away_team_crest || getFlagUrl(match.away_team || match.awayTeamName)}
                                                 alt=""
                                                 className={cn(
-                                                    "drop-shadow-sm",
+                                                    "",
                                                     teamMode === 'selecoes' ? "w-full h-full object-cover rounded-full" : "max-h-full max-w-full object-contain"
                                                 )}
                                                 onError={(e) => (e.currentTarget.style.display = 'none')}
@@ -841,14 +850,14 @@ export function UnifiedMatchCard({
                                         <Button
                                             variant="outline"
                                             size="sm"
-                                            className="h-7 text-[10px] font-bold border-red-600/30 text-red-600 dark:text-red-500 hover:bg-red-500/10 hover:text-red-700 dark:hover:text-red-400 transition-all px-4 rounded-full shadow-sm"
+                                            className="h-7 text-[10px] font-bold border-red-600/30 text-red-600 dark:text-red-500 hover:bg-red-500/10 hover:text-red-700 dark:hover:text-red-400  px-4 rounded-full shadow-sm"
                                             onClick={(e) => { e.stopPropagation(); setShowFinalizeDialog(true); }}
                                         >
                                             FINALIZAR PARTIDA
                                         </Button>
                                     )
                                 ) : showCountdown ? (
-                                    <div className="flex items-center gap-1.5 bg-red-500/5 dark:bg-red-500/10 px-3 py-1 rounded-full border border-red-500/10 animate-pulse">
+                                    <div className="flex items-center gap-1.5 bg-red-500/5 dark:bg-red-500/10 px-3 py-1 rounded-full border border-red-500/10 ">
                                         <Clock className="h-3.5 w-3.5 text-red-500" />
                                         <span className="text-[11px] sm:text-[13px] text-red-600 dark:text-red-500 font-bold uppercase tracking-wider">
                                             {minutesToStart > 0 && "Começa em "}
@@ -872,7 +881,7 @@ export function UnifiedMatchCard({
                         {/* Footer indicator */}
                         {canViewPredictions && (
                             <div className="opacity-10 group-hover:opacity-40 transition-opacity">
-                                <ChevronDown className={`h-4 w-4 transition-transform duration-300 text-foreground ${expanded ? 'rotate-180' : ''}`} />
+                                <ChevronDown className={`h-4 w-4   text-foreground ${expanded ? 'rotate-180' : ''}`} />
                             </div>
                         )}
 
@@ -882,7 +891,7 @@ export function UnifiedMatchCard({
 
                 {/* PREDICTIONS SECTION */}
                 {expanded && (
-                    <div className="border-t border-border dark:border-slate-800 bg-muted/30 dark:bg-slate-950 animate-in slide-in-from-top-4 duration-300">
+                    <div className="border-t border-border dark:border-slate-800 bg-muted/30 dark:bg-slate-950">
                         <div className="p-4 sm:p-6 space-y-4">
 
                             {/* Header Section */}
@@ -1042,7 +1051,7 @@ export function UnifiedMatchCard({
                                                             </TooltipContent>
                                                         </Tooltip>
                                                     )}
-                                                    <div className={`h-7 w-7 rounded-full flex items-center justify-center text-[13px] font-black shadow-sm shrink-0 transition-all ${badgeClass}`}>
+                                                    <div className={`h-7 w-7 rounded-full flex items-center justify-center text-[13px] font-black shadow-sm shrink-0  ${badgeClass}`}>
                                                         {isZero ? "0" : `+${points}`}
                                                     </div>
                                                 </div>

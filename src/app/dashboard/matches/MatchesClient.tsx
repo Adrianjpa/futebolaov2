@@ -417,7 +417,7 @@ export default function MatchesClient() {
                 3. Aparece apenas se bannerEnabled estiver ativo no campeonato
             */}
             {selectedChampionship !== "all" && !isAdmin && bannerEnabled && (
-                <Card className="mb-6 overflow-hidden border-2 border-primary/20 bg-gradient-to-br from-blue-50 to-slate-100 dark:from-blue-950/40 dark:to-slate-950/60 backdrop-blur-md relative group">
+                <Card className="mb-6 overflow-hidden border-2 border-primary/20 bg-card relative group shadow-sm">
                     <div className="absolute inset-0 bg-blue-500/5 opacity-50 group-hover:opacity-100 transition-opacity" />
                     <CardContent className="p-4 sm:p-6 relative">
                         <div className="flex flex-col lg:flex-row items-center justify-between gap-6">
@@ -450,13 +450,13 @@ export default function MatchesClient() {
                                     const currentTeamMode = currentChamp?.settings?.teamMode || 'clubes';
 
                                     return (
-                                        <div key={idx} className="flex flex-col items-center gap-1.5 p-2 rounded-xl bg-slate-100 dark:bg-slate-900/40 border border-black/5 dark:border-white/5 transition-all hover:bg-slate-200 dark:hover:bg-slate-900/60 min-w-[70px] sm:min-w-[80px]">
+                                        <div key={idx} className="flex flex-col items-center gap-1.5 p-2 rounded-xl bg-slate-100 dark:bg-slate-900/40 border border-black/5 dark:border-white/5  hover:bg-slate-200 dark:hover:bg-slate-900/60 min-w-[70px] sm:min-w-[80px]">
                                             <span className="text-[9px] sm:text-[10px] font-bold text-muted-foreground uppercase">{idx + 1}º Opção</span>
                                             {team ? (
                                                 <TooltipProvider>
                                                     <Tooltip>
                                                         <TooltipTrigger asChild>
-                                                            <div className={`transition-all duration-700 ${showFade ? "opacity-20 grayscale blur-[1px] scale-90" : "opacity-100 scale-105 drop-shadow-[0_0_8px_rgba(255,255,255,0.2)]"}`}>
+                                                            <div className={` duration-700 ${showFade ? "opacity-20 grayscale blur-[1px] scale-90" : "opacity-100 scale-105 drop-shadow-[0_0_8px_rgba(255,255,255,0.2)]"}`}>
                                                                 {(() => {
                                                                     const tData = championshipTeams.find((ct: any) => ct.name === team);
                                                                     if (tData?.shieldUrl) {
@@ -465,7 +465,7 @@ export default function MatchesClient() {
                                                                                 src={tData.shieldUrl}
                                                                                 alt={team}
                                                                                 className={cn(
-                                                                                    "shadow-lg transition-all",
+                                                                                    "shadow-sm ",
                                                                                     currentTeamMode === 'selecoes'
                                                                                         ? "h-10 w-10 sm:h-12 sm:w-12 object-cover rounded-full"
                                                                                         : "h-6 sm:h-8 w-10 sm:w-12 object-contain"
@@ -478,7 +478,7 @@ export default function MatchesClient() {
                                                                             src={`https://flagcdn.com/w80/${iso}.png`}
                                                                             alt={team}
                                                                             className={cn(
-                                                                                "shadow-lg border border-white/10 transition-all",
+                                                                                "shadow-sm border border-white/10 ",
                                                                                 currentTeamMode === 'selecoes'
                                                                                     ? "h-10 w-10 sm:h-12 sm:w-12 object-cover rounded-full"
                                                                                     : "h-6 sm:h-8 w-10 sm:w-12 object-cover rounded"
@@ -706,7 +706,7 @@ export default function MatchesClient() {
 
             {/* Rules Modal */}
             <Dialog open={showRulesModal} onOpenChange={setShowRulesModal}>
-                <DialogContent className="max-w-xl max-h-[85vh] overflow-hidden flex flex-col bg-background border-border shadow-2xl">
+                <DialogContent className="max-w-xl max-h-[85vh] overflow-hidden flex flex-col bg-background border-border shadow-sm">
                     <DialogHeader>
                         <div className="flex items-center justify-center mb-4 mt-2">
                             {(() => {

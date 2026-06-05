@@ -108,6 +108,7 @@ export default function DashboardClient() {
                     .select("*")
                     .eq("status", "finished")
                     .order("date", { ascending: false })
+                    .order("round", { ascending: false })
                     .limit(5);
 
                 const formattedRecent = (recent as any[])?.map(m => ({
@@ -163,7 +164,7 @@ export default function DashboardClient() {
 
     // 2. Timer for live state updates
     useEffect(() => {
-        const timer = setInterval(() => setCurrentTime(new Date()), 10000);
+        const timer = setInterval(() => setCurrentTime(new Date()), 60000);
         return () => clearInterval(timer);
     }, []);
 
@@ -318,13 +319,13 @@ export default function DashboardClient() {
             <div className="flex flex-col items-center justify-center min-h-[400px]">
                 <Loader2 className="h-10 w-10 animate-spin text-primary mb-4" />
                 <h2 className="text-xl font-bold text-foreground">Prepare-se para o jogo!</h2>
-                <p className="text-sm text-muted-foreground font-medium animate-pulse mt-1">Carregando seus dados...</p>
+                <p className="text-sm text-muted-foreground font-medium  mt-1">Carregando seus dados...</p>
             </div>
         );
     }
 
     return (
-        <div className="space-y-8 animate-in fade-in duration-500">
+        <div className="space-y-8">
             {/* Top Bar / Status Section */}
             <div className="flex flex-col space-y-4">
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -333,7 +334,7 @@ export default function DashboardClient() {
 
                 {/* System Announcement Banner */}
                 {announcement && announcement !== dismissedAnnouncement && (
-                    <div className="bg-primary/10 border border-primary/20 text-primary-foreground p-4 rounded-xl flex items-start gap-3 shadow-sm animate-in fade-in slide-in-from-top-2 relative pr-10">
+                    <div className="bg-primary/10 border border-primary/20 text-primary-foreground p-4 rounded-xl flex items-start gap-3 shadow-sm relative pr-10">
                         <Info className="h-5 w-5 text-primary shrink-0 mt-0.5" />
                         <div>
                             <p className="font-bold text-sm text-primary uppercase tracking-wide mb-1">Comunicado Oficial</p>
@@ -361,13 +362,13 @@ export default function DashboardClient() {
             {!isAdmin && (
                 <div className="space-y-4">
                     {activeChampsCount === 0 ? (
-                        <div className="text-center py-10 bg-yellow-500/5 border border-yellow-500/20 border-dashed rounded-2xl animate-in fade-in zoom-in duration-500">
+                        <div className="text-center py-10 bg-yellow-500/5 border border-yellow-500/20 border-dashed rounded-2xl">
                             <Info className="h-10 w-10 mx-auto mb-3 text-yellow-500/50" />
                             <h3 className="text-sm font-bold text-yellow-700 dark:text-yellow-400">Nenhum campeonato em andamento</h3>
                             <p className="text-xs text-yellow-600/70 dark:text-yellow-400/70 mt-1">Para maiores informações, contate o ADMIN.</p>
                         </div>
                     ) : userActiveChampsCount === 0 ? (
-                        <div className="text-center py-10 bg-blue-500/5 border border-blue-500/20 border-dashed rounded-2xl animate-in fade-in zoom-in duration-500">
+                        <div className="text-center py-10 bg-blue-500/5 border border-blue-500/20 border-dashed rounded-2xl">
                             <Trophy className="h-10 w-10 mx-auto mb-3 text-blue-500/50" />
                             <h3 className="text-sm font-bold text-blue-700 dark:text-blue-400">Você ainda não entrou no jogo</h3>
                             <p className="text-xs text-blue-600/70 dark:text-blue-400/70 mt-1">Participe de um campeonato para começar a ganhar pontos!</p>
@@ -380,7 +381,7 @@ export default function DashboardClient() {
                         const isLocked = !isAdmin && hasRules && !hasAccepted;
 
                         const CardContentWrapper = ({ children }: any) => (
-                            <Card className={`border-primary/30 transition-all ${isLocked ? 'bg-slate-900/80 border-dashed hover:border-primary/50 cursor-pointer' : 'bg-gradient-to-r from-primary/20 to-primary/5'}`}>
+                            <Card className={`border-primary/30  ${isLocked ? 'bg-slate-900/80 border-dashed hover:border-primary/50 cursor-pointer' : 'bg-gradient-to-r from-primary/20 to-primary/5'}`}>
                                 <CardContent className="flex flex-col sm:flex-row items-center justify-between p-6 gap-6 text-center sm:text-left">
                                     {children}
                                 </CardContent>
@@ -390,7 +391,7 @@ export default function DashboardClient() {
                         const innerContent = (
                             <>
                                 <div className="flex items-center gap-4">
-                                    <div className={`h-14 w-14 rounded-2xl flex items-center justify-center border shadow-inner transition-transform overflow-hidden p-2 ${isLocked ? 'bg-slate-800 border-slate-700' : 'bg-primary/10 border-primary/20'}`}>
+                                    <div className={`h-14 w-14 rounded-2xl flex items-center justify-center border   overflow-hidden p-2 ${isLocked ? 'bg-slate-800 border-slate-700' : 'bg-primary/10 border-primary/20'}`}>
                                         {(upcomingChampionship.settings as any)?.iconUrl || (upcomingChampionship as any).icon_url ? (
                                             <img
                                                 src={(upcomingChampionship.settings as any)?.iconUrl || (upcomingChampionship as any).icon_url}
@@ -422,7 +423,7 @@ export default function DashboardClient() {
                                 </div>
                                 <div className="flex flex-col items-center sm:items-end gap-1">
                                     {isLocked ? (
-                                        <Button variant="default" className="font-bold uppercase tracking-wider text-xs shadow-lg animate-pulse">
+                                        <Button variant="default" className="font-bold uppercase tracking-wider text-xs shadow-sm ">
                                             Ler Regulamento
                                         </Button>
                                     ) : upcomingChampionship.earliestMatchDate ? (
@@ -430,7 +431,7 @@ export default function DashboardClient() {
                                             <Countdown targetDate={upcomingChampionship.earliestMatchDate} variant="block" />
                                         </div>
                                     ) : (
-                                        <div className="bg-primary/10 text-primary px-4 py-2 rounded-lg font-bold text-xs uppercase tracking-widest border border-primary/20 animate-pulse">
+                                        <div className="bg-primary/10 text-primary px-4 py-2 rounded-lg font-bold text-xs uppercase tracking-widest border border-primary/20 ">
                                             Aguardando Tabela
                                         </div>
                                     )}
@@ -459,7 +460,7 @@ export default function DashboardClient() {
                         <CardHeader className="pb-3 border-b border-red-100 dark:border-red-900/30">
                             <div className="flex items-center justify-between">
                                 <CardTitle className="flex items-center text-red-600 dark:text-red-500 text-xl font-black">
-                                    <Activity className="mr-2 h-6 w-6 animate-pulse" />
+                                    <Activity className="mr-2 h-6 w-6 " />
                                     AO VIVO
                                 </CardTitle>
                             </div>
@@ -491,7 +492,7 @@ export default function DashboardClient() {
                         </CardContent>
                     </Card>
                 ) : isAdmin ? (
-                    <div className="text-center py-8 bg-card/30 border border-dashed rounded-xl animate-in fade-in duration-500">
+                    <div className="text-center py-8 bg-card/30 border border-dashed rounded-xl">
                         <Activity className="h-8 w-8 mx-auto mb-2 text-muted-foreground opacity-20" />
                         <p className="text-sm font-medium text-muted-foreground">Nenhum jogo ao vivo no momento.</p>
                     </div>
@@ -553,7 +554,7 @@ export default function DashboardClient() {
                             <CardHeader className="bg-muted/10 pb-4 border-b">
                                 <CardTitle className="flex items-center text-lg">
                                     <History className="mr-2 h-5 w-5 text-muted-foreground" />
-                                    Resultados Recentes
+                                    Últimos Resultados
                                 </CardTitle>
                             </CardHeader>
                             <CardContent className="grid gap-4 pt-4">
@@ -601,7 +602,7 @@ export default function DashboardClient() {
 
             {/* Rules Modal */}
             <Dialog open={showRulesModal} onOpenChange={setShowRulesModal}>
-                <DialogContent className="max-w-xl max-h-[85vh] overflow-hidden flex flex-col bg-background border-border shadow-2xl">
+                <DialogContent className="max-w-xl max-h-[85vh] overflow-hidden flex flex-col bg-background border-border shadow-sm">
                     <DialogHeader>
                         <div className="flex items-center justify-center mb-4 mt-2">
                             {(selectedRulesChamp?.settings as any)?.iconUrl || selectedRulesChamp?.icon_url ? (

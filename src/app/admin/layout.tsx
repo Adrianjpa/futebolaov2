@@ -91,11 +91,11 @@ export default function AdminLayout({
 
                 {/* Sidebar */}
                 <aside className={`
-          fixed inset-y-0 left-0 z-50 w-64 bg-white/40 backdrop-blur-xl border-r border-white/20 transform transition-transform duration-200 ease-in-out
+          fixed inset-y-0 left-0 z-50 w-64 bg-card border-r border-border transform transition-transform duration-200 ease-in-out
           ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"}
           md:relative md:translate-x-0 shadow-2xl flex flex-col h-full
         `}>
-                    <div className="h-16 flex items-center px-6 border-b border-white/10 bg-red-500/10 backdrop-blur-md shrink-0">
+                    <div className="h-16 flex items-center px-6 border-b border-border bg-red-500/10 shrink-0">
                         <Settings className="h-6 w-6 text-red-600 mr-2" />
                         <span className="font-bold text-lg text-red-600">Área Admin</span>
                     </div>
@@ -137,7 +137,7 @@ export default function AdminLayout({
                         })}
                     </div>
 
-                    <div className="p-4 border-t border-white/10 bg-white/10 backdrop-blur-md shrink-0">
+                    <div className="p-4 border-t border-border bg-card shrink-0">
                         <Button variant="outline" className="w-full border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 rounded-xl" onClick={handleSignOut}>
                             <LogOut className="mr-2 h-4 w-4" />
                             Sair
@@ -146,8 +146,8 @@ export default function AdminLayout({
                 </aside>
 
                 {/* Main Content */}
-                <div className="flex-1 flex flex-col h-full min-w-0 overflow-hidden">
-                    <header className="h-16 border-b border-white/20 flex items-center justify-between px-4 md:px-6 bg-white/30 backdrop-blur-xl shrink-0 z-30 shadow-sm">
+                <div className="flex-1 flex flex-col h-full overflow-hidden relative">
+                    <header className="h-16 border-b border-border flex items-center justify-between px-4 md:px-6 bg-card shrink-0 z-30 shadow-sm">
                         <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setIsSidebarOpen(true)}>
                             <Menu className="h-6 w-6" />
                         </Button>
