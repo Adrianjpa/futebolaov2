@@ -396,7 +396,6 @@ export function UnifiedMatchCard({
     const canViewPredictions = isAdmin || isLive || isFinished;
 
     const handleToggleExpand = async () => {
-        if (!canViewPredictions && !isAdmin) return;
 
         if (!expanded) {
             setLoadingPreds(true);
@@ -405,10 +404,17 @@ export function UnifiedMatchCard({
                 if (predictions.length === 0) {
                     const { data: preds } = await supabase
                         .from("predictions")
-                        .select("*")
+                        .select("*, profiles:user_id(email)")
                         .eq("match_id", match.id)
                         .order('points', { ascending: false });
-                    setPredictions(preds || []);
+                    
+                    let finalPreds = preds || [];
+                    // Regra de Transparência do Loia: 
+                    // Se o jogo ainda não começou, mostra APENAS os palpites do robô (lindoaldo@legacy.local)
+                    if (!canViewPredictions && !isAdmin) {
+                        finalPreds = finalPreds.filter((p: any) => p.profiles?.email === "lindoaldo@legacy.local");
+                    }
+                    setPredictions(finalPreds);
                 }
 
                 // 2. Fetch Championship Data (Ranking & Participants)
@@ -512,10 +518,10 @@ export function UnifiedMatchCard({
         <TooltipProvider delayDuration={0}>
             <Card
                 className={cn(
-                    "group relative overflow-hidden   border shadow-sm",
+                    "group relative overflow-hidden   border shadow-sm transition-colors",
                     isFutureBlock ? "opacity-60 grayscale-[50%] cursor-not-allowed border-slate-800 bg-card dark:bg-slate-950/50" : (userResultClass ? userResultClass : "border-border bg-card dark:border-slate-800 dark:bg-slate-950/50"),
-                    !isFutureBlock && canViewPredictions && !userResultClass ? "hover:bg-muted/50 dark:hover:bg-slate-900/80 cursor-pointer" : "",
-                    !isFutureBlock && canViewPredictions && userResultClass ? "cursor-pointer" : "",
+                    !isFutureBlock && !userResultClass ? "hover:bg-muted/50 dark:hover:bg-slate-900/80 cursor-pointer" : "",
+                    !isFutureBlock && userResultClass ? "cursor-pointer" : "",
                     !isFutureBlock && !userResultClass && urgencyClass ? urgencyClass : ""
                 )}
                 onClick={isFutureBlock ? undefined : handleToggleExpand}
@@ -879,11 +885,10 @@ export function UnifiedMatchCard({
                         </div>
 
                         {/* Footer indicator */}
-                        {canViewPredictions && (
-                            <div className="opacity-10 group-hover:opacity-40 transition-opacity">
-                                <ChevronDown className={`h-4 w-4   text-foreground ${expanded ? 'rotate-180' : ''}`} />
-                            </div>
-                        )}
+                        {/* Footer indicator */}
+                        <div className="opacity-10 group-hover:opacity-40 transition-opacity">
+                            <ChevronDown className={`h-4 w-4 text-foreground ${expanded ? 'rotate-180' : ''}`} />
+                        </div>
 
 
                     </div>
