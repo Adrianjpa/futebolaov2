@@ -273,17 +273,22 @@ export default function RankingPage() {
                 const loiaParticipant = legacyParts.find((p: any) => p.email === "lindoaldo@legacy.local");
                 const loiaId = loiaParticipant?.userId || loiaParticipant?.id || loiaParticipant?.user_id;
                 
-                if (loiaId && !rawData.some((r: any) => r.user_id === loiaId)) {
-                    rawData.push({
-                        user_id: loiaId,
-                        nome: loiaParticipant.displayName || loiaParticipant.name || "Lindoaldo",
-                        nickname: "Lóia",
-                        foto_perfil: loiaParticipant.photoUrl || "",
-                        total_points: 0,
-                        exact_scores: 0,
-                        outcomes: 0,
-                        errors: 0
-                    });
+                if (loiaId) {
+                    const selections = loiaParticipant.selections || loiaParticipant.teamSelections || [];
+                    pMap.set(loiaId, selections);
+                    
+                    if (!rawData.some((r: any) => r.user_id === loiaId)) {
+                        rawData.push({
+                            user_id: loiaId,
+                            nome: loiaParticipant.displayName || loiaParticipant.name || "Lindoaldo",
+                            nickname: "Lóia",
+                            foto_perfil: loiaParticipant.photoUrl || "",
+                            total_points: 0,
+                            exact_scores: 0,
+                            outcomes: 0,
+                            errors: 0
+                        });
+                    }
                 }
             }
             
