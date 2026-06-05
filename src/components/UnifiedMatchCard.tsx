@@ -846,11 +846,7 @@ export function UnifiedMatchCard({
                                             </div>
                                         ) : (
                                             <div className="flex flex-col items-center gap-2">
-                                                <div className="bg-muted dark:bg-slate-900/60 px-6 py-2 sm:px-8 sm:py-3 rounded-2xl md:rounded-full border border-border dark:border-slate-800/80 flex items-center gap-4 min-w-[100px] sm:min-w-[140px] justify-center opacity-80">
-                                                    <span className="text-2xl sm:text-3xl font-bold text-slate-400 dark:text-slate-600 font-mono">-</span>
-                                                    <span className="text-slate-300 dark:text-slate-700 font-bold text-xl">-</span>
-                                                    <span className="text-2xl sm:text-3xl font-bold text-slate-400 dark:text-slate-600 font-mono">-</span>
-                                                </div>
+                                                <span className="text-2xl sm:text-3xl font-black text-slate-300 dark:text-slate-700/60 uppercase tracking-tighter">vs</span>
                                                 {/* Loia Front-Facing Indicator (Desktop) */}
                                                 {!isLive && !isFinished && loiaPrediction && (
                                                     <div className="hidden md:flex items-center gap-2 bg-purple-500/10 border border-purple-500/20 px-3 py-1 rounded-full shadow-sm shadow-purple-500/10">
@@ -1019,7 +1015,17 @@ export function UnifiedMatchCard({
                                 </div>
                             ) : predictions.length > 0 ? (
                                 <div className="space-y-2">
-                                    {predictions.map((pred) => {
+                                    {predictions
+                                        .filter(pred => {
+                                            // Hide Lindoaldo from the expanded list if the match hasn't started yet 
+                                            // (because his prediction is already visible on the card face)
+                                            if (!isLive && !isFinished) {
+                                                const pu = users.find(u => u.id === pred.user_id);
+                                                if (pu && pu.email === "lindoaldo@legacy.local") return false;
+                                            }
+                                            return true;
+                                        })
+                                        .map((pred) => {
                                         const userProfile = users.find(u => u.id === pred.user_id);
                                         const isComputed = isLive || isFinished;
                                         const points = pred.points || 0;
