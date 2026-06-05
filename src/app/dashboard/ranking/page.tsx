@@ -266,6 +266,27 @@ export default function RankingPage() {
                     }
                 });
             }
+            
+            // Explicitly Inject Loia if enabled and missing
+            if (settings.enableLoia) {
+                const legacyParts = settings.participants || [];
+                const loiaParticipant = legacyParts.find((p: any) => p.email === "lindoaldo@legacy.local");
+                const loiaId = loiaParticipant?.userId || loiaParticipant?.id || loiaParticipant?.user_id;
+                
+                if (loiaId && !rawData.some((r: any) => r.user_id === loiaId)) {
+                    rawData.push({
+                        user_id: loiaId,
+                        nome: loiaParticipant.displayName || loiaParticipant.name || "Lindoaldo",
+                        nickname: "Lóia",
+                        foto_perfil: loiaParticipant.photoUrl || "",
+                        total_points: 0,
+                        exact_scores: 0,
+                        outcomes: 0,
+                        errors: 0
+                    });
+                }
+            }
+            
             setParticipantsData(pMap);
 
             // Compute real points for injected users (those missing from the SQL view)
