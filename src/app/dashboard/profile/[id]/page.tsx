@@ -329,6 +329,14 @@ export default function PublicProfilePage() {
                     <div className="flex-1 text-center sm:text-left space-y-2">
                         <h1 className="text-3xl font-bold">{displayName}</h1>
                         {profileData.nickname && <p className="text-muted-foreground text-sm">({profileData.nome})</p>}
+                        
+                        {profileData.nickname === "Lóia" && (
+                            <div className="mt-4 bg-purple-500/10 border border-purple-500/20 p-3 rounded-md max-w-xl text-left">
+                                <p className="text-sm text-slate-300 italic">
+                                    "Membro fundador e lenda do Bolão. Sua última participação física foi em 2019. Agora, sua essência e genialidade foram resgatadas e vivem eternamente através desta Inteligência Artificial, honrando seu legado a cada palpite."
+                                </p>
+                            </div>
+                        )}
                         {isAdmin && (
                             <p className="text-red-500 text-sm bg-red-500/10 w-fit px-2 py-1 rounded border border-red-500/20 mx-auto sm:mx-0 font-bold">
                                 <User className="h-3 w-3 inline mr-1" /> {profileData.email} (Admin View)
