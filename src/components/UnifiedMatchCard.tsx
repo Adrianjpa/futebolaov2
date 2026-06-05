@@ -110,6 +110,9 @@ export function UnifiedMatchCard({
     const [initialComboActive, setInitialComboActive] = useState<boolean>(false);
     const [betTotalGoals, setBetTotalGoals] = useState<string>("");
 
+    // --- LOIA PREDICTION FRONT-FACING ---
+    const [loiaPrediction, setLoiaPrediction] = useState<{home: number, away: number} | null>(null);
+
     // --- USER RESULT COLOR (Live & Finished) ---
     // Computes the border/background of the main card based on the target user's prediction outcome.
     const userResultClass = useMemo(() => {
@@ -180,6 +183,32 @@ export function UnifiedMatchCard({
         };
         fetchUserPrediction();
     }, [effectiveUserId, match.id, showBetButton, isLive, isFinished, supabase]);
+
+    // Fetch Loia's prediction for the card face if game hasn't started
+    useEffect(() => {
+        if (!isLive && !isFinished) {
+            const fetchLoia = async () => {
+                const { data } = await supabase
+                    .from("profiles")
+                    .select("id")
+                    .eq("email", "lindoaldo@legacy.local")
+                    .single();
+                
+                if ((data as any)?.id) {
+                    const { data: pred } = await supabase
+                        .from("predictions")
+                        .select("home_score, away_score")
+                        .eq("match_id", match.id)
+                        .eq("user_id", (data as any).id)
+                        .maybeSingle();
+                    if (pred) {
+                        setLoiaPrediction({ home: (pred as any).home_score, away: (pred as any).away_score });
+                    }
+                }
+            };
+            fetchLoia();
+        }
+    }, [match.id, isLive, isFinished, supabase]);
 
     // --- HIGHLANDER LOGIC (Strict Priority) ---
     // Calculates the "Highlander" winners: Find the highest ranking team that was selected,
@@ -396,6 +425,7 @@ export function UnifiedMatchCard({
     const canViewPredictions = isAdmin || isLive || isFinished;
 
     const handleToggleExpand = async () => {
+        if (!canViewPredictions && !isAdmin) return;
 
         if (!expanded) {
             setLoadingPreds(true);
@@ -404,17 +434,10 @@ export function UnifiedMatchCard({
                 if (predictions.length === 0) {
                     const { data: preds } = await supabase
                         .from("predictions")
-                        .select("*, profiles:user_id(email)")
+                        .select("*")
                         .eq("match_id", match.id)
                         .order('points', { ascending: false });
-                    
-                    let finalPreds = preds || [];
-                    // Regra de Transparência do Loia: 
-                    // Se o jogo ainda não começou, mostra APENAS os palpites do robô (lindoaldo@legacy.local)
-                    if (!canViewPredictions && !isAdmin) {
-                        finalPreds = finalPreds.filter((p: any) => p.profiles?.email === "lindoaldo@legacy.local");
-                    }
-                    setPredictions(finalPreds);
+                    setPredictions(preds || []);
                 }
 
                 // 2. Fetch Championship Data (Ranking & Participants)
@@ -518,10 +541,10 @@ export function UnifiedMatchCard({
         <TooltipProvider delayDuration={0}>
             <Card
                 className={cn(
-                    "group relative overflow-hidden   border shadow-sm transition-colors",
+                    "group relative overflow-hidden   border shadow-sm",
                     isFutureBlock ? "opacity-60 grayscale-[50%] cursor-not-allowed border-slate-800 bg-card dark:bg-slate-950/50" : (userResultClass ? userResultClass : "border-border bg-card dark:border-slate-800 dark:bg-slate-950/50"),
-                    !isFutureBlock && !userResultClass ? "hover:bg-muted/50 dark:hover:bg-slate-900/80 cursor-pointer" : "",
-                    !isFutureBlock && userResultClass ? "cursor-pointer" : "",
+                    !isFutureBlock && canViewPredictions && !userResultClass ? "hover:bg-muted/50 dark:hover:bg-slate-900/80 cursor-pointer" : "",
+                    !isFutureBlock && canViewPredictions && userResultClass ? "cursor-pointer" : "",
                     !isFutureBlock && !userResultClass && urgencyClass ? urgencyClass : ""
                 )}
                 onClick={isFutureBlock ? undefined : handleToggleExpand}
@@ -624,6 +647,17 @@ export function UnifiedMatchCard({
                         )}>
                             {translateRoundName(match.round_name || match.round)}
                         </span>
+                        {/* Loia Front-Facing Indicator (Mobile) */}
+                        {!isLive && !isFinished && loiaPrediction && (
+                            <div className="flex items-center gap-1.5 mt-1 bg-purple-500/10 border border-purple-500/20 px-2 py-0.5 rounded-full shadow-sm shadow-purple-500/10">
+                                <span className="text-[10px] font-black tracking-wider text-purple-600 dark:text-purple-400 uppercase">
+                                    🤖 Loia
+                                </span>
+                                <span className="text-[11px] font-bold font-mono text-purple-700 dark:text-purple-300 bg-purple-500/20 px-1.5 rounded">
+                                    {loiaPrediction.home} - {loiaPrediction.away}
+                                </span>
+                            </div>
+                        )}
                     </div>
 
                     {/* 3. MAIN TEAMS AREA */}
@@ -811,8 +845,23 @@ export function UnifiedMatchCard({
                                                 <span className="text-3xl sm:text-4xl font-bold text-slate-900 dark:text-white font-mono break-keep">{match.score_away ?? 0}</span>
                                             </div>
                                         ) : (
-                                            <div className="flex flex-col items-center">
-                                                <span className="text-2xl sm:text-3xl font-black text-slate-300 dark:text-slate-700/60 uppercase tracking-tighter">vs</span>
+                                            <div className="flex flex-col items-center gap-2">
+                                                <div className="bg-muted dark:bg-slate-900/60 px-6 py-2 sm:px-8 sm:py-3 rounded-2xl md:rounded-full border border-border dark:border-slate-800/80 flex items-center gap-4 min-w-[100px] sm:min-w-[140px] justify-center opacity-80">
+                                                    <span className="text-2xl sm:text-3xl font-bold text-slate-400 dark:text-slate-600 font-mono">-</span>
+                                                    <span className="text-slate-300 dark:text-slate-700 font-bold text-xl">-</span>
+                                                    <span className="text-2xl sm:text-3xl font-bold text-slate-400 dark:text-slate-600 font-mono">-</span>
+                                                </div>
+                                                {/* Loia Front-Facing Indicator (Desktop) */}
+                                                {!isLive && !isFinished && loiaPrediction && (
+                                                    <div className="hidden md:flex items-center gap-2 bg-purple-500/10 border border-purple-500/20 px-3 py-1 rounded-full shadow-sm shadow-purple-500/10">
+                                                        <span className="text-xs font-black tracking-widest text-purple-600 dark:text-purple-400 uppercase">
+                                                            🤖 PALPITE DA IA:
+                                                        </span>
+                                                        <span className="text-sm font-bold font-mono text-purple-700 dark:text-purple-300 bg-purple-500/20 px-2 rounded">
+                                                            {loiaPrediction.home} - {loiaPrediction.away}
+                                                        </span>
+                                                    </div>
+                                                )}
                                             </div>
                                         )}
                                     </div>
@@ -885,10 +934,11 @@ export function UnifiedMatchCard({
                         </div>
 
                         {/* Footer indicator */}
-                        {/* Footer indicator */}
-                        <div className="opacity-10 group-hover:opacity-40 transition-opacity">
-                            <ChevronDown className={`h-4 w-4 text-foreground ${expanded ? 'rotate-180' : ''}`} />
-                        </div>
+                        {canViewPredictions && (
+                            <div className="opacity-10 group-hover:opacity-40 transition-opacity">
+                                <ChevronDown className={`h-4 w-4 text-foreground ${expanded ? 'rotate-180' : ''}`} />
+                            </div>
+                        )}
 
 
                     </div>
