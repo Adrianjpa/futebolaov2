@@ -110,6 +110,9 @@ export function UnifiedMatchCard({
     const [initialComboActive, setInitialComboActive] = useState<boolean>(false);
     const [betTotalGoals, setBetTotalGoals] = useState<string>("");
 
+    // --- LOIA PREDICTION FRONT-FACING ---
+    const [loiaPrediction, setLoiaPrediction] = useState<{home: number, away: number} | null>(null);
+
     // --- USER RESULT COLOR (Live & Finished) ---
     // Computes the border/background of the main card based on the target user's prediction outcome.
     const userResultClass = useMemo(() => {
@@ -180,6 +183,32 @@ export function UnifiedMatchCard({
         };
         fetchUserPrediction();
     }, [effectiveUserId, match.id, showBetButton, isLive, isFinished, supabase]);
+
+    // Fetch Loia's prediction for the card face if game hasn't started (Only needed for normal users, but we fetch it to be safe)
+    useEffect(() => {
+        if (!isLive && !isFinished && !isAdmin) {
+            const fetchLoia = async () => {
+                const { data } = await supabase
+                    .from("profiles")
+                    .select("id")
+                    .eq("email", "lindoaldo@legacy.local")
+                    .single();
+                
+                if ((data as any)?.id) {
+                    const { data: pred } = await supabase
+                        .from("predictions")
+                        .select("home_score, away_score")
+                        .eq("match_id", match.id)
+                        .eq("user_id", (data as any).id)
+                        .maybeSingle();
+                    if (pred) {
+                        setLoiaPrediction({ home: (pred as any).home_score, away: (pred as any).away_score });
+                    }
+                }
+            };
+            fetchLoia();
+        }
+    }, [match.id, isLive, isFinished, isAdmin, supabase]);
 
     // --- HIGHLANDER LOGIC (Strict Priority) ---
     // Calculates the "Highlander" winners: Find the highest ranking team that was selected,
@@ -880,8 +909,28 @@ export function UnifiedMatchCard({
 
                         {/* Footer indicator */}
                         {canViewPredictions && (
-                            <div className="opacity-10 group-hover:opacity-40 transition-opacity">
+                            <div className="opacity-10 group-hover:opacity-40 transition-opacity mt-2">
                                 <ChevronDown className={`h-4 w-4 text-foreground ${expanded ? 'rotate-180' : ''}`} />
+                            </div>
+                        )}
+                        
+                        {/* Loia Front-Facing Prediction for Normal Users (Pre-match) */}
+                        {!isAdmin && !isLive && !isFinished && loiaPrediction && (
+                            <div className="w-full mt-4 pt-4 border-t border-slate-200 dark:border-slate-800/60" onClick={(e) => e.stopPropagation()}>
+                                <div className="flex items-center justify-between bg-purple-50 dark:bg-purple-900/10 px-4 py-2 sm:px-6 sm:py-3 rounded-xl border border-purple-200 dark:border-purple-800/30">
+                                    <div className="flex items-center gap-3">
+                                        <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-full bg-purple-500/20 flex items-center justify-center border border-purple-500/30 shrink-0">
+                                            <span className="text-[14px] sm:text-[18px]">🤖</span>
+                                        </div>
+                                        <div className="flex flex-col">
+                                            <span className="text-[10px] sm:text-[11px] font-bold text-purple-600 dark:text-purple-400 uppercase tracking-widest">Palpite da IA</span>
+                                            <span className="text-sm sm:text-base font-bold text-slate-800 dark:text-slate-200 leading-tight">Lindoaldo</span>
+                                        </div>
+                                    </div>
+                                    <div className="font-mono font-bold text-xl sm:text-2xl text-purple-700 dark:text-purple-300 bg-purple-500/10 px-4 py-1.5 sm:px-5 sm:py-2 rounded-lg border border-purple-500/20 shadow-sm">
+                                        {loiaPrediction.home} - {loiaPrediction.away}
+                                    </div>
+                                </div>
                             </div>
                         )}
 
