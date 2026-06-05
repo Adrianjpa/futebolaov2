@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { supabaseAdmin } from "@/lib/supabase-admin";
+import { supabaseAdmin } from "@/lib/supabase-server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 // Inicializa a API do Gemini
