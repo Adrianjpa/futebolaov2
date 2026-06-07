@@ -494,21 +494,21 @@ export default function RankingPage() {
         }
 
         const content = (
-            <div role="button" tabIndex={0} className="absolute -bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-[1px] bg-slate-950 border border-slate-800 rounded-full px-[5px] py-[2px] shadow-xl z-20 cursor-help focus:outline-none">
+            <div role="button" tabIndex={0} className="absolute -bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-[1px] bg-slate-950 border border-slate-800 rounded-full px-[5px] py-[2px] shadow-xl z-20 cursor-pointer focus:outline-none">
                 {icons}
             </div>
         );
 
         return (
-            <Tooltip delayDuration={100}>
-                <TooltipTrigger asChild>
+            <Popover>
+                <PopoverTrigger asChild>
                     {content}
-                </TooltipTrigger>
-                <TooltipContent side="bottom" className="max-w-[200px] text-[10px] p-2 bg-slate-950 dark:bg-slate-950 border-slate-700 text-white shadow-xl opacity-100 touch-none">
+                </PopoverTrigger>
+                <PopoverContent side="bottom" className="w-auto max-w-[200px] text-[10px] p-2 bg-slate-950 dark:bg-slate-950 border-slate-700 text-white shadow-xl z-50">
                     <p className="font-bold mb-0.5">Sistema de Prestígio 🏆</p>
                     <p className="text-slate-300">Venceu {titles} campeonato(s).</p>
-                </TooltipContent>
-            </Tooltip>
+                </PopoverContent>
+            </Popover>
         );
     };
 

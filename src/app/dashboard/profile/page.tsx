@@ -13,6 +13,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import Link from "next/link";
 import ReactCrop, { centerCrop, makeAspectCrop, Crop, PixelCrop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
@@ -435,7 +436,7 @@ export default function ProfilePage() {
         let content;
         if (titles <= 0) {
             content = (
-                <div role="button" tabIndex={0} className="absolute -bottom-3 left-1/2 -translate-x-1/2 flex items-center justify-center bg-slate-950 border border-slate-800 rounded-full h-6 w-6 sm:h-7 sm:w-7 shadow-xl z-20 cursor-help group transition-colors hover:border-slate-600 focus:outline-none">
+                <div role="button" tabIndex={0} className="absolute -bottom-3 left-1/2 -translate-x-1/2 flex items-center justify-center bg-slate-950 border border-slate-800 rounded-full h-6 w-6 sm:h-7 sm:w-7 shadow-xl z-20 cursor-pointer group transition-colors hover:border-slate-600 focus:outline-none">
                     <Info className="h-3 w-3 sm:h-4 sm:w-4 text-slate-500 group-hover:text-slate-300 transition-colors" />
                 </div>
             );
@@ -464,29 +465,27 @@ export default function ProfilePage() {
             }
 
             content = (
-                <div role="button" tabIndex={0} className="absolute -bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-1 bg-slate-950 border border-slate-800 rounded-full px-3 py-1 shadow-xl z-20 cursor-help focus:outline-none">
+                <div role="button" tabIndex={0} className="absolute -bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-1 bg-slate-950 border border-slate-800 rounded-full px-3 py-1 shadow-xl z-20 cursor-pointer focus:outline-none">
                     {icons}
                 </div>
             );
         }
 
         return (
-            <TooltipProvider>
-                <Tooltip delayDuration={100}>
-                    <TooltipTrigger asChild>
-                        {content}
-                    </TooltipTrigger>
-                    <TooltipContent side="bottom" className="max-w-[250px] text-xs p-3 bg-slate-950 dark:bg-slate-950 border-slate-700 text-white shadow-xl opacity-100 touch-none">
-                        <p className="font-bold mb-1">Sistema de Prestígio 🏆</p>
-                        <p className="text-slate-300 mb-2">Vença campeonatos para evoluir suas insígnias:</p>
-                        <ul className="space-y-1 text-slate-400">
-                            <li>⭐ 1 a 3 Títulos</li>
-                            <li>🏆 4 a 6 Títulos</li>
-                            <li>💎 7+ Títulos</li>
-                        </ul>
-                    </TooltipContent>
-                </Tooltip>
-            </TooltipProvider>
+            <Popover>
+                <PopoverTrigger asChild>
+                    {content}
+                </PopoverTrigger>
+                <PopoverContent side="bottom" className="w-auto max-w-[250px] text-xs p-3 bg-slate-950 dark:bg-slate-950 border-slate-700 text-white shadow-xl z-50">
+                    <p className="font-bold mb-1">Sistema de Prestígio 🏆</p>
+                    <p className="text-slate-300 mb-2">Vença campeonatos para evoluir suas insígnias:</p>
+                    <ul className="space-y-1 text-slate-400">
+                        <li>⭐ 1 a 3 Títulos</li>
+                        <li>🏆 4 a 6 Títulos</li>
+                        <li>💎 7+ Títulos</li>
+                    </ul>
+                </PopoverContent>
+            </Popover>
         );
     };
 

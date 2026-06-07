@@ -8,6 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Loader2, User, Trophy, Users, Gamepad2, Clock, Target, CheckCircle, Gem, XCircle, Goal, ArrowLeft, UserX, Star } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { useParams } from "next/navigation";
@@ -283,28 +284,26 @@ export default function PublicProfilePage() {
         }
 
         const content = (
-            <div role="button" tabIndex={0} className="absolute -bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-1 bg-slate-950 border border-slate-800 rounded-full px-3 py-1 shadow-xl z-20 cursor-help focus:outline-none">
+            <div role="button" tabIndex={0} className="absolute -bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-1 bg-slate-950 border border-slate-800 rounded-full px-3 py-1 shadow-xl z-20 cursor-pointer focus:outline-none">
                 {icons}
             </div>
         );
 
         return (
-            <TooltipProvider>
-                <Tooltip delayDuration={100}>
-                    <TooltipTrigger asChild>
-                        {content}
-                    </TooltipTrigger>
-                    <TooltipContent side="bottom" className="max-w-[250px] text-xs p-3 bg-slate-950 dark:bg-slate-950 border-slate-700 text-white shadow-xl opacity-100 touch-none">
-                        <p className="font-bold mb-1">Sistema de Prestígio 🏆</p>
-                        <p className="text-slate-300 mb-2">Este usuário venceu {titles} campeonato(s).</p>
-                        <ul className="space-y-1 text-slate-400">
-                            <li>⭐ 1 a 3 Títulos</li>
-                            <li>🏆 4 a 6 Títulos</li>
-                            <li>💎 7+ Títulos</li>
-                        </ul>
-                    </TooltipContent>
-                </Tooltip>
-            </TooltipProvider>
+            <Popover>
+                <PopoverTrigger asChild>
+                    {content}
+                </PopoverTrigger>
+                <PopoverContent side="bottom" className="w-auto max-w-[250px] text-xs p-3 bg-slate-950 dark:bg-slate-950 border-slate-700 text-white shadow-xl z-50">
+                    <p className="font-bold mb-1">Sistema de Prestígio 🏆</p>
+                    <p className="text-slate-300 mb-2">Este usuário venceu {titles} campeonato(s).</p>
+                    <ul className="space-y-1 text-slate-400">
+                        <li>⭐ 1 a 3 Títulos</li>
+                        <li>🏆 4 a 6 Títulos</li>
+                        <li>💎 7+ Títulos</li>
+                    </ul>
+                </PopoverContent>
+            </Popover>
         );
     };
 
