@@ -1042,7 +1042,21 @@ export function UnifiedMatchCard({
                             ) : predictions.length > 0 ? (
                                 <div className="space-y-2">
                                     {predictions.map((pred) => {
-                                        const userProfile = users.find(u => u.id === pred.user_id);
+                                        let userProfile = users.find(u => u.id === pred.user_id);
+                                        if (!userProfile) {
+                                            // Fallback for ghost users (like Loia) not in the main users table
+                                            const pData = participantsData.find(p => p.userId === pred.user_id);
+                                            if (pData) {
+                                                const isLoia = pData.nickname === "Lóia" || pData.nickname === "Lindoaldo" || pData.email === "lindoaldo@legacy.local";
+                                                userProfile = {
+                                                    id: pData.userId,
+                                                    nickname: pData.nickname,
+                                                    nome: pData.nickname,
+                                                    foto_perfil: isLoia ? "/lindoaldo.jpg" : ""
+                                                };
+                                            }
+                                        }
+
                                         const isComputed = isLive || isFinished;
                                         const points = pred.points || 0;
                                         const isZero = isComputed && points === 0;
