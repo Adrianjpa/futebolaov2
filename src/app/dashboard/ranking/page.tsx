@@ -452,7 +452,7 @@ export default function RankingPage() {
 
     const getRankIcon = (index: number, total: number) => {
         if (index === 0) return <Crown className="h-6 w-6 text-yellow-500" />;
-        if (index === total - 1 && total > 3) return <Siren className="h-6 w-6 text-red-600 " />;
+        if (index === total - 1 && total > 3) return <Siren className="h-6 w-6 text-red-600 animate-pulse" />;
         return null;
     };
 
