@@ -253,6 +253,8 @@ export default function PublicProfilePage() {
     }
 
     const displayName = profileData.nickname || profileData.nome || "Usuário sem nome";
+    const isLoia = profileData.nickname === "Lóia" || profileData.nickname === "Lindoaldo" || profileData.email === "lindoaldo@legacy.local";
+    const avatarSrc = profileData.foto_perfil || (isLoia ? "/lindoaldo.jpg" : "");
 
     const renderPrestigeBadges = (titles: number) => {
         if (titles <= 0) return null; // Não mostra nada se for visita a perfil com 0 títulos
@@ -318,7 +320,7 @@ export default function PublicProfilePage() {
                 <CardContent className="p-6 sm:p-8 flex flex-col sm:flex-row items-center sm:items-start gap-6 relative z-10">
                     <div className="relative">
                         <Avatar className="h-24 w-24 sm:h-32 sm:w-32 border-4 border-background dark:border-slate-800 shadow-xl">
-                            <AvatarImage src={profileData.foto_perfil} />
+                            <AvatarImage src={avatarSrc} />
                             <AvatarFallback className="bg-muted dark:bg-slate-800 text-2xl font-bold">
                                 {displayName.substring(0, 2).toUpperCase()}
                             </AvatarFallback>
