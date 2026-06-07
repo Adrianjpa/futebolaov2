@@ -254,7 +254,7 @@ export default function PublicProfilePage() {
 
     const displayName = profileData.nickname || profileData.nome || "Usuário sem nome";
     const isLoia = profileData.nickname === "Lóia" || profileData.nickname === "Lindoaldo" || profileData.email === "lindoaldo@legacy.local";
-    const avatarSrc = profileData.foto_perfil || (isLoia ? "/lindoaldo.jpg" : "");
+    const avatarSrc = profileData.foto_perfil || (isLoia ? "https://qgdiyngonrofriocxnla.supabase.co/storage/v1/object/public/avatars/lindoaldo_1780852852366.jpg" : "");
 
     const renderPrestigeBadges = (titles: number) => {
         if (titles <= 0) return null; // Não mostra nada se for visita a perfil com 0 títulos

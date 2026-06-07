@@ -937,7 +937,7 @@ export function UnifiedMatchCard({
                                     {/* Left: Avatar + Name */}
                                     <div className="flex items-center gap-2.5 min-w-0 overflow-hidden text-left pl-1">
                                         <Avatar className="h-8 w-8 border border-purple-500/30 shadow-sm ring-1 ring-purple-500/20">
-                                            <AvatarImage src="/lindoaldo.jpg" />
+                                            <AvatarImage src="https://qgdiyngonrofriocxnla.supabase.co/storage/v1/object/public/avatars/lindoaldo_1780852852366.jpg" />
                                             <AvatarFallback className="bg-purple-900 text-purple-100 text-xs font-bold">LO</AvatarFallback>
                                         </Avatar>
                                         <div className="flex flex-col min-w-0 leading-none">
@@ -1052,7 +1052,7 @@ export function UnifiedMatchCard({
                                                     id: pData.userId,
                                                     nickname: pData.nickname,
                                                     nome: pData.nickname,
-                                                    foto_perfil: isLoia ? "/lindoaldo.jpg" : ""
+                                                    foto_perfil: isLoia ? "https://qgdiyngonrofriocxnla.supabase.co/storage/v1/object/public/avatars/lindoaldo_1780852852366.jpg" : ""
                                                 };
                                             }
                                         }
