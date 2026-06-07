@@ -129,8 +129,8 @@ export default function LogsPage() {
                     <div className="grid grid-cols-2 gap-4">
                         <div className="bg-red-50 dark:bg-red-950/20 p-3 rounded-lg border border-red-100 dark:border-red-900/30">
                             <span className="text-xs text-red-600 dark:text-red-400 font-bold uppercase mb-1 block">Antes</span>
-                            {details["Old Home"] !== undefined ? (
-                                <span className="text-xl font-mono">{details["Old Home"]} - {details["Old Away"]}</span>
+                            {(details.old_home !== undefined || details["Old Home"] !== undefined) ? (
+                                <span className="text-xl font-mono">{details.old_home ?? details["Old Home"]} - {details.old_away ?? details["Old Away"]}</span>
                             ) : (
                                 <span className="text-sm italic text-muted-foreground">Nenhum palpite anterior</span>
                             )}
@@ -138,8 +138,8 @@ export default function LogsPage() {
 
                         <div className="bg-green-50 dark:bg-green-950/20 p-3 rounded-lg border border-green-100 dark:border-green-900/30">
                             <span className="text-xs text-green-600 dark:text-green-400 font-bold uppercase mb-1 block">Depois</span>
-                            {details["Home Score"] !== undefined ? (
-                                <span className="text-xl font-mono font-bold text-green-700 dark:text-green-300">{details["Home Score"]} - {details["Away Score"]}</span>
+                            {(details.home_score !== undefined || details["Home Score"] !== undefined) ? (
+                                <span className="text-xl font-mono font-bold text-green-700 dark:text-green-300">{details.home_score ?? details["Home Score"]} - {details.away_score ?? details["Away Score"]}</span>
                             ) : (
                                 <span className="text-sm italic text-muted-foreground">Sem dados de placar</span>
                             )}
