@@ -39,6 +39,7 @@ export default function LogsPage() {
     const [searchTerm, setSearchTerm] = useState("");
     const [filterAction, setFilterAction] = useState("all");
     const [selectedLog, setSelectedLog] = useState<LogEntry | null>(null);
+    const [matchesDict, setMatchesDict] = useState<Map<string, { home: string, away: string, champName: string }>>(new Map());
 
     useEffect(() => {
         const fetchLogs = async () => {
@@ -60,6 +61,14 @@ export default function LogsPage() {
                 } else {
                     setLogs(data as any || []);
                 }
+                
+                // Fetch matches dictionary
+                const { data: matches } = await supabase.from('matches').select('id, home_team, away_team, championships(name)');
+                const mDict = new Map();
+                if (matches) {
+                    matches.forEach((m: any) => mDict.set(m.id, { home: m.home_team, away: m.away_team, champName: m.championships?.name }));
+                }
+                setMatchesDict(mDict);
             } catch (err: any) {
                 console.error("Erro ao buscar logs:", err.message);
             } finally {
@@ -103,6 +112,43 @@ export default function LogsPage() {
     const formatLogDetails = (details: any) => {
         if (!details) return <p className="text-muted-foreground italic">Sem detalhes adicionais</p>;
         
+        const isPredictionLog = details["Match Id"] || details.match_id || details["Tipo"]?.includes("Palpite");
+
+        if (isPredictionLog) {
+            const matchId = details["Match Id"] || details.match_id;
+            const matchInfo = matchesDict.get(matchId);
+            const matchName = matchInfo ? `${matchInfo.home} x ${matchInfo.away} (${matchInfo.champName})` : `ID: ${matchId}`;
+
+            return (
+                <div className="space-y-4">
+                    <div className="flex flex-col gap-1 border-b pb-3">
+                        <span className="text-xs text-muted-foreground font-semibold uppercase tracking-wider">Jogo</span>
+                        <span className="font-bold text-lg">{matchName}</span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="bg-red-50 dark:bg-red-950/20 p-3 rounded-lg border border-red-100 dark:border-red-900/30">
+                            <span className="text-xs text-red-600 dark:text-red-400 font-bold uppercase mb-1 block">Antes</span>
+                            {details["Old Home"] !== undefined ? (
+                                <span className="text-xl font-mono">{details["Old Home"]} - {details["Old Away"]}</span>
+                            ) : (
+                                <span className="text-sm italic text-muted-foreground">Nenhum palpite anterior</span>
+                            )}
+                        </div>
+
+                        <div className="bg-green-50 dark:bg-green-950/20 p-3 rounded-lg border border-green-100 dark:border-green-900/30">
+                            <span className="text-xs text-green-600 dark:text-green-400 font-bold uppercase mb-1 block">Depois</span>
+                            {details["Home Score"] !== undefined ? (
+                                <span className="text-xl font-mono font-bold text-green-700 dark:text-green-300">{details["Home Score"]} - {details["Away Score"]}</span>
+                            ) : (
+                                <span className="text-sm italic text-muted-foreground">Sem dados de placar</span>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
         return (
             <div className="space-y-2">
                 {Object.entries(details).map(([key, value]) => (
