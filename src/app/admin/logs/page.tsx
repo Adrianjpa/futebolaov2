@@ -79,16 +79,28 @@ export default function LogsPage() {
         fetchLogs();
     }, [supabase]);
 
+    const getEffectiveAction = (log: LogEntry) => {
+        if (log.action === 'place_bet' && log.details) {
+            const details = log.details;
+            if (details.old_home !== undefined || details["Old Home"] !== undefined || details.Tipo === "Alterou Palpite Existente") {
+                return 'update_bet';
+            }
+        }
+        return log.action;
+    };
+
     const filteredLogs = logs.filter(log => {
-        const matchesAction = filterAction === "all" || log.action === filterAction;
-        const searchStr = `${log.profiles?.nome || ""} ${log.profiles?.nickname || ""} ${log.profiles?.email || ""} ${log.action}`.toLowerCase();
+        const effectiveAction = getEffectiveAction(log);
+        const matchesAction = filterAction === "all" || effectiveAction === filterAction;
+        const searchStr = `${log.profiles?.nome || ""} ${log.profiles?.nickname || ""} ${log.profiles?.email || ""} ${effectiveAction}`.toLowerCase();
         const matchesSearch = searchStr.includes(searchTerm.toLowerCase());
         return matchesAction && matchesSearch;
     });
 
-    const uniqueActions = Array.from(new Set(logs.map(l => l.action)));
+    const uniqueActions = Array.from(new Set(logs.map(l => getEffectiveAction(l))));
 
     const getActionBadgeColor = (action: string) => {
+        if (action === "update_bet") return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200";
         if (action.includes("update") || action.includes("edit")) return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200";
         if (action.includes("delete") || action.includes("remove")) return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200";
         if (action.includes("create") || action.includes("insert") || action.includes("bet")) return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200";
@@ -96,15 +108,12 @@ export default function LogsPage() {
         return "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200";
     };
 
-    const getActionLabel = (action: string, details?: any) => {
+    const getActionLabel = (action: string) => {
         switch(action) {
             case 'login': return 'Login';
             case 'update_profile': return 'Atualizou Perfil';
-            case 'place_bet': 
-                if (details && (details.old_home !== undefined || details["Old Home"] !== undefined || details.Tipo === "Alterou Palpite Existente")) {
-                    return 'Alterou Palpite';
-                }
-                return 'Realizou Palpite';
+            case 'place_bet': return 'Realizou Palpite';
+            case 'update_bet': return 'Alterou Palpite';
             case 'send_message': return 'Enviou Mensagem';
             case 'update_presence': return 'Mudou Presença';
             case 'update_status': return 'Status Alterado';
@@ -272,8 +281,8 @@ export default function LogsPage() {
                                                 </div>
                                             </TableCell>
                                             <TableCell>
-                                                <Badge className={`${getActionBadgeColor(log.action)} font-normal`} variant="secondary">
-                                                    {getActionLabel(log.action, log.details)}
+                                                <Badge className={`${getActionBadgeColor(getEffectiveAction(log))} font-normal`} variant="secondary">
+                                                    {getActionLabel(getEffectiveAction(log))}
                                                 </Badge>
                                             </TableCell>
                                             <TableCell className="text-right">
@@ -296,8 +305,8 @@ export default function LogsPage() {
                                                                 </div>
                                                                 <div>
                                                                     <span className="text-muted-foreground block text-xs">Ação:</span>
-                                                                    <Badge className={`${getActionBadgeColor(selectedLog?.action || "")} font-normal mt-1`} variant="secondary">
-                                                                        {getActionLabel(selectedLog?.action || "", selectedLog?.details)}
+                                                                    <Badge className={`${getActionBadgeColor(selectedLog ? getEffectiveAction(selectedLog) : "")} font-normal mt-1`} variant="secondary">
+                                                                        {getActionLabel(selectedLog ? getEffectiveAction(selectedLog) : "")}
                                                                     </Badge>
                                                                 </div>
                                                                 <div>
