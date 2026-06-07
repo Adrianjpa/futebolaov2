@@ -96,11 +96,15 @@ export default function LogsPage() {
         return "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200";
     };
 
-    const getActionLabel = (action: string) => {
+    const getActionLabel = (action: string, details?: any) => {
         switch(action) {
             case 'login': return 'Login';
             case 'update_profile': return 'Atualizou Perfil';
-            case 'place_bet': return 'Realizou Palpite';
+            case 'place_bet': 
+                if (details && (details.old_home !== undefined || details["Old Home"] !== undefined || details.Tipo === "Alterou Palpite Existente")) {
+                    return 'Alterou Palpite';
+                }
+                return 'Realizou Palpite';
             case 'send_message': return 'Enviou Mensagem';
             case 'update_presence': return 'Mudou Presença';
             case 'update_status': return 'Status Alterado';
@@ -119,6 +123,8 @@ export default function LogsPage() {
             const matchInfo = matchesDict.get(matchId);
             const matchName = matchInfo ? `${matchInfo.home} x ${matchInfo.away} (${matchInfo.champName})` : `ID: ${matchId}`;
 
+            const hasOldScore = details.old_home !== undefined || details["Old Home"] !== undefined;
+
             return (
                 <div className="space-y-4">
                     <div className="flex flex-col gap-1 border-b pb-3">
@@ -126,25 +132,34 @@ export default function LogsPage() {
                         <span className="font-bold text-lg">{matchName}</span>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="bg-red-50 dark:bg-red-950/20 p-3 rounded-lg border border-red-100 dark:border-red-900/30">
-                            <span className="text-xs text-red-600 dark:text-red-400 font-bold uppercase mb-1 block">Antes</span>
-                            {(details.old_home !== undefined || details["Old Home"] !== undefined) ? (
-                                <span className="text-xl font-mono">{details.old_home ?? details["Old Home"]} - {details.old_away ?? details["Old Away"]}</span>
-                            ) : (
-                                <span className="text-sm italic text-muted-foreground">Nenhum palpite anterior</span>
-                            )}
-                        </div>
-
-                        <div className="bg-green-50 dark:bg-green-950/20 p-3 rounded-lg border border-green-100 dark:border-green-900/30">
-                            <span className="text-xs text-green-600 dark:text-green-400 font-bold uppercase mb-1 block">Depois</span>
+                    {!hasOldScore ? (
+                         <div className="bg-green-50 dark:bg-green-950/20 p-4 rounded-lg border border-green-100 dark:border-green-900/30 text-center">
+                            <span className="text-xs text-green-600 dark:text-green-400 font-bold uppercase mb-2 block">Placar Salvo</span>
                             {(details.home_score !== undefined || details["Home Score"] !== undefined) ? (
-                                <span className="text-xl font-mono font-bold text-green-700 dark:text-green-300">{details.home_score ?? details["Home Score"]} - {details.away_score ?? details["Away Score"]}</span>
+                                <span className="text-3xl font-mono font-bold text-green-700 dark:text-green-300">
+                                    {details.home_score ?? details["Home Score"]} - {details.away_score ?? details["Away Score"]}
+                                </span>
                             ) : (
                                 <span className="text-sm italic text-muted-foreground">Sem dados de placar</span>
                             )}
                         </div>
-                    </div>
+                    ) : (
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="bg-red-50 dark:bg-red-950/20 p-3 rounded-lg border border-red-100 dark:border-red-900/30">
+                                <span className="text-xs text-red-600 dark:text-red-400 font-bold uppercase mb-1 block">Antes</span>
+                                <span className="text-xl font-mono">{details.old_home ?? details["Old Home"]} - {details.old_away ?? details["Old Away"]}</span>
+                            </div>
+
+                            <div className="bg-green-50 dark:bg-green-950/20 p-3 rounded-lg border border-green-100 dark:border-green-900/30">
+                                <span className="text-xs text-green-600 dark:text-green-400 font-bold uppercase mb-1 block">Depois</span>
+                                {(details.home_score !== undefined || details["Home Score"] !== undefined) ? (
+                                    <span className="text-xl font-mono font-bold text-green-700 dark:text-green-300">{details.home_score ?? details["Home Score"]} - {details.away_score ?? details["Away Score"]}</span>
+                                ) : (
+                                    <span className="text-sm italic text-muted-foreground">Sem dados de placar</span>
+                                )}
+                            </div>
+                        </div>
+                    )}
                 </div>
             );
         }
@@ -258,7 +273,7 @@ export default function LogsPage() {
                                             </TableCell>
                                             <TableCell>
                                                 <Badge className={`${getActionBadgeColor(log.action)} font-normal`} variant="secondary">
-                                                    {getActionLabel(log.action)}
+                                                    {getActionLabel(log.action, log.details)}
                                                 </Badge>
                                             </TableCell>
                                             <TableCell className="text-right">
@@ -282,7 +297,7 @@ export default function LogsPage() {
                                                                 <div>
                                                                     <span className="text-muted-foreground block text-xs">Ação:</span>
                                                                     <Badge className={`${getActionBadgeColor(selectedLog?.action || "")} font-normal mt-1`} variant="secondary">
-                                                                        {getActionLabel(selectedLog?.action || "")}
+                                                                        {getActionLabel(selectedLog?.action || "", selectedLog?.details)}
                                                                     </Badge>
                                                                 </div>
                                                                 <div>
