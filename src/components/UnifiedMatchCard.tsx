@@ -951,7 +951,10 @@ export function UnifiedMatchCard({
                                             <AvatarFallback className="bg-purple-900 text-purple-100 text-xs font-bold">LO</AvatarFallback>
                                         </Avatar>
                                         <div className="flex flex-col min-w-0 leading-none">
-                                            <span className="text-[10px] font-bold text-purple-600 dark:text-purple-400 uppercase tracking-widest mb-0.5">INTELIGÊNCIA ARTIFICIAL</span>
+                                            <span className="text-[10px] font-bold text-purple-600 dark:text-purple-400 uppercase tracking-widest mb-0.5">
+                                                <span className="sm:hidden">IA</span>
+                                                <span className="hidden sm:inline">INTELIGÊNCIA ARTIFICIAL</span>
+                                            </span>
                                             <span className="text-sm font-bold text-slate-800 dark:text-slate-200 truncate flex items-center gap-1.5 hover:underline">
                                                 Lóia <Ghost className="h-3.5 w-3.5 text-purple-500 dark:text-purple-400 opacity-90" />
                                             </span>
