@@ -89,6 +89,29 @@ export default function EditChampionshipPage() {
                 if (rulesError) console.error("Error saving phase rules:", rulesError);
             }
 
+            // Cleanup removed participants' predictions
+            try {
+                const oldParticipants = championship?.participants || [];
+                const newParticipants = sanitizedSettings.participants || [];
+                const removedParticipantIds = oldParticipants
+                    .map((p: any) => p.userId || p.user_id)
+                    .filter((id: string) => !newParticipants.some((np: any) => (np.userId || np.user_id) === id));
+
+                if (removedParticipantIds.length > 0) {
+                    const { data: matches } = await supabase.from('matches').select('id').eq('championship_id', params.id as string);
+                    if (matches && matches.length > 0) {
+                        const matchIds = matches.map((m: any) => m.id);
+                        const { error: deletePredsError } = await (supabase.from('predictions') as any)
+                            .delete()
+                            .in('user_id', removedParticipantIds)
+                            .in('match_id', matchIds);
+                        if (deletePredsError) console.error("Erro ao deletar palpites de removidos:", deletePredsError);
+                    }
+                }
+            } catch (cleanupError) {
+                console.error("Erro no cleanup de palpites:", cleanupError);
+            }
+
             alert("Campeonato atualizado com sucesso!");
             router.push(`/admin/championships/${params.id}`);
         } catch (error: any) {
