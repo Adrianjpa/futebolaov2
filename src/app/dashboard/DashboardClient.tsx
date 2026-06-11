@@ -453,6 +453,64 @@ export default function DashboardClient() {
                 </div>
             )}
 
+            {/* Segue o Líder Banners */}
+            {(() => {
+                const activeChampsForLeader = isAdmin 
+                    ? Object.values(championshipsMap).filter((c: any) => c.status === 'ativo').map((c: any) => c.id)
+                    : Array.from(userParticipation).filter(id => championshipsMap[id]?.status === 'ativo');
+
+                if (activeChampsForLeader.length === 0) return null;
+
+                return (
+                    <div className="space-y-4">
+                        {activeChampsForLeader.map(champId => {
+                            const champ = championshipsMap[champId];
+                            const leader = leadersMap[champId];
+                            if (!champ || !leader) return null;
+
+                            return (
+                                <div key={`leader-${champId}`} className="bg-gradient-to-r from-yellow-500/20 via-amber-500/10 to-orange-500/20 border border-yellow-500/40 rounded-2xl p-4 sm:p-6 flex flex-col sm:flex-row items-center justify-between gap-4 relative overflow-hidden shadow-sm">
+                                    <div className="absolute top-0 right-0 -mt-6 -mr-6 text-yellow-500/10 z-0">
+                                        <Trophy className="w-32 h-32" />
+                                    </div>
+                                    <div className="flex flex-col sm:flex-row items-center gap-4 z-10 w-full sm:w-auto">
+                                        <div className="relative shrink-0">
+                                            <Avatar className="h-20 w-20 border-4 border-yellow-500/80 shadow-xl">
+                                                <AvatarImage src={leader.foto_perfil} className="object-cover" />
+                                                <AvatarFallback className="bg-yellow-100 text-yellow-800 text-2xl font-black">
+                                                    {(leader.nickname?.charAt(0) || leader.nome?.charAt(0) || 'U').toUpperCase()}
+                                                </AvatarFallback>
+                                            </Avatar>
+                                            <div className="absolute -bottom-2 -right-2 bg-yellow-500 text-yellow-950 p-1.5 rounded-full shadow-lg border-2 border-background">
+                                                <Trophy className="h-4 w-4" />
+                                            </div>
+                                        </div>
+                                        <div className="flex flex-col text-center sm:text-left">
+                                            <div className="text-yellow-600 dark:text-yellow-400 font-black tracking-widest uppercase text-[10px] sm:text-xs mb-1 flex items-center justify-center sm:justify-start gap-1">
+                                                <Activity className="h-3 w-3" /> SEGUE O LÍDER • {champ.name}
+                                            </div>
+                                            <div className="text-xl sm:text-2xl font-black text-foreground uppercase truncate max-w-[250px] sm:max-w-[400px]">
+                                                {leader.nickname || leader.nome}
+                                            </div>
+                                            <div className="text-sm font-medium text-muted-foreground mt-0.5">
+                                                <span className="text-foreground font-bold text-lg">{leader.total_points}</span> pts
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="z-10 w-full sm:w-auto mt-2 sm:mt-0">
+                                        <Link href="/dashboard/ranking" prefetch={false} className="w-full">
+                                            <Button className="w-full sm:w-auto font-bold uppercase tracking-wider text-xs h-10 shadow-md bg-gradient-to-r from-yellow-500 to-amber-500 text-yellow-950 hover:from-yellow-400 hover:to-amber-400 border-none transition-all hover:scale-105">
+                                                Ver Ranking
+                                            </Button>
+                                        </Link>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                );
+            })()}
+
             {/* Live Matches Section */}
             {(liveMatches.length > 0 || isAdmin) && (
                 liveMatches.length > 0 ? (
