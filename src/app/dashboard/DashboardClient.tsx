@@ -47,6 +47,7 @@ export default function DashboardClient() {
     const [showRulesModal, setShowRulesModal] = useState(false);
     const [selectedRulesChamp, setSelectedRulesChamp] = useState<any>(null);
     const [acceptingRules, setAcceptingRules] = useState(false);
+    const [selectedLeaderModal, setSelectedLeaderModal] = useState<any>(null);
 
     const supabase = createClient();
     const isAdmin = profile?.funcao === "admin" || profile?.funcao === "moderator";
@@ -83,34 +84,20 @@ export default function DashboardClient() {
                     .map((c: any) => c.id);
 
                 if (activeChampIds.length > 0) {
-                    const { data: rankingData } = await (supabase
-                        .from("ranking_by_championship") as any)
-                        .select("*")
-                        .in("championship_id", activeChampIds);
-
                     const newLeadersMap: Record<string, any> = {};
-
-                    if (rankingData) {
-                        const grouped: Record<string, any[]> = {};
-                        rankingData.forEach((row: any) => {
-                            if (!grouped[row.championship_id]) grouped[row.championship_id] = [];
-                            grouped[row.championship_id].push(row);
-                        });
-
-                        for (const champId of activeChampIds) {
-                            const rows = grouped[champId] || [];
-                            if (rows.length > 0) {
-                                rows.sort((a, b) => {
-                                    if (b.total_points !== a.total_points) return b.total_points - a.total_points;
-                                    if (b.exact_scores !== a.exact_scores) return (b.exact_scores || 0) - (a.exact_scores || 0);
-                                    if (b.outcomes !== a.outcomes) return (b.outcomes || 0) - (a.outcomes || 0);
-                                    if (b.errors !== a.errors) return (a.errors || 0) - (b.errors || 0);
-                                    return (a.nickname || a.nome || "").localeCompare(b.nickname || b.nome || "");
-                                });
-                                newLeadersMap[champId] = rows[0];
+                    await Promise.all(activeChampIds.map(async (champId) => {
+                        try {
+                            const res = await fetch(`/api/ranking/leader?championship_id=${champId}`);
+                            if (res.ok) {
+                                const json = await res.json();
+                                if (json.leader) {
+                                    newLeadersMap[champId] = json.leader;
+                                }
                             }
+                        } catch (e) {
+                            console.error("Error fetching leader for champ:", champId, e);
                         }
-                    }
+                    }));
                     setLeadersMap(newLeadersMap);
                 }
 
@@ -150,34 +137,20 @@ export default function DashboardClient() {
                     .map((c: any) => c.id);
 
                 if (activeChampIds.length > 0) {
-                    const { data: rankingData } = await (supabase
-                        .from("ranking_by_championship") as any)
-                        .select("*")
-                        .in("championship_id", activeChampIds);
-
                     const newLeadersMap: Record<string, any> = {};
-
-                    if (rankingData) {
-                        const grouped: Record<string, any[]> = {};
-                        rankingData.forEach((row: any) => {
-                            if (!grouped[row.championship_id]) grouped[row.championship_id] = [];
-                            grouped[row.championship_id].push(row);
-                        });
-
-                        for (const champId of activeChampIds) {
-                            const rows = grouped[champId] || [];
-                            if (rows.length > 0) {
-                                rows.sort((a, b) => {
-                                    if (b.total_points !== a.total_points) return b.total_points - a.total_points;
-                                    if (b.exact_scores !== a.exact_scores) return (b.exact_scores || 0) - (a.exact_scores || 0);
-                                    if (b.outcomes !== a.outcomes) return (b.outcomes || 0) - (a.outcomes || 0);
-                                    if (b.errors !== a.errors) return (a.errors || 0) - (b.errors || 0);
-                                    return (a.nickname || a.nome || "").localeCompare(b.nickname || b.nome || "");
-                                });
-                                newLeadersMap[champId] = rows[0];
+                    await Promise.all(activeChampIds.map(async (champId) => {
+                        try {
+                            const res = await fetch(`/api/ranking/leader?championship_id=${champId}`);
+                            if (res.ok) {
+                                const json = await res.json();
+                                if (json.leader) {
+                                    newLeadersMap[champId] = json.leader;
+                                }
                             }
+                        } catch (e) {
+                            console.error("Error fetching leader for champ:", champId, e);
                         }
-                    }
+                    }));
                     setLeadersMap(newLeadersMap);
                 }
             })
@@ -500,20 +473,20 @@ export default function DashboardClient() {
                                         <Trophy className="w-32 h-32" />
                                     </div>
                                     <div className="flex flex-col sm:flex-row items-center gap-4 z-10 w-full sm:w-auto">
-                                        <div className="relative shrink-0">
+                                        <div 
+                                            className="relative shrink-0 cursor-pointer transition-transform hover:scale-105"
+                                            onClick={() => setSelectedLeaderModal(leader)}
+                                        >
                                             <Avatar className="h-20 w-20 border-4 border-yellow-500/80 shadow-xl">
                                                 <AvatarImage src={leader.foto_perfil} className="object-cover" />
                                                 <AvatarFallback className="bg-yellow-100 text-yellow-800 text-2xl font-black">
                                                     {(leader.nickname?.charAt(0) || leader.nome?.charAt(0) || 'U').toUpperCase()}
                                                 </AvatarFallback>
                                             </Avatar>
-                                            <div className="absolute -bottom-2 -right-2 bg-yellow-500 text-yellow-950 p-1.5 rounded-full shadow-lg border-2 border-background">
-                                                <Trophy className="h-4 w-4" />
-                                            </div>
                                         </div>
                                         <div className="flex flex-col text-center sm:text-left">
                                             <div className="text-yellow-600 dark:text-yellow-400 font-black tracking-widest uppercase text-[10px] sm:text-xs mb-1 flex items-center justify-center sm:justify-start gap-1">
-                                                <Activity className="h-3 w-3" /> SEGUE O LÍDER • {champ.name}
+                                                SEGUE O LÍDER • {champ.name}
                                             </div>
                                             <div className="text-xl sm:text-2xl font-black text-foreground uppercase truncate max-w-[250px] sm:max-w-[400px]">
                                                 {leader.nickname || leader.nome}
@@ -735,6 +708,36 @@ export default function DashboardClient() {
                             </>
                         )}
                     </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Leader Modal */}
+            <Dialog open={!!selectedLeaderModal} onOpenChange={(open) => !open && setSelectedLeaderModal(null)}>
+                <DialogContent className="sm:max-w-sm bg-gradient-to-b from-slate-900 to-slate-950 border-yellow-500/30 text-center flex flex-col items-center p-10 pb-12 shadow-2xl shadow-yellow-500/10">
+                    <div className="relative mb-6">
+                        <Avatar className="h-40 w-40 border-[6px] border-yellow-500 shadow-xl shadow-yellow-500/30">
+                            <AvatarImage src={selectedLeaderModal?.foto_perfil} className="object-cover" />
+                            <AvatarFallback className="bg-yellow-100 text-yellow-800 text-6xl font-black">
+                                {(selectedLeaderModal?.nickname?.charAt(0) || selectedLeaderModal?.nome?.charAt(0) || 'U').toUpperCase()}
+                            </AvatarFallback>
+                        </Avatar>
+                        <div className="absolute -bottom-5 left-1/2 -translate-x-1/2 bg-yellow-500 text-yellow-950 p-3 rounded-full shadow-lg border-4 border-slate-900">
+                            <Trophy className="h-8 w-8" />
+                        </div>
+                    </div>
+                    
+                    <h2 className="text-3xl font-black text-foreground uppercase tracking-wider mt-4">
+                        {selectedLeaderModal?.nickname || selectedLeaderModal?.nome}
+                    </h2>
+                    
+                    <div className="text-yellow-500 font-black tracking-widest uppercase text-2xl mt-2 flex items-center justify-center gap-2 drop-shadow-md">
+                        SEGUE O LÍDER
+                    </div>
+                    
+                    <div className="text-muted-foreground mt-6 bg-yellow-500/10 px-6 py-3 rounded-2xl border border-yellow-500/20">
+                        <span className="text-4xl font-black text-yellow-500">{selectedLeaderModal?.total_points}</span>
+                        <span className="text-sm font-bold ml-2 uppercase tracking-widest text-yellow-600/70">pontos</span>
+                    </div>
                 </DialogContent>
             </Dialog>
         </div>
