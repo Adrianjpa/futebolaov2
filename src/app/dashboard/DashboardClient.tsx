@@ -86,18 +86,30 @@ export default function DashboardClient() {
                     const { data: rankingData } = await (supabase
                         .from("ranking_by_championship") as any)
                         .select("*")
-                        .in("championship_id", activeChampIds)
-                        .order("total_points", { ascending: false });
+                        .in("championship_id", activeChampIds);
 
                     const newLeadersMap: Record<string, any> = {};
 
-                    // Logic: Since data is ordered by points desc, the first occurrence of a champ_id is the leader
                     if (rankingData) {
+                        const grouped: Record<string, any[]> = {};
                         rankingData.forEach((row: any) => {
-                            if (!newLeadersMap[row.championship_id]) {
-                                newLeadersMap[row.championship_id] = row;
-                            }
+                            if (!grouped[row.championship_id]) grouped[row.championship_id] = [];
+                            grouped[row.championship_id].push(row);
                         });
+
+                        for (const champId of activeChampIds) {
+                            const rows = grouped[champId] || [];
+                            if (rows.length > 0) {
+                                rows.sort((a, b) => {
+                                    if (b.total_points !== a.total_points) return b.total_points - a.total_points;
+                                    if (b.exact_scores !== a.exact_scores) return (b.exact_scores || 0) - (a.exact_scores || 0);
+                                    if (b.outcomes !== a.outcomes) return (b.outcomes || 0) - (a.outcomes || 0);
+                                    if (b.errors !== a.errors) return (a.errors || 0) - (b.errors || 0);
+                                    return (a.nickname || a.nome || "").localeCompare(b.nickname || b.nome || "");
+                                });
+                                newLeadersMap[champId] = rows[0];
+                            }
+                        }
                     }
                     setLeadersMap(newLeadersMap);
                 }
@@ -141,16 +153,30 @@ export default function DashboardClient() {
                     const { data: rankingData } = await (supabase
                         .from("ranking_by_championship") as any)
                         .select("*")
-                        .in("championship_id", activeChampIds)
-                        .order("total_points", { ascending: false });
+                        .in("championship_id", activeChampIds);
 
                     const newLeadersMap: Record<string, any> = {};
+
                     if (rankingData) {
+                        const grouped: Record<string, any[]> = {};
                         rankingData.forEach((row: any) => {
-                            if (!newLeadersMap[row.championship_id]) {
-                                newLeadersMap[row.championship_id] = row;
-                            }
+                            if (!grouped[row.championship_id]) grouped[row.championship_id] = [];
+                            grouped[row.championship_id].push(row);
                         });
+
+                        for (const champId of activeChampIds) {
+                            const rows = grouped[champId] || [];
+                            if (rows.length > 0) {
+                                rows.sort((a, b) => {
+                                    if (b.total_points !== a.total_points) return b.total_points - a.total_points;
+                                    if (b.exact_scores !== a.exact_scores) return (b.exact_scores || 0) - (a.exact_scores || 0);
+                                    if (b.outcomes !== a.outcomes) return (b.outcomes || 0) - (a.outcomes || 0);
+                                    if (b.errors !== a.errors) return (a.errors || 0) - (b.errors || 0);
+                                    return (a.nickname || a.nome || "").localeCompare(b.nickname || b.nome || "");
+                                });
+                                newLeadersMap[champId] = rows[0];
+                            }
+                        }
                     }
                     setLeadersMap(newLeadersMap);
                 }
