@@ -4,6 +4,7 @@ export const dynamic = 'force-dynamic';
 export const maxDuration = 60; // Max execution time for Vercel Hobby
 import { supabaseAdmin } from "@/lib/supabase-server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { logActivity } from "@/lib/logger";
 
 // Inicializa a API do Gemini
 // A chave deve estar nas variáveis de ambiente da Vercel
@@ -101,12 +102,30 @@ ${promptMatches}
 `;
 
         const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-        const aiResponse = await model.generateContent(prompt);
-        let text = aiResponse.response.text();
         
-        // Limpar possíveis formatações markdown do JSON
-        text = text.replace(/\`\`\`json/g, '').replace(/\`\`\`/g, '').trim();
-        const predictionsArray = JSON.parse(text);
+        let predictionsArray = null;
+        let lastError = null;
+        
+        // Tentar até 3 vezes (Retry pattern) em caso de 503 do Google
+        for (let attempt = 1; attempt <= 3; attempt++) {
+            try {
+                const aiResponse = await model.generateContent(prompt);
+                let text = aiResponse.response.text();
+                text = text.replace(/```json/g, '').replace(/```/g, '').trim();
+                predictionsArray = JSON.parse(text);
+                break; // Se deu certo, sai do loop
+            } catch (err: any) {
+                lastError = err;
+                console.error(`Tentativa ${attempt} falhou:`, err.message);
+                if (attempt < 3) {
+                    await new Promise(resolve => setTimeout(resolve, 2000)); // Espera 2s antes de tentar de novo
+                }
+            }
+        }
+        
+        if (!predictionsArray) {
+            throw new Error(`Falha no Gemini após 3 tentativas. Último erro: ${lastError?.message}`);
+        }
 
         // 6. Inserir os palpites no banco
         const predictionsToInsert = predictionsArray.map((p: any) => ({
@@ -122,6 +141,8 @@ ${promptMatches}
 
         if (insertError) throw insertError;
 
+        await logActivity(supabaseAdmin, (loiaUser as any).id, "CRON_LOIA_SUCCESS", { count: predictionsToInsert.length });
+
         return NextResponse.json({ 
             success: true, 
             message: `Loia fez palpites em ${predictionsToInsert.length} jogos.`,
@@ -130,6 +151,13 @@ ${promptMatches}
 
     } catch (error: any) {
         console.error("Error in Loia predictions cron:", error);
+        
+        // Gravar no banco de dados para conseguirmos ver o erro do automático
+        try {
+            await logActivity(supabaseAdmin, '00000000-0000-0000-0000-000000000000', "CRON_LOIA_ERROR", { error: error.message, stack: error.stack });
+        } catch (e) {}
+        
         return NextResponse.json({ success: false, error: error.message }, { status: 500 });
     }
 }
+
