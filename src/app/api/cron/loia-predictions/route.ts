@@ -47,9 +47,9 @@ export async function GET(request: Request) {
 
         const champIds = loiaChamps.map((c: any) => c.id);
 
-        // 3. Buscar jogos "agendados" (scheduled) nas próximas 120 horas (5 dias) para esses campeonatos
+        // 3. Buscar jogos "agendados" (scheduled) nas próximas 48 horas (2 dias) para esses campeonatos
         const now = new Date();
-        const nextWindow = new Date(now.getTime() + 5 * 24 * 60 * 60 * 1000);
+        const nextWindow = new Date(now.getTime() + 2 * 24 * 60 * 60 * 1000);
 
         const { data: matches } = await supabaseAdmin
             .from("matches")
@@ -60,7 +60,7 @@ export async function GET(request: Request) {
             .lte("date", nextWindow.toISOString());
 
         if (!matches || matches.length === 0) {
-            return NextResponse.json({ success: true, message: "Sem jogos na janela de 5 dias." });
+            return NextResponse.json({ success: true, message: "Sem jogos na janela de 2 dias." });
         }
 
         // 4. Filtrar jogos que o Loia JÁ palpitou para não repetir
@@ -75,7 +75,7 @@ export async function GET(request: Request) {
         const pendingMatches = (matches as any[]).filter((m: any) => !predictedMatchIds.has(m.id));
 
         if (pendingMatches.length === 0) {
-            return NextResponse.json({ success: true, message: "Loia já palpitou em todos os jogos dos próximos 5 dias." });
+            return NextResponse.json({ success: true, message: "Loia já palpitou em todos os jogos dos próximos 2 dias." });
         }
 
         // 5. Preparar prompt para o Gemini
