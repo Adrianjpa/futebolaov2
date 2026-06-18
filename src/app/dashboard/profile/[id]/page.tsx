@@ -81,7 +81,7 @@ export default function PublicProfilePage() {
                 // 2. Fetch User Predictions with Match info to get Championship ID and Scores
                 const { data: predictions } = await (supabase
                     .from("predictions") as any)
-                    .select("*, matches(championship_id, score_home, score_away)")
+                    .select("*, matches(championship_id, score_home, score_away, status)")
                     .eq("user_id", id);
 
                 const preds = (predictions || []).map((p: any) => ({
@@ -183,7 +183,7 @@ export default function PublicProfilePage() {
             pontos += (p.points || 0);
 
             const match = p.matches;
-            if (match && match.score_home !== null && match.score_away !== null) {
+            if (match && match.status === 'finished' && match.score_home !== null && match.score_away !== null) {
                 const ph = p.home_score;
                 const pa = p.away_score;
                 const mh = match.score_home;
