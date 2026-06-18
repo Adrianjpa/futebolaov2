@@ -222,6 +222,8 @@ export default function HistoryClient() {
                     };
                 }).filter(Boolean) || [];
 
+                filtered.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
                 totalCount = filtered.length;
                 formattedMatches = filtered.slice(from, to + 1);
             } else {
