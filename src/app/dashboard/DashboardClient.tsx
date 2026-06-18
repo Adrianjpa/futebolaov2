@@ -472,7 +472,7 @@ export default function DashboardClient() {
                                     <div className="flex flex-col sm:flex-row items-center gap-4 z-10 w-full sm:w-auto">
                                         <div 
                                             className="relative shrink-0 cursor-pointer transition-transform hover:scale-105"
-                                            onClick={() => setSelectedLeaderModal(leader)}
+                                            onClick={() => setSelectedLeaderModal({ leader, champ })}
                                         >
                                             <Avatar className="h-20 w-20 border-4 border-yellow-500/80 shadow-xl">
                                                 <AvatarImage src={leader.foto_perfil} className="object-cover" />
@@ -710,12 +710,33 @@ export default function DashboardClient() {
 
             {/* Leader Modal */}
             <Dialog open={!!selectedLeaderModal} onOpenChange={(open) => !open && setSelectedLeaderModal(null)}>
-                <DialogContent className="sm:max-w-sm bg-gradient-to-b from-slate-900 to-slate-950 border-yellow-500/30 text-center flex flex-col items-center p-10 pb-12 shadow-2xl shadow-yellow-500/10">
-                    <div className="relative mb-6">
+                <DialogContent 
+                    className="sm:max-w-sm border-yellow-500/30 text-center flex flex-col items-center p-10 pb-12 shadow-2xl shadow-yellow-500/10 bg-cover bg-center bg-no-repeat relative overflow-hidden"
+                    style={{
+                        backgroundImage: selectedLeaderModal?.champ?.settings?.bannerConfig?.backgroundUrl 
+                            ? `url(${selectedLeaderModal.champ.settings.bannerConfig.backgroundUrl})`
+                            : 'none',
+                        backgroundColor: selectedLeaderModal?.champ?.settings?.bannerConfig?.backgroundUrl ? 'transparent' : undefined
+                    }}
+                >
+                    {/* Fallback gradient if no image */}
+                    {!selectedLeaderModal?.champ?.settings?.bannerConfig?.backgroundUrl && (
+                        <div className="absolute inset-0 bg-gradient-to-b from-slate-900 to-slate-950 -z-10" />
+                    )}
+                    
+                    {/* Dark overlay for contrast if image exists */}
+                    {selectedLeaderModal?.champ?.settings?.bannerConfig?.backgroundUrl && (
+                        <div className="absolute inset-0 bg-black/60 mix-blend-multiply -z-10" />
+                    )}
+                    {selectedLeaderModal?.champ?.settings?.bannerConfig?.backgroundUrl && (
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-black/40 -z-10" />
+                    )}
+
+                    <div className="relative mb-6 z-10 mt-4">
                         <Avatar className="h-40 w-40 border-[6px] border-yellow-500 shadow-xl shadow-yellow-500/30">
-                            <AvatarImage src={selectedLeaderModal?.foto_perfil} className="object-cover" />
+                            <AvatarImage src={selectedLeaderModal?.leader?.foto_perfil} className="object-cover" />
                             <AvatarFallback className="bg-yellow-100 text-yellow-800 text-6xl font-black">
-                                {(selectedLeaderModal?.nickname?.charAt(0) || selectedLeaderModal?.nome?.charAt(0) || 'U').toUpperCase()}
+                                {(selectedLeaderModal?.leader?.nickname?.charAt(0) || selectedLeaderModal?.leader?.nome?.charAt(0) || 'U').toUpperCase()}
                             </AvatarFallback>
                         </Avatar>
                         <div className="absolute -bottom-5 left-1/2 -translate-x-1/2 bg-yellow-500 text-yellow-950 p-3 rounded-full shadow-lg border-4 border-slate-900">
@@ -723,17 +744,17 @@ export default function DashboardClient() {
                         </div>
                     </div>
                     
-                    <h2 className="text-3xl font-black text-foreground uppercase tracking-wider mt-4">
-                        {selectedLeaderModal?.nickname || selectedLeaderModal?.nome}
+                    <h2 className="text-3xl font-black text-foreground uppercase tracking-wider mt-4 z-10" style={{ color: selectedLeaderModal?.champ?.settings?.bannerConfig?.namesColor || "white", textShadow: "0 2px 10px rgba(0,0,0,0.5)" }}>
+                        {selectedLeaderModal?.leader?.nickname || selectedLeaderModal?.leader?.nome}
                     </h2>
                     
-                    <div className="text-yellow-500 font-black tracking-widest uppercase text-2xl mt-2 flex items-center justify-center gap-2 drop-shadow-md">
+                    <div className="font-black tracking-widest uppercase text-2xl mt-2 flex items-center justify-center gap-2 drop-shadow-md z-10" style={{ color: selectedLeaderModal?.champ?.settings?.bannerConfig?.subtitleColor || "#EAB308" }}>
                         SEGUE O LÍDER
                     </div>
                     
-                    <div className="text-muted-foreground mt-6 bg-yellow-500/10 px-6 py-3 rounded-2xl border border-yellow-500/20">
-                        <span className="text-4xl font-black text-yellow-500">{selectedLeaderModal?.total_points}</span>
-                        <span className="text-sm font-bold ml-2 uppercase tracking-widest text-yellow-600/70">pontos</span>
+                    <div className="mt-6 px-6 py-3 rounded-2xl border bg-black/40 border-white/10 backdrop-blur-sm z-10">
+                        <span className="text-4xl font-black text-yellow-500" style={{ color: selectedLeaderModal?.champ?.settings?.bannerConfig?.subtitleColor || "#EAB308" }}>{selectedLeaderModal?.leader?.total_points}</span>
+                        <span className="text-sm font-bold ml-2 uppercase tracking-widest text-white/70">pontos</span>
                     </div>
                 </DialogContent>
             </Dialog>
