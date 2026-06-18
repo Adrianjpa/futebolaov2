@@ -711,7 +711,7 @@ export default function DashboardClient() {
             {/* Leader Modal */}
             <Dialog open={!!selectedLeaderModal} onOpenChange={(open) => !open && setSelectedLeaderModal(null)}>
                 <DialogContent 
-                    className="sm:max-w-sm border-yellow-500/30 text-center flex flex-col items-center p-10 pb-12 shadow-2xl shadow-yellow-500/10 bg-cover bg-center bg-no-repeat relative overflow-hidden"
+                    className="sm:max-w-sm border-yellow-500/30 text-center flex flex-col items-center p-10 pb-12 shadow-2xl shadow-yellow-500/10 bg-cover bg-center bg-no-repeat overflow-hidden"
                     style={{
                         backgroundImage: selectedLeaderModal?.champ?.settings?.bannerConfig?.backgroundUrl 
                             ? `url(${selectedLeaderModal.champ.settings.bannerConfig.backgroundUrl})`
