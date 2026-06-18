@@ -171,7 +171,8 @@ export default function HistoryClient() {
             if (paramUser && paramType) {
                 let query = (supabase.from("predictions") as any)
                     .select("*, matches!inner(*)")
-                    .eq("user_id", paramUser);
+                    .eq("user_id", paramUser)
+                    .eq("matches.status", "finished");
 
                 if (selectedChampionship !== "all") {
                     query = query.filter("matches.championship_id", "eq", selectedChampionship);
@@ -228,7 +229,8 @@ export default function HistoryClient() {
                 if (paramUser) {
                     query = (supabase.from("predictions") as any)
                         .select("*, matches!inner(*)", { count: "exact" })
-                        .eq("user_id", paramUser);
+                        .eq("user_id", paramUser)
+                        .eq("matches.status", "finished");
                     query = query.order("date", { foreignTable: "matches", ascending: false });
                     if (selectedChampionship !== "all") {
                         query = query.filter("matches.championship_id", "eq", selectedChampionship);
