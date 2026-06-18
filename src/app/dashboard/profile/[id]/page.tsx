@@ -5,7 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { createClient } from "@/lib/supabase";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Loader2, User, Trophy, Users, Gamepad2, Clock, Target, CheckCircle, Gem, XCircle, Goal, ArrowLeft, UserX, Star } from "lucide-react";
+import { Loader2, User, Trophy, Users, Gamepad2, Clock, Target, CheckCircle, Gem, XCircle, Goal, ArrowLeft, UserX, Star, Info } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -367,7 +367,19 @@ export default function PublicProfilePage() {
             {championships.length > 0 && (
                 <div className="space-y-4">
                     <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-                        <h2 className="text-xl font-bold">Estatísticas por Campeonato</h2>
+                        <div className="flex items-center gap-2">
+                            <h2 className="text-xl font-bold">Estatísticas por Campeonato</h2>
+                            <TooltipProvider delayDuration={100}>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Info className="h-5 w-5 text-muted-foreground hover:text-primary transition-colors cursor-help" />
+                                    </TooltipTrigger>
+                                    <TooltipContent className="max-w-[280px] bg-slate-900 border-slate-800 text-slate-100 p-3 shadow-xl z-50">
+                                        <p>As informações dos cards abaixo só serão consolidadas quando os jogos finalizarem. Para ver pontuações de jogos em andamento (Realtime), consulte o Ranking.</p>
+                                    </TooltipContent>
+                                </Tooltip>
+                            </TooltipProvider>
+                        </div>
                         <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
                             <Select value={categoryFilter} onValueChange={handleCategoryChange}>
                                 <SelectTrigger className="w-full sm:w-[150px]"><SelectValue placeholder="Agrupamento" /></SelectTrigger>
