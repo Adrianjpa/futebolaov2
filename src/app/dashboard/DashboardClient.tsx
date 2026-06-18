@@ -469,9 +469,6 @@ export default function DashboardClient() {
 
                             return (
                                 <div key={`leader-${champId}`} className="bg-gradient-to-r from-yellow-500/20 via-amber-500/10 to-orange-500/20 border border-yellow-500/40 rounded-2xl p-4 sm:p-6 flex flex-col sm:flex-row items-center justify-between gap-4 relative overflow-hidden shadow-sm">
-                                    <div className="absolute top-0 right-0 -mt-6 -mr-6 text-yellow-500/10 z-0">
-                                        <Trophy className="w-32 h-32" />
-                                    </div>
                                     <div className="flex flex-col sm:flex-row items-center gap-4 z-10 w-full sm:w-auto">
                                         <div 
                                             className="relative shrink-0 cursor-pointer transition-transform hover:scale-105"
