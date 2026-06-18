@@ -740,8 +740,12 @@ export default function DashboardClient() {
                                 {(selectedLeaderModal?.leader?.nickname?.charAt(0) || selectedLeaderModal?.leader?.nome?.charAt(0) || 'U').toUpperCase()}
                             </AvatarFallback>
                         </Avatar>
-                        <div className="absolute -bottom-5 left-1/2 -translate-x-1/2 bg-yellow-500 text-yellow-950 p-3 rounded-full shadow-lg border-4 border-slate-900">
-                            <Trophy className="h-8 w-8" />
+                        <div className="absolute -bottom-5 left-1/2 -translate-x-1/2 bg-yellow-500 text-yellow-950 p-1.5 rounded-full shadow-lg border-4 border-slate-900 flex items-center justify-center overflow-hidden h-14 w-14">
+                            {selectedLeaderModal?.champ?.settings?.bannerConfig?.championshipLogoUrl || selectedLeaderModal?.champ?.settings?.iconUrl || selectedLeaderModal?.champ?.icon_url ? (
+                                <img src={selectedLeaderModal.champ.settings.bannerConfig?.championshipLogoUrl || selectedLeaderModal.champ.settings.iconUrl || selectedLeaderModal.champ.icon_url} alt="Logo" className="w-full h-full object-contain drop-shadow-md" />
+                            ) : (
+                                <Trophy className="h-8 w-8" />
+                            )}
                         </div>
                     </div>
                     
