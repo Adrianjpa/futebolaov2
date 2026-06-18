@@ -719,6 +719,7 @@ export default function DashboardClient() {
                         backgroundColor: selectedLeaderModal?.champ?.settings?.bannerConfig?.backgroundUrl ? 'transparent' : undefined
                     }}
                 >
+                    <DialogTitle className="sr-only">Líder do Campeonato</DialogTitle>
                     {/* Fallback gradient if no image */}
                     {!selectedLeaderModal?.champ?.settings?.bannerConfig?.backgroundUrl && (
                         <div className="absolute inset-0 bg-gradient-to-b from-slate-900 to-slate-950 -z-10" />
