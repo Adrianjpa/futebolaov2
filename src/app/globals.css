@@ -15,11 +15,11 @@
   /* Transparent base, handled by body bg */
   --foreground: hsl(240 10% 3.9%);
 
-  /* Glassmorphism Cards */
-  --card: hsl(0 0% 100% / 0.6);
+  /* Solid Cards (Optimized Performance) */
+  --card: hsl(0 0% 100%);
   --card-foreground: hsl(240 10% 3.9%);
 
-  --popover: hsl(0 0% 100% / 0.8);
+  --popover: hsl(0 0% 100%);
   --popover-foreground: hsl(240 10% 3.9%);
 
   --primary: hsl(210 100% 50%);
@@ -57,10 +57,10 @@
   --background: hsl(240 10% 3.9%);
   --foreground: hsl(0 0% 98%);
 
-  --card: hsl(240 10% 3.9% / 0.6);
+  --card: hsl(240 10% 3.9%);
   --card-foreground: hsl(0 0% 98%);
 
-  --popover: hsl(240 10% 3.9% / 0.8);
+  --popover: hsl(240 10% 3.9%);
   --popover-foreground: hsl(0 0% 98%);
 
   --primary: hsl(210 100% 50%);
