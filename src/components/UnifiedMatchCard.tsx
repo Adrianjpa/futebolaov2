@@ -74,7 +74,7 @@ export function UnifiedMatchCard({
     const isCritical = !isAdmin && !hasPrediction && !isFinished && !isLive && minutesToStart > 0 && minutesToStart <= 30; // 30 mins
 
     const urgencyClass = isCritical
-        ? "border-red-500/50 shadow-sm shadow-red-500/20  bg-red-500/5"
+        ? "border-red-500/50 shadow-sm shadow-red-500/20 bg-red-500/5 animate-border-pulse"
         : isUrgent
             ? "border-yellow-500/50 shadow-sm shadow-yellow-500/20 bg-yellow-500/5"
             : "";
