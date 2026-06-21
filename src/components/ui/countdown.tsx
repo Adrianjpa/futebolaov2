@@ -37,7 +37,7 @@ export function Countdown({ targetDate, onZero, variant = "inline" }: CountdownP
         return () => clearInterval(timer);
     }, [targetDate, onZero]);
 
-    if (timeLeft <= 0) return <span className="text-red-600 dark:text-red-500 font-bold text-[10px] animate-pulse">AGUARDANDO</span>;
+    if (timeLeft <= 0) return <span className="text-red-600 dark:text-red-500 font-bold text-[10px]">AGUARDANDO</span>;
 
     const days = Math.floor(timeLeft / 86400);
     const hours = Math.floor((timeLeft % 86400) / 3600);
@@ -70,8 +70,8 @@ export function Countdown({ targetDate, onZero, variant = "inline" }: CountdownP
     }
 
     return (
-        <span className="font-mono font-bold text-red-600 animate-pulse">
-            {days > 0 ? `${String(days).padStart(2, '0')}:` : ''}{String(hours).padStart(2, '0')}:{String(minutes).padStart(2, '0')}
+        <span className="font-mono font-bold text-red-600 tabular-nums">
+            {days > 0 ? `${String(days).padStart(2, '0')}:` : ''}{String(hours).padStart(2, '0')}:{String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}
         </span>
     );
 }
