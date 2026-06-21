@@ -369,16 +369,16 @@ export default function PublicProfilePage() {
                     <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
                         <div className="flex items-center gap-2">
                             <h2 className="text-xl font-bold">Estatísticas por Campeonato</h2>
-                            <TooltipProvider delayDuration={100}>
-                                <Tooltip>
-                                    <TooltipTrigger asChild>
+                            <Popover>
+                                <PopoverTrigger asChild>
+                                    <button className="rounded-full focus:outline-none focus:ring-2 focus:ring-primary/50">
                                         <Info className="h-5 w-5 text-muted-foreground hover:text-primary transition-colors cursor-help" />
-                                    </TooltipTrigger>
-                                    <TooltipContent className="max-w-[280px] bg-slate-900 border-slate-800 text-slate-100 p-3 shadow-xl z-50">
-                                        <p>As informações dos cards abaixo só serão consolidadas quando os jogos finalizarem. Para ver pontuações de jogos em andamento (Realtime), consulte o Ranking.</p>
-                                    </TooltipContent>
-                                </Tooltip>
-                            </TooltipProvider>
+                                    </button>
+                                </PopoverTrigger>
+                                <PopoverContent side="top" className="w-auto max-w-[280px] text-sm p-3 bg-slate-900 border-slate-800 text-slate-100 shadow-xl z-50">
+                                    <p>As informações dos cards abaixo só serão consolidadas quando os jogos finalizarem. Para ver pontuações de jogos em andamento (Realtime), consulte o Ranking.</p>
+                                </PopoverContent>
+                            </Popover>
                         </div>
                         <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
                             <Select value={categoryFilter} onValueChange={handleCategoryChange}>
