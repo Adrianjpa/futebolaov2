@@ -163,6 +163,22 @@ export function UnifiedMatchCard({
 
             if (data) {
                 const pred = data as any;
+                
+                // For live/finished matches, fetch true timestamp via API to bypass RLS
+                if (isLive || isFinished) {
+                    try {
+                        const res = await fetch(`/api/predictions/timestamp?matchId=${match.id}&userId=${effectiveUserId}`);
+                        if (res.ok) {
+                            const { timestamp } = await res.json();
+                            if (timestamp) {
+                                pred.updated_at = timestamp;
+                            }
+                        }
+                    } catch (e) {
+                        console.error("Error fetching true timestamp:", e);
+                    }
+                }
+
                 setBetHome(pred.home_score.toString());
                 setBetAway(pred.away_score.toString());
                 setIsComboActive(pred.is_combo || false);
@@ -834,7 +850,7 @@ export function UnifiedMatchCard({
 
                                                         return (
                                                             <>
-                                                                {isAltered ? "Alterado em: " : "Adicionado em: "}
+                                                                {isAltered ? "Última alteração em: " : "Adicionado em: "}
                                                                 {showDate && format(showDate, "dd/MM HH:mm", { locale: ptBR })}
                                                             </>
                                                         );
@@ -846,11 +862,34 @@ export function UnifiedMatchCard({
                                 ) : (
                                     <div className="flex flex-col items-center">
                                         {isLive || isFinished ? (
-                                            <div className="bg-white dark:bg-black/80 px-5 py-2 sm:px-8 sm:py-3 rounded-2xl md:rounded-full border border-slate-200 dark:border-slate-800 flex items-center gap-4 sm:gap-8 min-w-[100px] sm:min-w-[140px] justify-center shadow-md">
-                                                <span className="text-3xl sm:text-4xl font-bold text-slate-900 dark:text-white font-mono break-keep">{match.score_home ?? 0}</span>
-                                                <span className="text-slate-400 dark:text-slate-600 font-bold text-xl">-</span>
-                                                <span className="text-3xl sm:text-4xl font-bold text-slate-900 dark:text-white font-mono break-keep">{match.score_away ?? 0}</span>
-                                            </div>
+                                            <>
+                                                <div className="bg-white dark:bg-black/80 px-5 py-2 sm:px-8 sm:py-3 rounded-2xl md:rounded-full border border-slate-200 dark:border-slate-800 flex items-center gap-4 sm:gap-8 min-w-[100px] sm:min-w-[140px] justify-center shadow-md">
+                                                    <span className="text-3xl sm:text-4xl font-bold text-slate-900 dark:text-white font-mono break-keep">{match.score_home ?? 0}</span>
+                                                    <span className="text-slate-400 dark:text-slate-600 font-bold text-xl">-</span>
+                                                    <span className="text-3xl sm:text-4xl font-bold text-slate-900 dark:text-white font-mono break-keep">{match.score_away ?? 0}</span>
+                                                </div>
+                                                {!(isAdmin && !targetUserId) && (
+                                                    <div className="mt-2 text-[9px] sm:text-[10px] font-medium opacity-80 flex items-center gap-1.5 justify-center">
+                                                        <Clock className="h-3 w-3" />
+                                                        {predictionCreatedAt || predictionUpdatedAt ? (
+                                                            <span>
+                                                                {(() => {
+                                                                    const showDate = predictionUpdatedAt || predictionCreatedAt;
+                                                                    const isAltered = predictionUpdatedAt && predictionCreatedAt && Math.abs(predictionUpdatedAt.getTime() - predictionCreatedAt.getTime()) > 2000;
+                                                                    return (
+                                                                        <>
+                                                                            {isAltered ? "Última alteração em: " : "Adicionado em: "}
+                                                                            {showDate && format(showDate, "dd/MM HH:mm", { locale: ptBR })}
+                                                                        </>
+                                                                    );
+                                                                })()}
+                                                            </span>
+                                                        ) : (
+                                                            <span>Nenhum placar foi adicionado</span>
+                                                        )}
+                                                    </div>
+                                                )}
+                                            </>
                                         ) : (
                                             <div className="flex flex-col items-center gap-2">
                                                 <span className="text-2xl sm:text-3xl font-black text-slate-300 dark:text-slate-700/60 uppercase tracking-tighter">vs</span>
