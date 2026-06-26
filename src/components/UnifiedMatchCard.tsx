@@ -1091,9 +1091,27 @@ export function UnifiedMatchCard({
                                 <div className="flex justify-center p-4">
                                     <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                                 </div>
-                            ) : predictions.length > 0 ? (
+                            ) : (() => {
+                                const displayPredictions = [...predictions];
+                                if ((isLive || isFinished || isAdmin) && participantsData.length > 0) {
+                                    const predictedUserIds = new Set(predictions.map(p => p.user_id));
+                                    participantsData.forEach(p => {
+                                        if (!predictedUserIds.has(p.userId)) {
+                                            displayPredictions.push({
+                                                isMissing: true,
+                                                user_id: p.userId,
+                                                home_score: null,
+                                                away_score: null,
+                                                points: 0,
+                                            });
+                                        }
+                                    });
+                                }
+                                displayPredictions.sort((a, b) => (b.points || 0) - (a.points || 0));
+
+                                return displayPredictions.length > 0 ? (
                                 <div className="space-y-2">
-                                    {predictions.map((pred) => {
+                                    {displayPredictions.map((pred) => {
                                         let userProfile = users.find(u => u.id === pred.user_id);
                                         if (!userProfile) {
                                             // Fallback for ghost users (like Loia) not in the main users table
@@ -1145,7 +1163,7 @@ export function UnifiedMatchCard({
                                         }
 
                                         return (
-                                            <div key={pred.id} className={`grid grid-cols-[1fr_auto_1fr] sm:grid-cols-3 items-center gap-2 p-3 rounded-xl border transition-colors duration-200 ${bgClass}`}>
+                                            <div key={pred.id || pred.user_id} className={`grid grid-cols-[1fr_auto_1fr] sm:grid-cols-3 items-center gap-2 p-3 rounded-xl border transition-colors duration-200 ${bgClass}`}>
                                                 {/* Left: Avatar + Name */}
                                                 <div className="flex items-center gap-3 min-w-0 overflow-hidden text-left">
                                                     <Avatar
@@ -1174,9 +1192,15 @@ export function UnifiedMatchCard({
 
                                                 {/* Center: Score */}
                                                 <div className="flex justify-center flex-col sm:flex-row items-center gap-1 sm:gap-3">
-                                                    <div className="font-mono font-bold text-lg text-current tracking-widest bg-foreground/10 px-3 py-1 rounded-lg whitespace-nowrap">
-                                                        {pred.home_score} - {pred.away_score}
-                                                    </div>
+                                                    {pred.isMissing ? (
+                                                        <div className="font-mono font-bold text-lg text-current bg-foreground/10 px-4 py-1 rounded-lg border border-border whitespace-nowrap shadow-sm">
+                                                            - x -
+                                                        </div>
+                                                    ) : (
+                                                        <div className="font-mono font-bold text-lg text-current tracking-widest bg-foreground/10 px-3 py-1 rounded-lg whitespace-nowrap">
+                                                            {pred.home_score} - {pred.away_score}
+                                                        </div>
+                                                    )}
                                                 </div>
 
                                                 {/* Right: Points Badge */}
@@ -1208,7 +1232,8 @@ export function UnifiedMatchCard({
                                         {isAdmin ? "Nenhum palpite registrado ainda." : "Nenhum palpite para exibir."}
                                     </p>
                                 </div>
-                            )}
+                            );
+                        })()}
                         </div>
                     </div>
                 )}

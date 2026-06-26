@@ -169,43 +169,61 @@ export default function HistoryClient() {
 
             // If we have a user AND a type filter, we MUST fetch all to filter correctly client-side
             if (paramUser && paramType) {
-                let query = (supabase.from("predictions") as any)
-                    .select("*, matches!inner(*)")
-                    .eq("user_id", paramUser)
-                    .eq("matches.status", "finished");
-
+                let matchQuery = (supabase.from("matches") as any)
+                    .select("*")
+                    .eq("status", "finished");
+                    
                 if (selectedChampionship !== "all") {
-                    query = query.filter("matches.championship_id", "eq", selectedChampionship);
+                    matchQuery = matchQuery.eq("championship_id", selectedChampionship);
                 } else {
-                    query = query.in("matches.championship_id", safeChampIds);
+                    matchQuery = matchQuery.in("championship_id", safeChampIds);
                 }
+                matchQuery = matchQuery.order("date", { ascending: false });
 
-                query = query.order("date", { foreignTable: "matches", ascending: false });
+                const { data: matchesData, error: matchError } = await matchQuery;
+                if (matchError) throw matchError;
 
-                const { data, error } = await query;
-                if (error) throw error;
+                // Fetch predictions for this user to evaluate outcomes
+                let predQuery = (supabase.from("predictions") as any)
+                    .select("*")
+                    .eq("user_id", paramUser);
+                const { data: predsData, error: predError } = await predQuery;
+                if (predError) throw predError;
 
-                const filtered = (data as any[])?.map(p => {
-                    const m = p.matches;
-                    if (!m) return null;
+                const predsMap = new Map((predsData || []).map((p: any) => [p.match_id, p]));
 
-                    const ph = p.home_score;
-                    const pa = p.away_score;
+                const filtered = (matchesData as any[])?.map(m => {
+                    const p = predsMap.get(m.id);
+                    
                     const mh = m.score_home;
                     const ma = m.score_away;
 
                     if (mh === null || ma === null) return null;
 
-                    const winP = ph > pa ? 1 : (ph < pa ? 2 : 0);
                     const winM = mh > ma ? 1 : (mh < ma ? 2 : 0);
 
-                    const isBucha = ph === mh && pa === ma;
-                    const isSituacao = !isBucha && winP === winM;
-                    const isErro = winP !== winM && !(p.is_combo && p.combo_total_goals === mh + ma);
+                    let isBucha = false;
+                    let isSituacao = false;
+                    let isErro = false;
+                    let hitGoals = false;
+                    let isCombo = false;
+                    let isBonus = false;
 
-                    const hitGoals = p.is_combo && p.combo_total_goals === (mh + ma);
-                    const isCombo = isBucha && hitGoals;
-                    const isBonus = !isBucha && hitGoals;
+                    if (p) {
+                        const ph = p.home_score;
+                        const pa = p.away_score;
+                        const winP = ph > pa ? 1 : (ph < pa ? 2 : 0);
+
+                        isBucha = ph === mh && pa === ma;
+                        isSituacao = !isBucha && winP === winM;
+                        hitGoals = p.is_combo && p.combo_total_goals === (mh + ma);
+                        isErro = winP !== winM && !hitGoals;
+                        isCombo = isBucha && hitGoals;
+                        isBonus = !isBucha && hitGoals;
+                    } else {
+                        // NO PREDICTION! This is always an error.
+                        isErro = true;
+                    }
 
                     if (paramType === "bucha" && !isBucha) return null;
                     if (paramType === "situacao" && !isSituacao) return null;
@@ -222,43 +240,29 @@ export default function HistoryClient() {
                     };
                 }).filter(Boolean) || [];
 
+                // Sort by date descending
                 filtered.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
                 totalCount = filtered.length;
                 formattedMatches = filtered.slice(from, to + 1);
             } else {
-                let query;
-                if (paramUser) {
-                    query = (supabase.from("predictions") as any)
-                        .select("*, matches!inner(*)", { count: "exact" })
-                        .eq("user_id", paramUser)
-                        .eq("matches.status", "finished");
-                    query = query.order("date", { foreignTable: "matches", ascending: false });
-                    if (selectedChampionship !== "all") {
-                        query = query.filter("matches.championship_id", "eq", selectedChampionship);
-                    } else {
-                        query = query.in("matches.championship_id", safeChampIds);
-                    }
+                // Without a type filter, history is simply all finished matches for the relevant championships
+                let query = (supabase.from("matches") as any)
+                    .select("*", { count: "exact" })
+                    .eq("status", "finished")
+                    .order("date", { ascending: false });
+                    
+                if (selectedChampionship !== "all") {
+                    query = query.eq("championship_id", selectedChampionship);
                 } else {
-                    // Logged in user querying global matches (must be restricted to their valid participation!)
-                    query = (supabase.from("matches") as any)
-                        .select("*", { count: "exact" })
-                        .eq("status", "finished")
-                        .order("date", { ascending: false });
-                    if (selectedChampionship !== "all") {
-                        query = query.eq("championship_id", selectedChampionship);
-                    } else {
-                        query = query.in("championship_id", safeChampIds);
-                    }
+                    query = query.in("championship_id", safeChampIds);
                 }
 
                 const { data, count, error } = await query.range(from, to);
                 if (error) throw error;
 
                 totalCount = count || 0;
-                formattedMatches = (data as any[])?.map(item => {
-                    const m = paramUser ? item.matches : item;
-                    if (!m) return null;
+                formattedMatches = (data as any[])?.map(m => {
                     const champ = champMap.get(m.championship_id);
                     return {
                         ...m,

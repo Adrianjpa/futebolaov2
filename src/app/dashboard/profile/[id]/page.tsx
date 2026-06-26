@@ -34,6 +34,7 @@ export default function PublicProfilePage() {
     const [selectedChampionship, setSelectedChampionship] = useState("");
     const [categoryFilter, setCategoryFilter] = useState("");
     const [userPredictions, setUserPredictions] = useState<any[]>([]);
+    const [liveFinishedCounts, setLiveFinishedCounts] = useState<Record<string, number>>({});
 
     const isAdmin = currentProfile?.funcao === "admin";
 
@@ -91,6 +92,23 @@ export default function PublicProfilePage() {
                 setUserPredictions(preds);
 
                 const uniqueChampionshipIds = Array.from(new Set(preds.map((p: any) => p.championship_id).filter(Boolean)));
+
+                // Fetch total live/finished matches per championship for exact error counting
+                if (uniqueChampionshipIds.length > 0) {
+                    const { data: matchCounts } = await supabase
+                        .from("matches")
+                        .select("championship_id")
+                        .in("status", ["live", "finished"])
+                        .in("championship_id", uniqueChampionshipIds);
+                        
+                    const counts: Record<string, number> = {};
+                    if (matchCounts) {
+                        matchCounts.forEach((m: any) => {
+                            counts[m.championship_id] = (counts[m.championship_id] || 0) + 1;
+                        });
+                    }
+                    setLiveFinishedCounts(counts);
+                }
 
                 // 3. Fetch All Championships to calculate titles and disputed
                 const { data: allChamps } = await (supabase
@@ -201,10 +219,22 @@ export default function PublicProfilePage() {
                 } else {
                     if (winP === winM) situacao++;
                     if (hitGoals) bonus++;
-                    if (winP !== winM && !hitGoals) erros++;
                 }
             }
         });
+        
+        // Calculo rigoroso de erros incluindo palpites nao realizados (World Cup 2026/Geral)
+        if (selectedChampionship !== "") {
+            const totalMatches = liveFinishedCounts[selectedChampionship] || 0;
+            erros = totalMatches - buchas - situacao;
+            if (erros < 0) erros = 0; // fallback just in case
+        } else {
+            // All championships
+            let totalAllMatches = 0;
+            Object.values(liveFinishedCounts).forEach(c => totalAllMatches += c);
+            erros = totalAllMatches - buchas - situacao;
+            if (erros < 0) erros = 0;
+        }
 
         return { points: pontos, buchas, situacao, combo, bonus, erros };
     };

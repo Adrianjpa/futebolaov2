@@ -60,6 +60,7 @@ export default function ProfilePage() {
     const [categoryFilter, setCategoryFilter] = useState("");
     const [userPredictions, setUserPredictions] = useState<any[]>([]);
     const [isDialogOpen, setIsDialogOpen] = useState(false);
+    const [liveFinishedCounts, setLiveFinishedCounts] = useState<Record<string, number>>({});
 
     // Image Cropping State
     const [imgSrc, setImgSrc] = useState('');
@@ -110,6 +111,23 @@ export default function ProfilePage() {
                     ...preds.map((p: any) => p.championship_id).filter(Boolean),
                     ...participantIds
                 ]));
+
+                // Fetch total live/finished matches per championship for exact error counting
+                if (uniqueChampionshipIds.length > 0) {
+                    const { data: matchCounts } = await supabase
+                        .from("matches")
+                        .select("championship_id")
+                        .in("status", ["live", "finished"])
+                        .in("championship_id", uniqueChampionshipIds);
+                        
+                    const counts: Record<string, number> = {};
+                    if (matchCounts) {
+                        matchCounts.forEach((m: any) => {
+                            counts[m.championship_id] = (counts[m.championship_id] || 0) + 1;
+                        });
+                    }
+                    setLiveFinishedCounts(counts);
+                }
 
                 // 4. Fetch All Championships
                 const { data: allChamps } = await (supabase.from("championships") as any).select("*");
@@ -389,10 +407,22 @@ export default function ProfilePage() {
                 } else {
                     if (winP === winM) situacao++;
                     if (hitGoals) bonus++;
-                    if (winP !== winM && !hitGoals) erros++;
                 }
             }
         });
+        
+        // Calculo rigoroso de erros incluindo palpites nao realizados (World Cup 2026/Geral)
+        if (selectedChampionship !== "") {
+            const totalMatches = liveFinishedCounts[selectedChampionship] || 0;
+            erros = totalMatches - buchas - situacao;
+            if (erros < 0) erros = 0; // fallback just in case
+        } else {
+            // All championships
+            let totalAllMatches = 0;
+            Object.values(liveFinishedCounts).forEach(c => totalAllMatches += c);
+            erros = totalAllMatches - buchas - situacao;
+            if (erros < 0) erros = 0;
+        }
 
         return { points: pontos, buchas, situacao, combo, bonus, erros };
     };

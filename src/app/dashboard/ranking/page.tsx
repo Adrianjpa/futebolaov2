@@ -386,6 +386,85 @@ export default function RankingPage() {
                 return nameA.localeCompare(nameB);
             });
 
+            // HOTFIX: Copa do Mundo 2026 - Recalculate accurately to ignore 'scheduled' matches
+            if (selectedChampionship === '87b22aab-521b-4302-815a-500bec4b4a0a') {
+                const [predsRes, matchesRes] = await Promise.all([
+                    supabase
+                        .from("predictions")
+                        .select("user_id, points, home_score, away_score, is_combo, combo_total_goals, matches!inner(championship_id, status, score_home, score_away)")
+                        .eq("matches.championship_id", selectedChampionship),
+                    supabase
+                        .from("matches")
+                        .select("id", { count: "exact" })
+                        .eq("championship_id", selectedChampionship)
+                        .in("status", ["live", "finished"])
+                ]);
+
+                const allPreds = predsRes.data;
+                const totalLiveFinishedMatches = matchesRes.count || 0;
+                
+                if (allPreds) {
+                    rawData.forEach((user: any) => {
+                        const userPreds = allPreds.filter((p: any) => p.user_id === user.user_id);
+                        
+                        let pontos = 0;
+                        let buchas = 0;
+                        let situacao = 0;
+                        let erros = 0;
+
+                        userPreds.forEach((p: any) => {
+                            const match = p.matches;
+                            if (match && (match.status === 'live' || match.status === 'finished')) {
+                                pontos += (p.points || 0);
+
+                                const ph = p.home_score;
+                                const pa = p.away_score;
+                                const mh = match.score_home;
+                                const ma = match.score_away;
+
+                                const winP = ph > pa ? 1 : (ph < pa ? 2 : 0);
+                                const winM = mh > ma ? 1 : (mh < ma ? 2 : 0);
+
+                                const isExact = ph === mh && pa === ma;
+
+                                if (isExact) {
+                                    buchas++;
+                                } else {
+                                    if (winP === winM) situacao++;
+                                }
+                            }
+                        });
+                        
+                        // Strict error calculation: Any match that is live/finished and not a bucha or situacao is an error (including missing predictions)
+                        erros = totalLiveFinishedMatches - buchas - situacao;
+                        if (erros < 0) erros = 0; // fallback just in case
+                        
+                        user.total_points = pontos;
+                        user.exact_scores = buchas;
+                        user.outcomes = situacao;
+                        user.errors = erros;
+                    });
+                    
+                    // Re-sort after hotfix recalculation
+                    rawData.sort((a: any, b: any) => {
+                        for (const criteria of tiebreakers) {
+                            if (criteria === 'pontos') {
+                                if (b.total_points !== a.total_points) return b.total_points - a.total_points;
+                            } else if (criteria === 'buchas') {
+                                if (b.exact_scores !== a.exact_scores) return (b.exact_scores || 0) - (a.exact_scores || 0);
+                            } else if (criteria === 'situacoes') {
+                                if (b.outcomes !== a.outcomes) return (b.outcomes || 0) - (a.outcomes || 0);
+                            } else if (criteria === 'erros') {
+                                if (b.errors !== a.errors) return (a.errors || 0) - (b.errors || 0); 
+                            }
+                        }
+                        const nameA = a.nickname || a.nome || "";
+                        const nameB = b.nickname || b.nome || "";
+                        return nameA.localeCompare(nameB);
+                    });
+                }
+            }
+
             setUsers(rawData);
 
             setOfficialRanking(settings.officialRanking || []);
