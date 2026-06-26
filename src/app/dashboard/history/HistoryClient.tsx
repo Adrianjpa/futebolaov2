@@ -190,7 +190,7 @@ export default function HistoryClient() {
                 const { data: predsData, error: predError } = await predQuery;
                 if (predError) throw predError;
 
-                const predsMap = new Map((predsData || []).map((p: any) => [p.match_id, p]));
+                const predsMap = new Map<string, any>((predsData || []).map((p: any) => [p.match_id, p]));
 
                 const filtered = (matchesData as any[])?.map(m => {
                     const p = predsMap.get(m.id);
