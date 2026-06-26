@@ -456,6 +456,10 @@ export default function RankingPage() {
                                 if (b.outcomes !== a.outcomes) return (b.outcomes || 0) - (a.outcomes || 0);
                             } else if (criteria === 'erros') {
                                 if (b.errors !== a.errors) return (a.errors || 0) - (b.errors || 0); 
+                            } else if (criteria === 'primeira_bucha') {
+                                const timeA = firstBuchaMap.get(a.user_id) || Infinity;
+                                const timeB = firstBuchaMap.get(b.user_id) || Infinity;
+                                if (timeA !== timeB) return timeA - timeB; // Data mais antiga vence
                             }
                         }
                         const nameA = a.nickname || a.nome || "";
