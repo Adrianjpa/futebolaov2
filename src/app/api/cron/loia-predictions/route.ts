@@ -81,6 +81,19 @@ export async function GET(request: Request) {
         let predictionsToInsert: any[] = [];
         let messages = [];
 
+        // Encontrar a posição real do Loia no ranking oficial (se disponível)
+        let loiaPosition = "no meio da tabela";
+        let totalParticipants = 10;
+        const currentChamp = activeChamps.find((c: any) => champIds.includes(c.id));
+        if (currentChamp && currentChamp.settings && currentChamp.settings.officialRanking) {
+            const ranking = currentChamp.settings.officialRanking;
+            totalParticipants = ranking.length;
+            const idx = ranking.findIndex((r: any) => r.userId === (loiaUser as any).id);
+            if (idx !== -1) {
+                loiaPosition = `${idx + 1}º lugar (de ${totalParticipants})`;
+            }
+        }
+
         // --- ETAPA 1: PALPITE BASE ---
         if (pendingBaseMatches.length > 0) {
             let promptMatches = pendingBaseMatches.map((m: any) => `Match ID: ${m.id} | ${m.home_team} vs ${m.away_team} | Date: ${m.date}`).join("\n");
@@ -88,10 +101,12 @@ export async function GET(request: Request) {
 Você é o Lindoaldo (apelido: Loia), um analista e apostador fanático de futebol.
 Você tem uma preferência emocional pela Seleção Argentina.
 
-Atualmente você está em 6º lugar no ranking e precisa buscar placares exatos (cravadas) para subir na tabela.
-Portanto, fuja levemente do óbvio e assuma riscos calculados em placares um pouco mais ousados, mas sem cometer loucuras extremas. 
-Lembre-se de que agora os jogos são de mata-mata e o placar final válido da aposta engloba os 90 minutos do tempo normal + os 30 minutos de prorrogação. Empates são perfeitamente possíveis (e levariam a disputa para os pênaltis).
+Sua colocação atual no campeonato é: ${loiaPosition}.
+Sua estratégia deve se adaptar a essa posição:
+- Se você estiver no topo (Top 3), jogue com segurança e lógica.
+- Se você estiver no meio ou no final da tabela, assuma riscos calculados em placares um pouco mais ousados para buscar cravadas exclusivas, mas sem loucuras.
 
+Lembre-se de que os jogos de mata-mata englobam os 90 minutos + 30 de prorrogação. Empates são perfeitamente possíveis.
 Analise as seguintes partidas e forneça o placar exato para cada uma, favorecendo um pouquinho a Argentina caso ela jogue.
 
 Retorne APENAS um JSON estrito no seguinte formato, sem formatação markdown ou texto extra:
@@ -128,12 +143,16 @@ ${promptMatches}
             if (sniperPrompts.length > 0) {
                 const promptSniper = `
 Você é o Lindoaldo (Lóia), um estrategista de apostas. Faltam poucos minutos para os jogos começarem.
-Você está no meio da tabela e precisa urgentemente de pontos diferenciados.
+Sua colocação atual no campeonato é: ${loiaPosition}.
 Vou te passar o seu palpite atual e todos os palpites que os seus adversários já registraram para esse mesmo jogo.
-Para ganhar pontos sozinho, você DEVE analisar o que a maioria apostou (o padrão da massa) e escolher um placar plausível que FUJA desse padrão.
-Se a maioria foi num 2x0 para o time A, tente um 2x1, 1x0 ou até um empate. Não faça apostas completamente impossíveis (como 8x0), mas seja o 'diferentão' matemático.
+
+Sua missão é ler o jogo:
+1. Você NÃO precisa escolher um placar totalmente inédito se as opções restantes forem absurdas (ex: 5x1). É permitido repetir palpites de adversários se for matematicamente a melhor escolha.
+2. Se você estiver LIDERANDO o campeonato (Top 1 a 3), jogue com segurança. Marque de perto os adversários e aposte no mais óbvio.
+3. Se você estiver ATRÁS na tabela, analise a "massa": se todos apostaram no mesmo placar óbvio (ex: 2x0), tente um desvio leve e inteligente (ex: 2x1, 1x0 ou 1x1) para tentar a "bucha" exclusiva e pular na frente.
 Lembre-se: jogos de mata-mata englobam prorrogação, empates existem.
-Reavalie seus palpites e forneça os novos placares atualizados baseados nessa espionagem. Você PODE mudar o placar ou mantê-lo se achar que já está bem posicionado.
+
+Reavalie seus palpites e forneça os novos placares atualizados baseados nessa espionagem. Você PODE mudar o placar ou mantê-lo exatamente igual se achar que já está com a melhor aposta.
 
 Retorne APENAS um JSON estrito no seguinte formato, sem formatação markdown ou texto extra:
 [
