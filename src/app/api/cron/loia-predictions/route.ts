@@ -7,7 +7,6 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import { logActivity } from "@/lib/logger";
 
 // Inicializa a API do Gemini
-// A chave deve estar nas variáveis de ambiente da Vercel
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 
 export async function GET(request: Request) {
@@ -18,12 +17,10 @@ export async function GET(request: Request) {
     }
 
     try {
-        // Verificar se a chave do Gemini existe
         if (!process.env.GEMINI_API_KEY) {
             return NextResponse.json({ error: "GEMINI_API_KEY not configured" }, { status: 500 });
         }
 
-        // 1. Encontrar o usuário Loia pelo email
         const loiaEmail = "lindoaldo@legacy.local";
         const { data: loiaUser } = await supabaseAdmin
             .from("profiles")
@@ -35,7 +32,6 @@ export async function GET(request: Request) {
             return NextResponse.json({ success: false, error: "Usuário Loia não encontrado" });
         }
 
-        // 2. Buscar Campeonatos com enableLoia ativado
         const { data: activeChamps } = await supabaseAdmin
             .from("championships")
             .select("id, name, settings");
@@ -47,44 +43,48 @@ export async function GET(request: Request) {
 
         const champIds = loiaChamps.map((c: any) => c.id);
 
-        // 3. Buscar jogos "agendados" (scheduled) nas próximas 24 horas para esses campeonatos
         const now = new Date();
-        const nextWindow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+        const window24h = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+        const window1h = new Date(now.getTime() + 60 * 60 * 1000); // Janela Sniper de 1 hora
 
+        // Buscar apenas jogos "scheduled" (ainda não começaram e não finalizaram)
         const { data: matches } = await supabaseAdmin
             .from("matches")
             .select("id, championship_id, home_team, away_team, date, status")
             .in("championship_id", champIds)
             .eq("status", "scheduled")
             .gte("date", now.toISOString())
-            .lte("date", nextWindow.toISOString());
+            .lte("date", window24h.toISOString());
 
         if (!matches || matches.length === 0) {
             return NextResponse.json({ success: true, message: "Sem jogos na janela de 24 horas." });
         }
 
-        // 4. Filtrar jogos que o Loia JÁ palpitou para não repetir
         const matchIds = (matches as any[]).map((m: any) => m.id);
         const { data: existingPredictions } = await supabaseAdmin
             .from("predictions")
-            .select("match_id")
-            .eq("user_id", (loiaUser as any).id)
+            .select("*")
             .in("match_id", matchIds);
 
-        const predictedMatchIds = new Set((existingPredictions as any[])?.map((p: any) => p.match_id) || []);
-        const pendingMatches = (matches as any[]).filter((m: any) => !predictedMatchIds.has(m.id));
+        const loiaPredictions = (existingPredictions as any[])?.filter((p: any) => p.user_id === (loiaUser as any).id) || [];
+        const loiaPredictedMatchIds = new Set(loiaPredictions.map((p: any) => p.match_id));
 
-        if (pendingMatches.length === 0) {
-            return NextResponse.json({ success: true, message: "Loia já palpitou em todos os jogos das próximas 24 horas." });
-        }
+        // Separar jogos para o Palpite Base (na janela 24h que ele ainda não palpitou)
+        const pendingBaseMatches = (matches as any[]).filter((m: any) => !loiaPredictedMatchIds.has(m.id));
 
-        // 5. Preparar prompt para o Gemini
-        // O ideal aqui seria buscar a posição do Loia no Ranking. Para simplificar nesta versão inicial:
-        // Assumimos um comportamento padrão inteligente. (Podemos evoluir o prompt no futuro).
-        
-        let promptMatches = pendingMatches.map((m: any) => `Match ID: ${m.id} | ${m.home_team} vs ${m.away_team} | Date: ${m.date}`).join("\n");
-        
-        const prompt = `
+        // Separar jogos para a Análise Sniper (na janela de <= 1h que ele JÁ palpitou e ainda está scheduled)
+        const sniperMatches = (matches as any[]).filter((m: any) => {
+            const matchDate = new Date(m.date);
+            return matchDate <= window1h && loiaPredictedMatchIds.has(m.id);
+        });
+
+        let predictionsToInsert: any[] = [];
+        let messages = [];
+
+        // --- ETAPA 1: PALPITE BASE ---
+        if (pendingBaseMatches.length > 0) {
+            let promptMatches = pendingBaseMatches.map((m: any) => `Match ID: ${m.id} | ${m.home_team} vs ${m.away_team} | Date: ${m.date}`).join("\n");
+            const promptBase = `
 Você é o Lindoaldo (apelido: Loia), um analista e apostador fanático de futebol.
 Você tem uma preferência emocional pela Seleção Argentina.
 
@@ -102,35 +102,61 @@ Retorne APENAS um JSON estrito no seguinte formato, sem formatação markdown ou
 Partidas:
 ${promptMatches}
 `;
+            const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+            let predsBase = await fetchFromGemini(model, promptBase);
+            if (predsBase) {
+                predictionsToInsert = [...predictionsToInsert, ...predsBase];
+                messages.push(`Palpite base (24h) feito em ${predsBase.length} jogos.`);
+            }
+        }
 
-        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-        
-        let predictionsArray = null;
-        let lastError = null;
-        
-        // Tentar até 3 vezes (Retry pattern) em caso de 503 do Google
-        for (let attempt = 1; attempt <= 3; attempt++) {
-            try {
-                const aiResponse = await model.generateContent(prompt);
-                let text = aiResponse.response.text();
-                text = text.replace(/```json/g, '').replace(/```/g, '').trim();
-                predictionsArray = JSON.parse(text);
-                break; // Se deu certo, sai do loop
-            } catch (err: any) {
-                lastError = err;
-                console.error(`Tentativa ${attempt} falhou:`, err.message);
-                if (attempt < 3) {
-                    await new Promise(resolve => setTimeout(resolve, 2000)); // Espera 2s antes de tentar de novo
+        // --- ETAPA 2: ANÁLISE SNIPER (1h antes do jogo) ---
+        // Analisa TODOS os outros palpites existentes para o jogo e tenta fugir da "massa"
+        if (sniperMatches.length > 0) {
+            let sniperPrompts = [];
+            
+            for (const m of sniperMatches) {
+                const matchPreds = (existingPredictions as any[]).filter((p: any) => p.match_id === m.id && p.user_id !== (loiaUser as any).id);
+                const loiaCurrent = loiaPredictions.find((p: any) => p.match_id === m.id);
+                
+                if (matchPreds.length > 0) {
+                    const opponentScores = matchPreds.map((p: any) => `${p.home_score}x${p.away_score}`).join(", ");
+                    sniperPrompts.push(`Match ID: ${m.id} | Jogo: ${m.home_team} vs ${m.away_team} | Seu palpite atual: ${loiaCurrent?.home_score}x${loiaCurrent?.away_score} | Palpites dos adversários (Massa): ${opponentScores}`);
+                }
+            }
+
+            if (sniperPrompts.length > 0) {
+                const promptSniper = `
+Você é o Lindoaldo (Lóia), um estrategista de apostas. Faltam poucos minutos para os jogos começarem.
+Você está no meio da tabela e precisa urgentemente de pontos diferenciados.
+Vou te passar o seu palpite atual e todos os palpites que os seus adversários já registraram para esse mesmo jogo.
+Para ganhar pontos sozinho, você DEVE analisar o que a maioria apostou (o padrão da massa) e escolher um placar plausível que FUJA desse padrão.
+Se a maioria foi num 2x0 para o time A, tente um 2x1, 1x0 ou até um empate. Não faça apostas completamente impossíveis (como 8x0), mas seja o 'diferentão' matemático.
+Lembre-se: jogos de mata-mata englobam prorrogação, empates existem.
+Reavalie seus palpites e forneça os novos placares atualizados baseados nessa espionagem. Você PODE mudar o placar ou mantê-lo se achar que já está bem posicionado.
+
+Retorne APENAS um JSON estrito no seguinte formato, sem formatação markdown ou texto extra:
+[
+  { "match_id": "ID", "home_score": 1, "away_score": 0 }
+]
+
+Cenários Sniper:
+${sniperPrompts.join("\n\n")}
+`;
+                const modelSniper = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+                let predsSniper = await fetchFromGemini(modelSniper, promptSniper);
+                if (predsSniper) {
+                    predictionsToInsert = [...predictionsToInsert, ...predsSniper];
+                    messages.push(`Análise Sniper (1h) reajustou palpites em ${predsSniper.length} jogos.`);
                 }
             }
         }
-        
-        if (!predictionsArray) {
-            throw new Error(`Falha no Gemini após 3 tentativas. Último erro: ${lastError?.message}`);
+
+        if (predictionsToInsert.length === 0) {
+             return NextResponse.json({ success: true, message: "Sem jogos para palpitar ou reavaliar no momento." });
         }
 
-        // 6. Inserir os palpites no banco
-        const predictionsToInsert = predictionsArray.map((p: any) => ({
+        const formattedInsert = predictionsToInsert.map((p: any) => ({
             match_id: p.match_id,
             user_id: (loiaUser as any).id,
             home_score: p.home_score,
@@ -139,27 +165,42 @@ ${promptMatches}
 
         const { error: insertError } = await supabaseAdmin
             .from("predictions")
-            .upsert(predictionsToInsert, { onConflict: "match_id, user_id" });
+            .upsert(formattedInsert, { onConflict: "match_id, user_id" });
 
         if (insertError) throw insertError;
 
-        await logActivity(supabaseAdmin, (loiaUser as any).id, "CRON_LOIA_SUCCESS", { count: predictionsToInsert.length });
+        await logActivity(supabaseAdmin, (loiaUser as any).id, "CRON_LOIA_SUCCESS", { count: formattedInsert.length });
 
         return NextResponse.json({ 
             success: true, 
-            message: `Loia fez palpites em ${predictionsToInsert.length} jogos.`,
-            predictions: predictionsToInsert
+            message: messages.join(" | "),
+            predictions: formattedInsert
         });
 
     } catch (error: any) {
         console.error("Error in Loia predictions cron:", error);
-        
-        // Gravar no banco de dados para conseguirmos ver o erro do automático
         try {
             await logActivity(supabaseAdmin, '00000000-0000-0000-0000-000000000000', "CRON_LOIA_ERROR", { error: error.message, stack: error.stack });
         } catch (e) {}
-        
         return NextResponse.json({ success: false, error: error.message }, { status: 500 });
     }
 }
 
+async function fetchFromGemini(model: any, prompt: string) {
+    let lastError = null;
+    for (let attempt = 1; attempt <= 3; attempt++) {
+        try {
+            const aiResponse = await model.generateContent(prompt);
+            let text = aiResponse.response.text();
+            text = text.replace(/```json/g, '').replace(/```/g, '').trim();
+            return JSON.parse(text);
+        } catch (err: any) {
+            lastError = err;
+            if (attempt < 3) {
+                await new Promise(resolve => setTimeout(resolve, 2000)); 
+            }
+        }
+    }
+    console.error("Gemini failed after 3 attempts:", lastError?.message);
+    return null;
+}
