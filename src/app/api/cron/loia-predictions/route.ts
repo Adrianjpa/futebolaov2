@@ -84,7 +84,7 @@ export async function GET(request: Request) {
         // Encontrar a posição real do Loia no ranking oficial (se disponível)
         let loiaPosition = "no meio da tabela";
         let totalParticipants = 10;
-        const currentChamp = activeChamps.find((c: any) => champIds.includes(c.id));
+        const currentChamp = (activeChamps || []).find((c: any) => champIds.includes(c.id));
         if (currentChamp && currentChamp.settings && currentChamp.settings.officialRanking) {
             const ranking = currentChamp.settings.officialRanking;
             totalParticipants = ranking.length;
