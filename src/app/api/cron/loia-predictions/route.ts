@@ -184,7 +184,7 @@ ${sniperPrompts.join("\n\n")}
 
         const { error: insertError } = await supabaseAdmin
             .from("predictions")
-            .upsert(formattedInsert, { onConflict: "match_id, user_id" });
+            .upsert(formattedInsert as any, { onConflict: "match_id, user_id" });
 
         if (insertError) throw insertError;
 
