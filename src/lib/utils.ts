@@ -95,7 +95,9 @@ export function translateRoundName(round: string) {
   const map: Record<string, string> = {
     "REGULAR_SEASON": "Temporada Regular",
     "GROUP_STAGE": "Fase de Grupos",
-    "ROUND_OF_32": "16-avos de Final",
+    "ROUND_OF_32": "Segunda Fase",
+    "LAST_32": "Segunda Fase",
+    "LAST 32": "Segunda Fase",
     "ROUND_OF_16": "Oitavas de Final",
     "QUARTER_FINALS": "Quartas de Final",
     "SEMI_FINALS": "Semifinal",
