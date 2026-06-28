@@ -971,49 +971,6 @@ export function UnifiedMatchCard({
                             </div>
                         )}
                         
-                        {/* Loia Front-Facing Prediction for Normal Users (Pre-match) */}
-                        {!isAdmin && !isLive && !isFinished && loiaPrediction && (
-                            <div className="w-full mt-3 pt-3 border-t border-slate-200 dark:border-slate-800/60" onClick={(e) => e.stopPropagation()}>
-                                <div className="grid grid-cols-[1fr_auto_1fr] sm:grid-cols-3 items-center gap-2 p-2 rounded-xl border bg-purple-50 dark:bg-purple-900/10 border-purple-200 dark:border-purple-800/30 transition-colors">
-                                    {/* Left: Avatar + Name */}
-                                    <div 
-                                        className="flex items-center gap-2.5 min-w-0 overflow-hidden text-left pl-1 cursor-pointer hover:opacity-80 transition-opacity"
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            if (loiaUserId) {
-                                                window.location.href = `/dashboard/profile/${loiaUserId}`;
-                                            }
-                                        }}
-                                    >
-                                        <Avatar className="h-8 w-8 border border-purple-500/30 shadow-sm ring-1 ring-purple-500/20">
-                                            <AvatarImage src="https://qgdiyngonrofriocxnla.supabase.co/storage/v1/object/public/avatars/lindoaldo_1780852852366.jpg" />
-                                            <AvatarFallback className="bg-purple-900 text-purple-100 text-xs font-bold">LO</AvatarFallback>
-                                        </Avatar>
-                                        <div className="flex flex-col min-w-0 leading-none">
-                                            <span className="text-[10px] font-bold text-purple-600 dark:text-purple-400 uppercase tracking-widest mb-0.5">
-                                                <span className="sm:hidden">IA</span>
-                                                <span className="hidden sm:inline">INTELIGÊNCIA ARTIFICIAL</span>
-                                            </span>
-                                            <span className="text-sm font-bold text-slate-800 dark:text-slate-200 truncate flex items-center gap-1.5 hover:underline">
-                                                Lóia <Ghost className="h-3.5 w-3.5 text-purple-500 dark:text-purple-400 opacity-90" />
-                                            </span>
-                                        </div>
-                                    </div>
-                                    
-                                    {/* Center: Score */}
-                                    <div className="flex justify-center items-center">
-                                        <div className="font-mono font-bold text-base text-purple-700 dark:text-purple-300 bg-purple-500/10 px-4 py-1 rounded-lg border border-purple-500/20 whitespace-nowrap shadow-sm">
-                                            {loiaPrediction.home} - {loiaPrediction.away}
-                                        </div>
-                                    </div>
-                                    
-                                    {/* Right: Empty for balance */}
-                                    <div className="flex justify-end items-center pr-1">
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-
 
                     </div>
                 </CardContent>
