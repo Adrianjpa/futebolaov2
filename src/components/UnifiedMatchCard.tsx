@@ -1085,8 +1085,8 @@ export function UnifiedMatchCard({
                                         }
 
                                         const isComputed = isLive || isFinished;
-                                        const points = pred.points || 0;
-                                        const isZero = isComputed && points === 0;
+                                        let points = pred.points || 0;
+                                        
                                         const isExactDynamic = isComputed && (pred.home_score === match.score_home && pred.away_score === match.score_away);
                                         const isWinnerDynamic = isComputed && Math.sign(pred.home_score - pred.away_score) === Math.sign((match.score_home || 0) - (match.score_away || 0));
 
@@ -1095,6 +1095,22 @@ export function UnifiedMatchCard({
                                         const isCombo = isExactDynamic && hitGoals;
                                         const isBonus = !isExactDynamic && hitGoals;
                                         const usedToken = pred.is_combo;
+
+                                        // Recalcula os pontos ao vivo para exibir imediatamente (Mesmo antes do Cron rodar)
+                                        if (isLive) {
+                                            let livePoints = 0;
+                                            if (isCombo) livePoints = 5;
+                                            else if (isExactDynamic) livePoints = 3;
+                                            else if (isWinnerDynamic) livePoints = 1;
+                                            else if (isBonus) livePoints = 2;
+                                            
+                                            // Usa o livePoints se for maior que o salvo no banco (banco pode estar 0)
+                                            if (livePoints > points) {
+                                                points = livePoints;
+                                            }
+                                        }
+
+                                        const isZero = isComputed && points === 0;
 
                                         let bgClass = "";
                                         let badgeClass = "";
