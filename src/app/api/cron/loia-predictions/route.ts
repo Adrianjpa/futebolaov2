@@ -84,9 +84,12 @@ export async function GET(request: Request) {
         // Encontrar a posição real do Loia no ranking oficial (se disponível)
         let loiaPosition = "no meio da tabela";
         let totalParticipants = 10;
+        let officialRankingArray: any[] = [];
+        
         const currentChamp = (activeChamps as any[])?.find((c: any) => champIds.includes(c.id));
         if (currentChamp && currentChamp.settings && currentChamp.settings.officialRanking) {
             const ranking = currentChamp.settings.officialRanking;
+            officialRankingArray = ranking;
             totalParticipants = ranking.length;
             const idx = ranking.findIndex((r: any) => r.userId === (loiaUser as any).id);
             if (idx !== -1) {
@@ -103,8 +106,8 @@ Você tem uma preferência emocional pela Seleção Argentina.
 
 Sua colocação atual no campeonato é: ${loiaPosition}.
 Sua estratégia deve se adaptar a essa posição:
-- Se você estiver no topo (Top 3), jogue com segurança e lógica.
-- Se você estiver no meio ou no final da tabela, assuma riscos calculados em placares um pouco mais ousados para buscar cravadas exclusivas, mas sem loucuras.
+- Se você estiver no topo (Top 3), jogue com extrema segurança e lógica. Aposte sempre no favorito.
+- Se você estiver no final da tabela (lanterna), PARE de tentar zebras ou empates loucos. Jogue com segurança para garantir pontos básicos (+1). Só faça apostas arriscadas se for um clássico muito equilibrado. Evite empates exatos.
 
 Lembre-se de que os jogos de mata-mata englobam os 90 minutos + 30 de prorrogação. Empates são perfeitamente possíveis.
 Analise as seguintes partidas e forneça o placar exato para cada uma, favorecendo um pouquinho a Argentina caso ela jogue.
@@ -126,17 +129,21 @@ ${promptMatches}
         }
 
         // --- ETAPA 2: ANÁLISE SNIPER (1h antes do jogo) ---
-        // Analisa TODOS os outros palpites existentes para o jogo e tenta fugir da "massa"
+        // Protocolo Sombra: Identifica o Top 3 e foca neles
         if (sniperMatches.length > 0) {
             let sniperPrompts = [];
             
+            // Extrair os IDs do Top 3
+            const top3Ids = officialRankingArray.slice(0, 3).map((r: any) => r.userId);
+            
             for (const m of sniperMatches) {
-                const matchPreds = (existingPredictions as any[]).filter((p: any) => p.match_id === m.id && p.user_id !== (loiaUser as any).id);
+                // Filtra apenas os palpites dos caras que estão no Top 3
+                const matchPreds = (existingPredictions as any[]).filter((p: any) => p.match_id === m.id && top3Ids.includes(p.user_id));
                 const loiaCurrent = loiaPredictions.find((p: any) => p.match_id === m.id);
                 
                 if (matchPreds.length > 0) {
                     const opponentScores = matchPreds.map((p: any) => `${p.home_score}x${p.away_score}`).join(", ");
-                    sniperPrompts.push(`Match ID: ${m.id} | Jogo: ${m.home_team} vs ${m.away_team} | Seu palpite atual: ${loiaCurrent?.home_score}x${loiaCurrent?.away_score} | Palpites dos adversários (Massa): ${opponentScores}`);
+                    sniperPrompts.push(`Match ID: ${m.id} | Jogo: ${m.home_team} vs ${m.away_team} | Seu palpite atual: ${loiaCurrent?.home_score}x${loiaCurrent?.away_score} | Palpites do Top 3 (Os Líderes): ${opponentScores}`);
                 }
             }
 
@@ -144,15 +151,15 @@ ${promptMatches}
                 const promptSniper = `
 Você é o Lindoaldo (Lóia), um estrategista de apostas. Faltam poucos minutos para os jogos começarem.
 Sua colocação atual no campeonato é: ${loiaPosition}.
-Vou te passar o seu palpite atual e todos os palpites que os seus adversários já registraram para esse mesmo jogo.
+Vou te passar o seu palpite atual e os palpites exclusivos do TOP 3 (os líderes do campeonato) para esse jogo.
 
-Sua missão é ler o jogo:
-1. Você NÃO precisa escolher um placar totalmente inédito se as opções restantes forem absurdas (ex: 5x1). É permitido repetir palpites de adversários se for matematicamente a melhor escolha.
-2. Se você estiver LIDERANDO o campeonato (Top 1 a 3), jogue com segurança. Marque de perto os adversários e aposte no mais óbvio.
-3. Se você estiver ATRÁS na tabela, analise a "massa": se todos apostaram no mesmo placar óbvio (ex: 2x0), tente um desvio leve e inteligente (ex: 2x1, 1x0 ou 1x1) para tentar a "bucha" exclusiva e pular na frente.
-Lembre-se: jogos de mata-mata englobam prorrogação, empates existem.
+PROTOCOLO SOMBRA (Apenas copie os mestres):
+1. Você está numa situação onde NÃO DEVE ARRISCAR ZEBRAS. Aja como uma sombra do Top 3.
+2. Analise os placares que os líderes escolheram. Eles sabem o que estão fazendo.
+3. Escolha EXATAMENTE um dos placares deles para copiar, OU faça uma levíssima variação matemática (ex: se o líder apostou 2x0, você pode colocar 1x0 ou 2x1 para o mesmo time vencedor).
+4. Em hipótese alguma invente um placar absurdo ou um empate se os líderes cravaram vitória. Garanta pelo menos os pontos de vitória.
 
-Reavalie seus palpites e forneça os novos placares atualizados baseados nessa espionagem. Você PODE mudar o placar ou mantê-lo exatamente igual se achar que já está com a melhor aposta.
+Reavalie seus palpites e forneça os novos placares atualizados baseados na estratégia de "espelhar o mestre".
 
 Retorne APENAS um JSON estrito no seguinte formato, sem formatação markdown ou texto extra:
 [
