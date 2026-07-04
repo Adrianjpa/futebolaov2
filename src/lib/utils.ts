@@ -99,6 +99,8 @@ export function translateRoundName(round: string) {
     "LAST_32": "Segunda Fase",
     "LAST 32": "Segunda Fase",
     "ROUND_OF_16": "Oitavas de Final",
+    "LAST_16": "Oitavas de Final",
+    "LAST 16": "Oitavas de Final",
     "QUARTER_FINALS": "Quartas de Final",
     "SEMI_FINALS": "Semifinal",
     "FINAL": "Final",
