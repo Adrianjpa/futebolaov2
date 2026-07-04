@@ -103,6 +103,7 @@ export function translateRoundName(round: string) {
     "LAST 16": "Oitavas de Final",
     "QUARTER_FINALS": "Quartas de Final",
     "SEMI_FINALS": "Semifinal",
+    "THIRD_PLACE": "3º Lugar",
     "FINAL": "Final",
     "Playoffs": "Playoffs",
     "Relegation Round": "Rebaixamento"
