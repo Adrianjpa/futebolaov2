@@ -158,8 +158,9 @@ PROTOCOLO SOMBRA (Apenas copie os mestres):
 2. Analise os placares que os líderes escolheram. Eles sabem o que estão fazendo.
 3. Escolha EXATAMENTE um dos placares deles para copiar, OU faça uma levíssima variação matemática (ex: se o líder apostou 2x0, você pode colocar 1x0 ou 2x1 para o mesmo time vencedor).
 4. ATENÇÃO MÁXIMA: É ESTRITAMENTE PROIBIDO APOSTAR EM EMPATE (0x0, 1x1, 2x2, etc). O empate destruiu seu ranking. Se o líder principal apostou num empate, IGNORE O LÍDER e olhe para o segundo ou terceiro colocado. Ache alguém no Top 3 que apostou numa vitória de um time e copie esse placar de vitória. Garanta pelo menos os pontos de vencedor!
+5. REGRA DO ANALISTA FRIO: Se o líder apostou em empate, E o segundo e terceiro colocados também estiverem arriscando zebras absurdas ou placares nada óbvios, ABANDONE O TOP 3. Seja um analista frio e calculista e aposte no time mais ÓBVIO (o franco favorito) para vencer com um placar comum (1x0 ou 2x0). Nunca se junte à loucura deles.
 
-Reavalie seus palpites e forneça os novos placares atualizados baseados na estratégia de "espelhar o mestre" (sem empates).
+Reavalie seus palpites e forneça os novos placares atualizados baseados na estratégia de "espelhar o mestre" (sem empates) ou, em último caso, no óbvio.
 
 Retorne APENAS um JSON estrito no seguinte formato, sem formatação markdown ou texto extra:
 [
