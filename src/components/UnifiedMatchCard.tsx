@@ -1087,10 +1087,12 @@ export function UnifiedMatchCard({
                                         const isComputed = isLive || isFinished;
                                         let points = pred.points || 0;
                                         
-                                        const isExactDynamic = isComputed && (pred.home_score === match.score_home && pred.away_score === match.score_away);
-                                        const isWinnerDynamic = isComputed && Math.sign(pred.home_score - pred.away_score) === Math.sign((match.score_home || 0) - (match.score_away || 0));
+                                        const hasPredictionData = pred.home_score != null && pred.away_score != null;
 
-                                        const hitGoals = pred.is_combo && pred.combo_total_goals === ((match.score_home ?? 0) + (match.score_away ?? 0));
+                                        const isExactDynamic = hasPredictionData && isComputed && (pred.home_score === match.score_home && pred.away_score === match.score_away);
+                                        const isWinnerDynamic = hasPredictionData && isComputed && Math.sign(pred.home_score - pred.away_score) === Math.sign((match.score_home || 0) - (match.score_away || 0));
+
+                                        const hitGoals = hasPredictionData && pred.is_combo && pred.combo_total_goals === ((match.score_home ?? 0) + (match.score_away ?? 0));
                                         
                                         const isCombo = isExactDynamic && hitGoals;
                                         const isBonus = !isExactDynamic && hitGoals;
