@@ -388,20 +388,27 @@ export default function RankingPage() {
 
             // HOTFIX: Copa do Mundo 2026 - Recalculate accurately to ignore 'scheduled' matches
             if (selectedChampionship === '87b22aab-521b-4302-815a-500bec4b4a0a') {
-                const [predsRes, matchesRes] = await Promise.all([
-                    supabase
+                const { count: matchesCount } = await supabase
+                    .from("matches")
+                    .select("id", { count: "exact" })
+                    .eq("championship_id", selectedChampionship)
+                    .in("status", ["live", "finished"]);
+                    
+                const totalLiveFinishedMatches = matchesCount || 0;
+
+                let allPreds: any[] = [];
+                let page = 0;
+                while (true) {
+                    const { data: p } = await supabase
                         .from("predictions")
                         .select("user_id, points, home_score, away_score, is_combo, combo_total_goals, matches!inner(championship_id, status, score_home, score_away)")
-                        .eq("matches.championship_id", selectedChampionship),
-                    supabase
-                        .from("matches")
-                        .select("id", { count: "exact" })
-                        .eq("championship_id", selectedChampionship)
-                        .in("status", ["live", "finished"])
-                ]);
-
-                const allPreds = predsRes.data;
-                const totalLiveFinishedMatches = matchesRes.count || 0;
+                        .eq("matches.championship_id", selectedChampionship)
+                        .range(page * 1000, (page + 1) * 1000 - 1);
+                    
+                    if (!p || p.length === 0) break;
+                    allPreds = allPreds.concat(p);
+                    page++;
+                }
                 
                 if (allPreds) {
                     rawData.forEach((user: any) => {
